@@ -122,9 +122,7 @@ go build -o bin/coyotenote .
 python3 scripts/smoke.py  # Linux PTY test, after building
 ```
 
-See [the pre-implementation checklist](docs/behavior.md) for reference findings,
-Charm library choices and terminal adaptations of Archnote. The implementation
-uses Bubble Tea, Bubbles, Glamour and Lip Gloss; versions and checksums are pinned
+The implementation uses Bubble Tea, Bubbles, Glamour and Lip Gloss; versions and checksums are pinned
 in `go.mod` and `go.sum`. Rendering is cached until content, width or theme changes.
 There are no attachments, folders, tags, sync, accounts, desktop integration,
 global shortcuts or theme detection. Linux and Windows are the supported platforms.
