@@ -138,13 +138,15 @@ func (m *model) header(p palette) string {
 	name := ""
 	if len(m.notes) > 0 {
 		position = fmt.Sprintf("%d/%d", m.index+1, len(m.notes))
-		name = title(m.editor.Value())
+		name = displayName(m.notes[m.index].ID, m.editor.Value())
 	}
 	left := mark + "  " + ink(p.blue).Bold(true).Render(position)
 	mode, color := "EDIT", p.good
 	switch {
 	case m.picker != nil:
 		mode, color = "NOTES", p.pink
+	case m.prompt != nil:
+		mode, color = "NAME", p.warn
 	case m.mode == 1:
 		mode, color = "PREVIEW", p.cyan
 	case m.split():
@@ -180,7 +182,18 @@ func (m *model) paneLabels(p palette) string {
 		line += "  " + ink(p.muted).Italic(true).Render("split at 90+ columns")
 	}
 	if m.picker != nil {
-		line = ink(p.pink).Bold(true).Render("☰ NOTES")
+		// Not ☰: Unicode 16 made the trigrams wide, and terminals using its
+		// tables draw them in two cells while the layout counts one.
+		line = ink(p.pink).Bold(true).Render("≡ NOTES")
+		if m.pickerBacklinks {
+			line = ink(p.pink).Bold(true).Render("← LINKS HERE")
+		} else if m.picker.FilterValue() == "" {
+			where := m.pickerFolder + "/"
+			if m.pickerFolder == "" {
+				where = "vault"
+			}
+			line += "  " + ink(p.blue).Bold(true).Render(where) + "  " + ink(p.muted).Italic(true).Render("Enter opens · Backspace goes up · type to search everywhere")
+		}
 	}
 	return paintBlock("  "+line, m.width, 1, p.text, p.surface)
 }
@@ -194,7 +207,7 @@ func (p palette) headingColor(level int) string {
 
 var listMarker = regexp.MustCompile(`^\s*([-*+]|\d+\.)\s`)
 var quoteLine = regexp.MustCompile(`^\s*>`)
-var inlineMarkdown = regexp.MustCompile("`[^`]+`|\\*\\*[^*]+\\*\\*")
+var inlineMarkdown = regexp.MustCompile("`[^`]+`|\\*\\*[^*]+\\*\\*|\\[\\[[^\\[\\]]+\\]\\]")
 
 // tintMarkdown reapplies the foreground after nested textarea cursor styles,
 // preserving their backgrounds so the cursor remains visible.
@@ -234,6 +247,8 @@ func colorMarkdown(view string, p palette) string {
 			color, attributes := p.cyan, ""
 			if strings.HasPrefix(plain[match[0]:], "**") {
 				color, attributes = p.accent, ";1"
+			} else if strings.HasPrefix(plain[match[0]:], "[[") {
+				color, attributes = p.blue, ";4"
 			}
 			spans = append(spans, span{match[0], match[1], color, attributes})
 		}
@@ -290,6 +305,17 @@ func (m *model) statusLine(p palette) string {
 		cells = 8
 	}
 	left := aurora(p, cells)
+	if c := m.complete; c != nil {
+		parts := make([]string, len(c.items))
+		for i, item := range c.items {
+			parts[i] = ink(p.muted).Render(item)
+			if i == c.selected {
+				parts[i] = pill(item, p.onPill, p.blue)
+			}
+		}
+		line := "  " + ink(p.blue).Bold(true).Render("[[") + " " + strings.Join(parts, "  ") + "  " + ink(p.muted).Italic(true).Render("↑↓ Tab")
+		return paintBlock("  "+left+line, m.width, 1, p.text, p.chrome)
+	}
 	switch {
 	case m.status == "Saved" || m.status == "Unsaved…":
 	case m.status == "Moved to trash · Ctrl+Z undo":
@@ -310,7 +336,7 @@ type keyHint struct {
 
 func (m *model) shortcutLine(p palette) string {
 	hints := []keyHint{
-		{"^Z", "undo", 0}, {"^N", "new", 3}, {"^O", "find", 3}, {"^D", "delete", 1}, {"Alt+↑↓", "notes", 2}, {"^P", "view", 2},
+		{"^Z", "undo", 0}, {"^N", "new", 3}, {"^O", "find", 3}, {"^G", "link", 2}, {"^Y", "back", 1}, {"^R", "rename", 1}, {"^D", "delete", 1}, {"Alt+↑↓", "notes", 2}, {"^P", "view", 2},
 		{"^T", "theme", 1}, {"^S", "save", 0}, {"F1", "keys", 9}, {"^Q", "quit", 9},
 	}
 	colors := p.rainbow()
@@ -324,8 +350,16 @@ func (m *model) shortcutLine(p palette) string {
 	// The word count sits on the same row, right-aligned, when there is room.
 	right := ""
 	if m.width >= 64 {
-		words := len(strings.Fields(m.editor.Value()))
-		right = ink(p.cyan).Bold(true).Render(strconv.Itoa(words)) + ink(p.muted).Render(" words · ") + ink(p.good).Bold(true).Render("LOCAL")
+		words, noun := len(strings.Fields(m.editor.Value())), " words · "
+		if words == 1 {
+			noun = " word · "
+		}
+		right = ink(p.cyan).Bold(true).Render(strconv.Itoa(words)) + ink(p.muted).Render(noun) + ink(p.good).Bold(true).Render("LOCAL")
+		if len(m.notes) > 0 {
+			if n := len(m.backlinks[m.notes[m.index].ID]); n > 0 {
+				right = ink(p.pink).Bold(true).Render("← "+strconv.Itoa(n)) + ink(p.muted).Render(" · ") + right
+			}
+		}
 	}
 	room := m.width - 4
 	if right != "" {
@@ -351,7 +385,8 @@ func (m *model) shortcutLine(p palette) string {
 // helpView lists every key with a colored key column.
 func (m *model) helpView(p palette) string {
 	rows := [][2]string{
-		{"Ctrl+N", "new note"}, {"Ctrl+O", "find a note"}, {"Ctrl+Z", "undo move to trash"}, {"Ctrl+D", "move to trash (asks first)"}, {"Alt+↑/↓", "previous / next note"},
+		{"Ctrl+N", "new note (Folder/Name)"}, {"Ctrl+R", "rename or move; updates [[links]]"}, {"Ctrl+O", "find a note"},
+		{"Ctrl+G", "open the [[link]] under the cursor"}, {"Ctrl+Y", "back to the previous note"}, {"Ctrl+L", "notes linking here"}, {"Ctrl+Z", "undo move to trash"}, {"Ctrl+D", "move to trash (asks first)"}, {"Alt+↑/↓", "previous / next note"},
 		{"Ctrl+PgUp/PgDn", "previous / next note"}, {"Ctrl+P", "editor → preview → split"},
 		{"Ctrl+T", "dark / light theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q / Ctrl+C", "save and quit"},
 		{"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},

@@ -30,28 +30,48 @@ func main() {
 	}
 }
 func run() error {
-	dir := flag.String("data-dir", "", "override the standard application data directory")
+	dir := flag.String("data-dir", "", "data directory holding the notes and settings such as the theme")
 	showVersion := flag.Bool("version", false, "print the version and exit")
+	migrateNames := flag.Bool("migrate", false, "rename notes with timestamp names after their titles, then exit")
+	flag.Usage = func() {
+		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote [flags] [vault]")
+		fmt.Fprintln(flag.CommandLine.Output(), "\nThe vault is a folder of Markdown notes; it defaults to the application data directory.")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("coyotenote", versionString())
 		return nil
 	}
-	if flag.NArg() != 0 {
+	switch {
+	case flag.NArg() > 1:
 		return fmt.Errorf("unexpected arguments; use -help")
+	case flag.NArg() == 1 && *dir != "":
+		return fmt.Errorf("give the vault either as an argument or with -data-dir, not both")
 	}
+	vault := flag.Arg(0)
+	if vault != "" {
+		*dir = vault
+	}
+	config, configErr := dataDir()
 	if *dir == "" {
-		d, err := dataDir()
-		if err != nil {
-			return err
+		if configErr != nil {
+			return configErr
 		}
-		*dir = d
+		*dir = config
 	}
 	s, err := openStore(*dir)
 	if err != nil {
 		return err
 	}
 	defer s.close()
+	// A vault argument keeps the theme in the data directory, not among the notes.
+	if vault != "" && configErr == nil && !sameDir(config, *dir) && os.MkdirAll(config, 0700) == nil {
+		s.config = config
+	}
+	if *migrateNames {
+		return migrate(s, os.Stdin, os.Stdout)
+	}
 	m, err := newModel(s)
 	if err != nil {
 		return err
@@ -82,4 +102,10 @@ func run() error {
 		}
 	}
 	return err
+}
+
+func sameDir(a, b string) bool {
+	x, err1 := os.Stat(a)
+	y, err2 := os.Stat(b)
+	return err1 == nil && err2 == nil && os.SameFile(x, y)
 }

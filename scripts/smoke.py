@@ -14,13 +14,16 @@ import time
 
 binary = str(pathlib.Path(__file__).resolve().parents[1] / 'bin/coyotenote')
 
-def start(directory):
+def start(directory, vault_argument=False):
     pid, fd = pty.fork()
     if pid == 0:
         os.environ['TERM'] = 'xterm-256color'
         os.environ['COLORTERM'] = 'truecolor'
         os.environ.pop('NO_COLOR', None)
-        os.execv(binary, [binary, '-data-dir', directory])
+        # Keep settings such as the theme away from the real data directory.
+        os.environ['XDG_DATA_HOME'] = os.path.join(directory, '.xdg')
+        args = [binary, directory] if vault_argument else [binary, '-data-dir', directory]
+        os.execv(binary, args)
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 100, 0, 0))
     return pid, fd
 
@@ -67,7 +70,9 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
     pid,fd=start(directory)
     try:
         wait_for(fd,lambda out:b'coyotenote' in out)
-        os.write(fd,b'\x0e') # new
+        os.write(fd,b'\x0e') # new: name prompt
+        wait_for(fd,lambda out:b'NEW NOTE' in out)
+        os.write(fd,b'\r')
         wait_for(fd,lambda out:b'Untitled' in out)
         os.write(fd,b'# Persistent thought\r\r**markdown** survives a crash')
         def saved(_):
@@ -93,7 +98,9 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
     try:
         wait_for(fd,lambda out:b'Persistent thought' in out)
         os.write(fd,b'\x0e')
-        wait_for(fd,lambda out:b'Untitled' in out)
+        wait_for(fd,lambda out:b'NEW NOTE' in out)
+        os.write(fd,b'\r')
+        wait_for(fd,lambda out:b'Untitled 2' in out)
         os.write(fd,b'Flushed on termination')
         wait_for(fd,lambda out:b'termination' in out)
         os.kill(pid,signal.SIGTERM)
@@ -104,4 +111,45 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
         os.close(fd)
         try: os.kill(pid,signal.SIGKILL)
         except ProcessLookupError: pass
-print('PASS: real TUI create, edit, autosave, preview/split, theme/resize, SIGKILL recovery and SIGTERM flush')
+with tempfile.TemporaryDirectory(prefix='coyotenote-vault-') as directory:
+    vault=pathlib.Path(directory)
+    pid,fd=start(directory, vault_argument=True)
+    def has(path, text):
+        return lambda _: (vault/path).exists() and text in (vault/path).read_text()
+    try:
+        wait_for(fd,lambda out:b'coyotenote' in out)
+        os.write(fd,b'\x0e')
+        wait_for(fd,lambda out:b'NEW NOTE' in out)
+        os.write(fd,b'Folder/A\r')
+        wait_for(fd,lambda out:b'Folder/A' in out)
+        os.write(fd,b'Alpha body')
+        wait_for(fd,has('Folder/A.md','Alpha body'))
+        os.write(fd,b'\x0e')
+        wait_for(fd,lambda out:b'NEW NOTE' in out)
+        os.write(fd,b'\x15B\r') # Ctrl+U clears the "Folder/" prefix
+        wait_for(fd,has('B.md',''))
+        os.write(fd,b'see [[')
+        wait_for(fd,lambda out:b'Tab' in out)
+        os.write(fd,b'\t')
+        wait_for(fd,has('B.md','see [[A]]'))
+        os.write(fd,b'\x02\x02\x07') # cursor into the link, Ctrl+G
+        wait_for(fd,lambda out:b'Alpha body' in out)
+        os.write(fd,b'\x0c') # Ctrl+L: backlinks
+        wait_for(fd,lambda out:b'LINKS HERE' in out)
+        os.write(fd,b'\x1b')
+        time.sleep(.2)
+        os.write(fd,b'\x12') # Ctrl+R
+        wait_for(fd,lambda out:b'RENAME' in out)
+        os.write(fd,b'2\r')
+        wait_for(fd,has('B.md','see [[A2]]'))
+        assert (vault/'Folder/A2.md').read_text()=='Alpha body'
+        assert not (vault/'theme').exists()
+        os.write(fd,b'\x19') # Ctrl+Y back to B
+        wait_for(fd,lambda out:b'see [[A2]]' in out)
+        os.write(fd,b'\x11')
+        reap(pid,fd)
+    finally:
+        os.close(fd)
+        try: os.kill(pid,signal.SIGKILL)
+        except ProcessLookupError: pass
+print('PASS: real TUI create, edit, autosave, preview/split, theme/resize, SIGKILL recovery, SIGTERM flush, folders, [[link]] completion, follow, backlinks, rename and back')

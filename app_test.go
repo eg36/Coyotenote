@@ -22,6 +22,12 @@ func testStore(t *testing.T) *store {
 }
 func press(m *model, k tea.KeyType) { m.Update(tea.KeyMsg{Type: k}) }
 
+// newNote creates a note with the default name through the Ctrl+N prompt.
+func newNote(m *model) {
+	press(m, tea.KeyCtrlN)
+	press(m, tea.KeyEnter)
+}
+
 // settle runs the asynchronous preview render synchronously.
 func settle(m *model) {
 	if cmd := m.requestRender(); cmd != nil {
@@ -34,7 +40,7 @@ func TestCreateEditNavigateDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	if len(m.notes) != 1 {
 		t.Fatal("create")
 	}
@@ -51,7 +57,7 @@ func TestCreateEditNavigateDelete(t *testing.T) {
 	if m.dirty {
 		t.Fatal(m.status)
 	}
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.navigate(-1)
 	if !strings.Contains(m.editor.Value(), "hello 世界") {
 		t.Fatal("navigation lost edit")
@@ -77,7 +83,7 @@ func TestCreateEditNavigateDelete(t *testing.T) {
 }
 func TestInterruptedWriteRecovery(t *testing.T) {
 	s := testStore(t)
-	n, err := s.create()
+	n, err := s.create("x")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,8 +108,8 @@ func TestInterruptedWriteRecovery(t *testing.T) {
 func TestConflictAndFailedSaveBlockNavigation(t *testing.T) {
 	s := testStore(t)
 	m, _ := newModel(s)
-	press(m, tea.KeyCtrlN)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("local")})
 	if err := os.WriteFile(filepath.Join(s.dir, m.notes[m.index].ID+".md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
@@ -135,7 +141,7 @@ func TestMarkdownRenderingAndSizes(t *testing.T) {
 	}
 	s := testStore(t)
 	m, _ := newModel(s)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	for _, size := range [][2]int{{20, 8}, {32, 10}, {80, 24}, {120, 40}} {
 		for mode := 0; mode < 3; mode++ {
 			m.mode = mode
@@ -161,7 +167,7 @@ func TestLockThemeExitAndAtomicSave(t *testing.T) {
 		t.Fatal("second writer allowed")
 	}
 	m, _ := newModel(s)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("final edit")})
 	_, cmd := m.Update(exitMsg{})
 	if cmd == nil || m.dirty {
@@ -206,7 +212,7 @@ func TestDataDirectory(t *testing.T) {
 func TestDeleteLastNoteAndRestart(t *testing.T) {
 	s := testStore(t)
 	m, _ := newModel(s)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	press(m, tea.KeyCtrlD)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
 	m.navigate(1)
@@ -256,7 +262,7 @@ func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
 func TestFailedSaveWritesRecoveryAndSecondQuitExits(t *testing.T) {
 	s := testStore(t)
 	m, _ := newModel(s)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("precious")})
 	if err := os.WriteFile(filepath.Join(s.dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
@@ -278,7 +284,7 @@ func TestFailedSaveWritesRecoveryAndSecondQuitExits(t *testing.T) {
 func TestSignalExitAfterFailedSaveKeepsRecovery(t *testing.T) {
 	s := testStore(t)
 	m, _ := newModel(s)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("unsaved")})
 	if err := os.WriteFile(filepath.Join(s.dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
@@ -313,7 +319,7 @@ func TestRecoveryFallsBackToTempDir(t *testing.T) {
 }
 func TestOversizedPasteRejected(t *testing.T) {
 	m, _ := newModel(testStore(t))
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("keep")})
 	for _, paste := range []string{strings.Repeat("x\n", maxLines), strings.Repeat("x", maxPasteBytes+1)} {
 		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(paste), Paste: true})
@@ -344,8 +350,8 @@ func TestCursorStartsAtTopAndThemeWhitespace(t *testing.T) {
 }
 func TestWordKeysMoveCursorNotNotes(t *testing.T) {
 	m, _ := newModel(testStore(t))
-	press(m, tea.KeyCtrlN)
-	press(m, tea.KeyCtrlN)
+	newNote(m)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("alpha beta")})
 	for _, k := range []tea.KeyMsg{{Type: tea.KeyLeft, Alt: true}, {Type: tea.KeyCtrlLeft}} {
 		m.Update(k)
@@ -367,7 +373,7 @@ func TestWordKeysMoveCursorNotNotes(t *testing.T) {
 }
 func TestStalePreviewRenderIgnored(t *testing.T) {
 	m, _ := newModel(testStore(t))
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("# Old")})
 	m.mode = 1 // keys reach the editor only outside preview mode
 	old := m.requestRender()

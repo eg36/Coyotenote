@@ -79,7 +79,7 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.editor.SetValue("# A quiet place\n\n**Write** something `small`.\n\n```go\nfmt.Println(\"hello\")\n```\n\n- [ ] Keep writing")
 	for _, theme := range []string{"dark", "light", "dark"} {
 		m.theme = theme
@@ -146,7 +146,7 @@ func TestFooterColorsAndAlerts(t *testing.T) {
 	if !strings.Contains(footer, lipgloss.ColorProfile().Color(p.accent).Sequence(true)) || !strings.Contains(footer, lipgloss.ColorProfile().Color(p.muted).Sequence(false)) {
 		t.Fatal("footer has no ANSI styling")
 	}
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	for _, state := range []struct {
 		status, badge string
@@ -172,7 +172,7 @@ func TestAppearanceWithoutColor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.editor.SetValue("# Title\n\n**Text** and `code`")
 	m.mode = 1
 	settle(m)
@@ -190,7 +190,7 @@ func TestAppearanceWithoutColor(t *testing.T) {
 func TestEditorHeadingColors(t *testing.T) {
 	trueColor(t)
 	m, _ := newModel(testStore(t))
-	press(m, tea.KeyCtrlN)
+	newNote(m)
 	m.editor.SetValue("# Title\n## Sub\nplain #tag")
 	p := paletteFor("dark")
 	for _, mode := range []int{0, 2} {

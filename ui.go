@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -41,13 +40,29 @@ const renderDelay = 150 * time.Millisecond
 
 func binding(keys ...string) key.Binding { return key.NewBinding(key.WithKeys(keys...)) }
 
-var keys = struct{ new, del, prev, next, mode, theme, save, help, quit, undo, picker key.Binding }{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q", "ctrl+c"), binding("ctrl+z"), binding("ctrl+o")}
+var keys = struct {
+	new, del, prev, next, mode, theme, save, help, quit, undo, picker key.Binding
+	rename, follow, back, backlinks                                   key.Binding
+}{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q", "ctrl+c"), binding("ctrl+z"), binding("ctrl+o"),
+	binding("ctrl+r"), binding("ctrl+g"), binding("ctrl+y"), binding("ctrl+l")}
 
 type model struct {
-	store                *store
-	notes                []note
-	trashed              []string
-	picker               *list.Model
+	store           *store
+	notes           []note
+	trashed         []string
+	picker          *list.Model
+	pickerBacklinks bool
+	// pickerFolder is the folder Ctrl+O browses; pickerSearch holds every
+	// listed note, for searching.
+	pickerFolder string
+	pickerSearch []list.Item
+	prompt       *namePrompt
+	complete     *completion
+	// dismissed is the row and column of a [[ whose suggestions Esc closed.
+	dismissed [2]int
+	// history holds notes left by jumps, for Ctrl+Y.
+	history              []string
+	backlinks            map[string][]string
 	index                int
 	editor               textarea.Model
 	preview              viewport.Model
@@ -77,8 +92,8 @@ func newModel(s *store) (*model, error) {
 	e.KeyMap.Paste.SetEnabled(false) // Use terminal bracketed paste; no desktop clipboard process.
 	e.KeyMap.WordForward.SetKeys("alt+right", "alt+f", "ctrl+right")
 	e.KeyMap.WordBackward.SetKeys("alt+left", "alt+b", "ctrl+left")
-	m := &model{store: s, notes: notes, editor: e, preview: viewport.New(40, 10), width: 80, height: 24, theme: "dark", status: "Saved"}
-	if b, err := os.ReadFile(filepath.Join(s.dir, "theme")); err == nil && strings.TrimSpace(string(b)) == "light" {
+	m := &model{store: s, notes: notes, editor: e, preview: viewport.New(40, 10), width: 80, height: 24, theme: "dark", status: "Saved", dismissed: [2]int{-1, -1}}
+	if b, err := os.ReadFile(filepath.Join(s.config, "theme")); err == nil && strings.TrimSpace(string(b)) == "light" {
 		m.theme = "light"
 	}
 	var warnings []string
@@ -97,6 +112,7 @@ func newModel(s *store) (*model, error) {
 	m.applyTheme()
 	m.loadNote()
 	m.resize()
+	m.reindex()
 	return m, nil
 }
 func (m *model) Init() tea.Cmd { return textarea.Blink }
@@ -116,6 +132,7 @@ func (m *model) loadNote() {
 	m.preview.SetContent("")
 	m.preview.GotoTop()
 	m.shown, m.pending = previewKey{}, previewKey{}
+	m.complete = nil
 	m.editor.Focus()
 }
 func (m *model) flush() error {
@@ -128,6 +145,7 @@ func (m *model) flush() error {
 		return err
 	}
 	m.notes[m.index].Body = body
+	m.reindex()
 	m.dirty = false
 	m.quitArmed = false
 	m.status = "Saved"
@@ -216,7 +234,25 @@ func renderMarkdown(body, theme string, width int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return r.Render(body)
+	out, err := r.Render(body)
+	return colorLinks(out, p), err
+}
+
+// colorLinks swaps markLinks' markers for underlined link colors: cyan for
+// existing notes, muted for missing ones.
+func colorLinks(out string, p palette) string {
+	open, missing, closing := "", "", ""
+	profile := lipgloss.ColorProfile()
+	if c := profile.Color(p.cyan); c != nil && c.Sequence(false) != "" {
+		open = "\x1b[" + c.Sequence(false) + ";4m"
+	}
+	if c := profile.Color(p.muted); c != nil && c.Sequence(false) != "" {
+		missing = "\x1b[" + c.Sequence(false) + ";4m"
+	}
+	if c := profile.Color(p.text); c != nil && c.Sequence(false) != "" {
+		closing = "\x1b[24;" + c.Sequence(false) + "m"
+	}
+	return strings.NewReplacer(linkOpen, open, missingOpen, missing, linkClose, closing).Replace(out)
 }
 func (m *model) previewVisible() bool { return len(m.notes) > 0 && (m.mode == 1 || m.split()) }
 
@@ -228,7 +264,7 @@ func (m *model) requestRender() tea.Cmd {
 		return nil
 	}
 	m.pending = k
-	body := m.editor.Value()
+	body := markLinks(m.editor.Value(), newResolver(m.notes), m.notes[m.index].ID)
 	return func() tea.Msg {
 		out, err := renderMarkdown(body, k.theme, k.width)
 		return renderedMsg{k, out, err}
@@ -282,6 +318,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.picker != nil {
 			return m, m.updatePicker(v)
 		}
+		if m.prompt != nil {
+			return m, m.updatePrompt(v)
+		}
+		if m.complete != nil {
+			if cmd, handled := m.updateCompletionKeys(v); handled {
+				return m, cmd
+			}
+		}
 		if m.confirm {
 			if v.String() == "y" {
 				err := m.store.trash(m.notes[m.index])
@@ -293,6 +337,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.notes = append(m.notes[:m.index], m.notes[m.index+1:]...)
 					m.index = max(0, min(m.index, len(m.notes)-1))
 					m.loadNote()
+					m.reindex()
 					m.status = "Moved to trash · Ctrl+Z undo"
 					if err != nil {
 						m.status += "; directory sync failed: " + err.Error()
@@ -329,34 +374,41 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.trashed = m.trashed[:len(m.trashed)-1]
 			m.notes = append(m.notes, n)
-			sort.Slice(m.notes, func(i, j int) bool { return m.notes[i].ID < m.notes[j].ID })
-			for i := range m.notes {
-				if m.notes[i].ID == id {
-					m.index = i
-					break
-				}
-			}
+			sortNotes(m.notes)
+			m.selectID(id)
 			m.loadNote()
+			m.reindex()
 			m.status = "Restored from trash"
 			if err != nil {
 				m.status += "; directory sync failed: " + err.Error()
 			}
 			return m, tea.Batch(textarea.Blink, m.requestRender())
 		case key.Matches(v, keys.new):
-			if m.flush() != nil {
+			folder := ""
+			if len(m.notes) > 0 {
+				folder = folderOf(m.notes[m.index].ID)
+			}
+			if folder != "" {
+				folder += "/"
+			}
+			return m, m.openPrompt(promptNew, folder)
+		case key.Matches(v, keys.rename):
+			if len(m.notes) == 0 {
 				return m, nil
 			}
-			n, err := m.store.create()
-			if err != nil {
-				m.status = err.Error()
-				return m, nil
+			n := m.notes[m.index]
+			name := n.ID
+			if legacyID.MatchString(n.ID) {
+				name = safeName(title(m.editor.Value()))
 			}
-			m.notes = append(m.notes, n)
-			m.index = len(m.notes) - 1
-			m.mode = 0
-			m.loadNote()
-			m.resize()
-			return m, textarea.Blink
+			return m, m.openPrompt(promptRename, name)
+		case key.Matches(v, keys.follow):
+			return m, m.followLink()
+		case key.Matches(v, keys.back):
+			m.back()
+			return m, m.requestRender()
+		case key.Matches(v, keys.backlinks):
+			return m, m.openBacklinks()
 		case key.Matches(v, keys.del):
 			if len(m.notes) > 0 && m.flush() == nil {
 				m.confirm = true
@@ -385,7 +437,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.theme == "light" {
 				theme = "dark"
 			}
-			if err := atomicWrite(m.store.dir, "theme", []byte(theme)); err != nil {
+			if err := atomicWrite(m.store.config, "theme", []byte(theme)); err != nil {
 				m.status = err.Error()
 			} else {
 				m.theme = theme
@@ -417,26 +469,33 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.editor, cmd = m.editor.Update(msg)
 	m.followCursor()
-	limited := m.editor.LineCount() >= maxLines
-	if before != m.editor.Value() {
-		m.dirty = true
-		m.quitArmed = false
-		m.status = "Unsaved…"
-		if limited {
-			m.status = "Note reached the 10,000-line limit; extra lines were not added"
-		}
-		m.revision++
-		rev := m.revision
-		save := tea.Tick(400*time.Millisecond, func(time.Time) tea.Msg { return saveMsg(rev) })
-		if !m.previewVisible() {
-			return m, tea.Batch(cmd, save)
-		}
-		return m, tea.Batch(cmd, save, tea.Tick(renderDelay, func(time.Time) tea.Msg { return renderTickMsg(rev) }))
+	if _, ok := msg.(tea.KeyMsg); ok {
+		m.updateCompletion()
 	}
-	if limited {
+	if before != m.editor.Value() {
+		return m, tea.Batch(cmd, m.edited())
+	}
+	if m.editor.LineCount() >= maxLines {
 		m.status = "Note reached the 10,000-line limit; extra lines were not added"
 	}
 	return m, cmd
+}
+
+// edited marks the editor changed and schedules the debounced save and preview.
+func (m *model) edited() tea.Cmd {
+	m.dirty = true
+	m.quitArmed = false
+	m.status = "Unsaved…"
+	if m.editor.LineCount() >= maxLines {
+		m.status = "Note reached the 10,000-line limit; extra lines were not added"
+	}
+	m.revision++
+	rev := m.revision
+	save := tea.Tick(400*time.Millisecond, func(time.Time) tea.Msg { return saveMsg(rev) })
+	if !m.previewVisible() {
+		return save
+	}
+	return tea.Batch(save, tea.Tick(renderDelay, func(time.Time) tea.Msg { return renderTickMsg(rev) }))
 }
 func (m *model) View() string {
 	p := paletteFor(m.theme)
@@ -450,11 +509,13 @@ func (m *model) View() string {
 			"\n\n" + pill("y", p.onPill, p.danger) + ink(p.muted).Render(" confirm   ") + pill("n / Esc", p.onPill, p.good) + ink(p.muted).Render(" cancel")
 	case m.picker != nil:
 		body = m.picker.View()
+	case m.prompt != nil:
+		body = m.promptView(p)
 	case m.help:
 		body = m.helpView(p)
 	case len(m.notes) == 0:
 		body = gradient("A quiet place for your next thought.", true, p.accent, p.pink, p.cyan) +
-			"\n\n" + pill("Ctrl+N", p.onPill, p.accent) + ink(p.muted).Render(" creates a note. Your first line becomes its title.")
+			"\n\n" + pill("Ctrl+N", p.onPill, p.accent) + ink(p.muted).Render(" creates a note. Folder/Name puts it in a folder.")
 	case m.mode == 1:
 		body = m.preview.View()
 	case m.split():
