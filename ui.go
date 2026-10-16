@@ -12,8 +12,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/styles"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 )
 
 type exitMsg struct{}
@@ -98,18 +99,49 @@ func (m *model) navigate(delta int) {
 	m.index = (m.index + delta + len(m.notes)) % len(m.notes)
 	m.loadNote()
 }
+func (m *model) split() bool { return m.mode == 2 && m.width >= 90 }
+
 func (m *model) resize() {
-	w := max(10, m.width-4)
-	if m.mode == 2 && m.width >= 90 {
-		w = (m.width - 6) / 2
+	w := max(1, m.width-4)
+	if m.split() {
+		w = max(1, (m.width-7)/2)
 	}
 	m.editor.SetWidth(w)
 	m.editor.SetHeight(max(1, m.height-7))
 	m.preview.Width = w
+	if m.split() {
+		m.preview.Width = max(1, m.width-7-w)
+	}
 	m.preview.Height = max(1, m.height-7)
 }
 func renderMarkdown(body, theme string, width int) (string, error) {
-	r, err := glamour.NewTermRenderer(glamour.WithStandardStyle(theme), glamour.WithWordWrap(max(10, width)), glamour.WithPreservedNewLines())
+	// Use explicit styles, with the same writing surface as the editor.
+	// Leave layout padding to the app, rather than Glamour's document margins.
+	style := styles.DarkStyleConfig
+	if theme == "light" {
+		style = styles.LightStyleConfig
+	}
+	p := paletteFor(theme)
+	zero := uint(0)
+	style.Document.Margin = &zero
+	style.Document.BlockPrefix = ""
+	style.Document.BlockSuffix = ""
+	style.Document.Color = &p.text
+	style.Document.BackgroundColor = &p.surface
+	style.Heading.Color = &p.cyan
+	style.H1.Color = &p.accent
+	style.H1.BackgroundColor = &p.surface
+	style.Code.BackgroundColor = &p.surface
+	// Named Chroma themes avoid Glamour's global first-theme-wins registry.
+	style.CodeBlock.Chroma = nil
+	style.CodeBlock.Theme = "github-dark"
+	if theme == "light" {
+		style.CodeBlock.Theme = "github"
+	}
+	if lipgloss.ColorProfile() == termenv.Ascii {
+		style.CodeBlock.Theme = ""
+	}
+	r, err := glamour.NewTermRenderer(glamour.WithStyles(style), glamour.WithWordWrap(max(10, width)), glamour.WithPreservedNewLines(), glamour.WithColorProfile(lipgloss.ColorProfile()))
 	if err != nil {
 		return "", err
 	}
@@ -251,64 +283,51 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 func (m *model) View() string {
+	p := paletteFor(m.theme)
 	if m.width < 32 || m.height < 10 {
-		return "Resize to at least 32×10.\nCtrl+S save · Ctrl+Q quit"
+		return paintBlock("Resize to at least 32×10.\nCtrl+S save · Ctrl+Q quit", max(1, m.width), max(1, m.height), p.text, p.surface)
 	}
-	accent := "141"
-	if m.theme == "light" {
-		accent = "62"
-	}
-	heading := lipgloss.NewStyle().Foreground(lipgloss.Color(accent)).Bold(true)
-	count := "No notes"
-	if len(m.notes) > 0 {
-		count = fmt.Sprintf("%d/%d  %s", m.index+1, len(m.notes), title(m.editor.Value()))
-	}
-	mode := []string{"EDIT", "PREVIEW", "SPLIT"}[m.mode]
-	if m.mode == 2 && m.width < 90 {
-		mode = "EDIT (split needs 90 columns)"
-	}
-	top := heading.Render("coyotenote") + "  " + count + "  · " + mode + " · " + m.theme
 	var body string
 	switch {
 	case m.confirm:
-		body = "Delete this note permanently?\n\ny confirm · n / Esc cancel"
+		body = ink(p.danger).Bold(true).Render("Delete this note permanently?") + "\n\ny confirm · n / Esc cancel"
 	case m.help:
-		body = "KEYS\nCtrl+N  new note    Ctrl+D  delete (confirm)\nAlt+←/→ or Ctrl+←/→  previous / next note\nCtrl+P  editor → preview → split\nCtrl+T  dark / light theme    Ctrl+S  save now\nCtrl+Q / Ctrl+C  save and quit    F1 / Esc  close help\nPreview: ↑/↓, PgUp/PgDn, Home/End\nSplit: type in editor; switch to preview to scroll.\nEditor: arrows, Home/End, normal text and paste."
+		body = ink(p.accent).Bold(true).Render("KEYS") + "\nCtrl+N  new note    Ctrl+D  delete (confirm)\nAlt+←/→ or Ctrl+←/→  previous / next note\nCtrl+P  editor → preview → split\nCtrl+T  dark / light theme    Ctrl+S  save now\nCtrl+Q / Ctrl+C  save and quit    F1 / Esc  close help\nPreview: ↑/↓, PgUp/PgDn, Home/End\nSplit: type in editor; switch to preview to scroll.\nEditor: arrows, Home/End, normal text and paste."
 	case len(m.notes) == 0:
-		body = "A quiet place for your next thought.\n\nCtrl+N creates a note. Your first line becomes its title."
+		body = ink(p.accent).Render("A quiet place for your next thought.") + "\n\nCtrl+N creates a note. Your first line becomes its title."
 	case m.mode == 1:
 		m.render()
 		body = m.preview.View()
-	case m.mode == 2 && m.width >= 90:
+	case m.split():
 		m.render()
-		body = lipgloss.JoinHorizontal(lipgloss.Top, m.editor.View(), " │ ", m.preview.View())
+		divider := ink(p.line).Render(strings.TrimSuffix(strings.Repeat(" │ \n", m.editor.Height()), "\n"))
+		body = lipgloss.JoinHorizontal(lipgloss.Top, m.editor.View(), divider, m.preview.View())
 	default:
 		body = m.editor.View()
 	}
-	body = lipgloss.NewStyle().Height(m.height - 5).MaxHeight(m.height - 5).Render(body)
-	footer := "^N new · ^D delete · Alt+←/→ notes · ^P view · ^T theme · F1 help · ^Q quit"
-	if m.width < 80 {
-		footer = "^N new · ^P view · F1 keys · ^Q quit"
-	}
-	lines := strings.Split(top+"\n"+body+"\n"+m.status+"\n"+footer, "\n")
-	for i, line := range lines {
-		lines[i] = ansi.Truncate(line, m.width, "")
-	}
-	fg, bg := "252", "235"
-	if m.theme == "light" {
-		fg, bg = "235", "255"
-	}
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(fg)).Background(lipgloss.Color(bg)).Width(m.width).Height(m.height).Render(strings.Join(lines, "\n"))
+	// Seven chrome rows: header, spacer, pane labels, spacer, status, keys, footer padding.
+	// Every surface is sized explicitly, including blank cells and nested ANSI resets.
+	body = paintBlock(body, m.width-4, m.height-7, p.text, p.surface)
+	body = lipgloss.NewStyle().Padding(0, 2).Render(body)
+	return strings.Join([]string{
+		m.header(p),
+		paintBlock("", m.width, 1, p.text, p.surface),
+		m.paneLabels(p),
+		paintBlock(body, m.width, m.height-7, p.text, p.surface),
+		paintBlock("", m.width, 1, p.text, p.surface),
+		m.statusLine(p),
+		m.shortcutLine(p),
+		paintBlock("", m.width, 1, p.text, p.chrome),
+	}, "\n")
 }
 
 func (m *model) applyTheme() {
-	fg, bg, muted := "252", "235", "245"
-	if m.theme == "light" {
-		fg, bg, muted = "235", "255", "242"
-	}
-	base := lipgloss.NewStyle().Foreground(lipgloss.Color(fg)).Background(lipgloss.Color(bg))
-	style := textarea.Style{Base: base, Text: base, CursorLine: base, Placeholder: base.Foreground(lipgloss.Color(muted)), EndOfBuffer: base}
+	p := paletteFor(m.theme)
+	base := ink(p.text).Background(lipgloss.Color(p.surface))
+	style := textarea.Style{Base: base, Text: base, CursorLine: base, Placeholder: base.Foreground(lipgloss.Color(p.muted)), EndOfBuffer: base}
 	m.editor.FocusedStyle = style
 	m.editor.BlurredStyle = style
-	m.editor.Cursor.Style = base
+	m.editor.Cursor.Style = ink(p.accent)
+	m.editor.Cursor.TextStyle = base
+	m.renderKey = ""
 }

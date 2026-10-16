@@ -4,6 +4,11 @@ A small, local-first Markdown notebook for the terminal. Write without leaving t
 keyboard, cycle through notes, and switch between source, rendered preview and a
 wide split view. No account, server or runtime network access.
 
+The padded header and labeled panes keep writing separate from navigation. Both
+manual themes share one consistent editor/preview surface. A colored shortcut
+footer includes a subtle violet-to-cyan accent, word count, and save indicator
+(● saved, ○ unsaved, ! warning/error); status text remains visible without color.
+
 ## Build and run
 
 Requires Go 1.24 or newer, Linux or macOS, and a UTF-8 terminal.

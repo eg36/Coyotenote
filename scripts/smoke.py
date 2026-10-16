@@ -17,6 +17,8 @@ def start(directory):
     pid, fd = pty.fork()
     if pid == 0:
         os.environ['TERM'] = 'xterm-256color'
+        os.environ['COLORTERM'] = 'truecolor'
+        os.environ.pop('NO_COLOR', None)
         os.execv(binary, [binary, '-data-dir', directory])
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 100, 0, 0))
     return pid, fd
@@ -33,6 +35,8 @@ def wait_for(fd, predicate, timeout=8):
             output += chunk
             if b'\x1b]11;' in chunk:
                 os.write(fd, b'\x1b]11;rgb:1111/1111/1111\x1b\\')
+            if b'\x1b[6n' in chunk:
+                os.write(fd, b'\x1b[1;1R')
         if predicate(output):
             return output
     raise AssertionError('terminal or persistence check timed out: ' + repr(output[-300:]))
@@ -60,6 +64,13 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
         wait_for(fd,saved)
         os.write(fd,b'\x10') # preview
         wait_for(fd,lambda out:b'PREVIEW' in out)
+        os.write(fd,b'\x10') # split
+        wait_for(fd,lambda out:b'SPLIT' in out)
+        os.write(fd,b'\x14') # light theme, including preview
+        wait_for(fd,lambda out:b'light' in out)
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 15, 40, 0, 0))
+        os.kill(pid,signal.SIGWINCH)
+        wait_for(fd,lambda out:b'split at 90+' in out and b'F1' in out)
         os.kill(pid,signal.SIGKILL)
         os.waitpid(pid,0)
     finally:
@@ -81,4 +92,4 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
         os.close(fd)
         try: os.kill(pid,signal.SIGKILL)
         except ProcessLookupError: pass
-print('PASS: real TUI create, edit, autosave, preview, SIGKILL recovery and SIGTERM flush')
+print('PASS: real TUI create, edit, autosave, preview/split, theme/resize, SIGKILL recovery and SIGTERM flush')

@@ -56,3 +56,17 @@ Go unit tests, the race detector, `go vet`, and a native build passed. The Pytho
 PTY smoke test exercised actual terminal input, autosave, Markdown preview,
 SIGKILL/reopen recovery and SIGTERM flushing. Linux was executed; macOS uses the
 same Unix lock/filesystem APIs but has not been exercised on a Mac.
+
+## Terminal polish
+
+Lip Gloss handles explicit shared surfaces, a padded header, pane labels and a
+full-height split divider. Bubbles help renders colored shortcut hints from the
+actual key bindings. The footer includes a static violet-to-cyan accent and word
+count; no animation loop or added module is required. Glamour uses explicit dark
+and light styles, aligned document margins, and named Chroma themes so code colors
+also change when switching themes. Surface rendering restores background colors
+after nested ANSI resets to avoid showing the terminal's default background.
+
+Appearance checks interpret background colors at every displayed cell in both
+themes and across terminal sizes. The PTY smoke test also exercises split view,
+theme switching and resizing below the split threshold.
