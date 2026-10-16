@@ -35,7 +35,11 @@ type store struct {
 
 func dataDir() (string, error) {
 	if runtime.GOOS == "windows" {
-		return "", errors.New("this version supports Linux and macOS")
+		base, err := os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(base, "coyotenote"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -123,18 +127,10 @@ func atomicWrite(dir, name string, b []byte) error {
 	if err = f.Close(); err != nil {
 		return err
 	}
-	if err = os.Rename(tmp, filepath.Join(dir, name)); err != nil {
+	if err = renameReplace(tmp, filepath.Join(dir, name)); err != nil {
 		return err
 	}
 	return syncDir(dir)
-}
-func syncDir(dir string) error {
-	f, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return f.Sync()
 }
 func (s *store) create() (note, error) {
 	var id [8]byte

@@ -1,4 +1,4 @@
-//go:build !unix
+//go:build !unix && !windows
 
 package main
 
@@ -7,6 +7,6 @@ import (
 	"os"
 )
 
-// Only Linux and macOS are supported; this keeps other platforms compiling.
+// Keep platforms without a supported file lock compiling.
 func lockFile(*os.File) error   { return errors.New("file locking is not supported on this platform") }
 func unlockFile(*os.File) error { return nil }

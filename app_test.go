@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -183,6 +184,18 @@ func TestLockThemeExitAndAtomicSave(t *testing.T) {
 	}
 }
 func TestDataDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Setenv("APPDATA", t.TempDir())
+		base, err := os.UserConfigDir()
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir, err := dataDir()
+		if err != nil || dir != filepath.Join(base, "coyotenote") {
+			t.Fatal(dir, err)
+		}
+		return
+	}
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	dir, err := dataDir()
 	if err != nil || filepath.Base(dir) != "coyotenote" {
@@ -213,8 +226,14 @@ func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	unsafeNames := []string{"long.md", "binary.md"}
 	if err := os.Symlink(filepath.Join(s.dir, "good.md"), filepath.Join(s.dir, "link.md")); err != nil {
-		t.Fatal(err)
+		if runtime.GOOS != "windows" {
+			t.Fatal(err)
+		}
+		t.Logf("skipping symlink check: %v", err)
+	} else {
+		unsafeNames = append(unsafeNames, "link.md")
 	}
 	m, err := newModel(s)
 	if err != nil {
@@ -223,7 +242,7 @@ func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
 	if len(m.notes) != 1 || m.notes[0].ID != "good" {
 		t.Fatalf("valid note not loaded: %v", m.notes)
 	}
-	for _, name := range []string{"long.md", "binary.md", "link.md"} {
+	for _, name := range unsafeNames {
 		if !strings.Contains(m.status, name) {
 			t.Fatalf("no warning for %s: %q", name, m.status)
 		}
@@ -272,6 +291,9 @@ func TestSignalExitAfterFailedSaveKeepsRecovery(t *testing.T) {
 	}
 }
 func TestRecoveryFallsBackToTempDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows chmod does not restrict directory writes")
+	}
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores directory permissions")
 	}

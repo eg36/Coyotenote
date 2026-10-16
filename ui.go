@@ -1,13 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,11 +41,13 @@ const renderDelay = 150 * time.Millisecond
 
 func binding(keys ...string) key.Binding { return key.NewBinding(key.WithKeys(keys...)) }
 
-var keys = struct{ new, del, prev, next, mode, theme, save, help, quit key.Binding }{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q", "ctrl+c")}
+var keys = struct{ new, del, prev, next, mode, theme, save, help, quit, undo, picker key.Binding }{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q", "ctrl+c"), binding("ctrl+z"), binding("ctrl+o")}
 
 type model struct {
 	store                *store
 	notes                []note
+	trashed              []string
+	picker               *list.Model
 	index                int
 	editor               textarea.Model
 	preview              viewport.Model
@@ -170,6 +175,9 @@ func (m *model) resize() {
 		m.preview.Width = max(1, m.width-7-w)
 	}
 	m.preview.Height = max(1, m.height-7)
+	if m.picker != nil {
+		m.picker.SetSize(max(1, m.width-4), max(1, m.height-7))
+	}
 }
 func renderMarkdown(body, theme string, width int) (string, error) {
 	// Use explicit styles, with the same writing surface as the editor.
@@ -265,20 +273,30 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.shown = v.key
 		m.preview.SetContent(v.out)
+		m.followCursor()
 		return m, nil
 	case tea.KeyMsg:
 		if key.Matches(v, keys.quit) {
 			return m, m.quit()
 		}
+		if m.picker != nil {
+			return m, m.updatePicker(v)
+		}
 		if m.confirm {
 			if v.String() == "y" {
-				if err := m.store.remove(m.notes[m.index]); err != nil {
+				err := m.store.trash(m.notes[m.index])
+				var moved movedSyncError
+				if err != nil && !errors.As(err, &moved) {
 					m.status = err.Error()
 				} else {
+					m.trashed = append(m.trashed, m.notes[m.index].ID)
 					m.notes = append(m.notes[:m.index], m.notes[m.index+1:]...)
 					m.index = max(0, min(m.index, len(m.notes)-1))
 					m.loadNote()
-					m.status = "Deleted"
+					m.status = "Moved to trash · Ctrl+Z undo"
+					if err != nil {
+						m.status += "; directory sync failed: " + err.Error()
+					}
 				}
 				m.confirm = false
 			} else if v.String() == "n" || v.String() == "esc" {
@@ -297,6 +315,33 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		switch {
+		case key.Matches(v, keys.picker):
+			return m, m.openPicker()
+		case key.Matches(v, keys.undo) && len(m.trashed) > 0:
+			if m.flush() != nil {
+				return m, nil
+			}
+			id := m.trashed[len(m.trashed)-1]
+			n, err := m.store.restore(id)
+			if err != nil && n.ID == "" {
+				m.status = err.Error()
+				return m, nil
+			}
+			m.trashed = m.trashed[:len(m.trashed)-1]
+			m.notes = append(m.notes, n)
+			sort.Slice(m.notes, func(i, j int) bool { return m.notes[i].ID < m.notes[j].ID })
+			for i := range m.notes {
+				if m.notes[i].ID == id {
+					m.index = i
+					break
+				}
+			}
+			m.loadNote()
+			m.status = "Restored from trash"
+			if err != nil {
+				m.status += "; directory sync failed: " + err.Error()
+			}
+			return m, tea.Batch(textarea.Blink, m.requestRender())
 		case key.Matches(v, keys.new):
 			if m.flush() != nil {
 				return m, nil
@@ -349,6 +394,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.requestRender()
 		}
 	}
+	if m.picker != nil {
+		return m, m.updatePicker(msg)
+	}
 	if len(m.notes) == 0 {
 		return m, nil
 	}
@@ -368,10 +416,15 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	before := m.editor.Value()
 	var cmd tea.Cmd
 	m.editor, cmd = m.editor.Update(msg)
+	m.followCursor()
+	limited := m.editor.LineCount() >= maxLines
 	if before != m.editor.Value() {
 		m.dirty = true
 		m.quitArmed = false
 		m.status = "Unsaved…"
+		if limited {
+			m.status = "Note reached the 10,000-line limit; extra lines were not added"
+		}
 		m.revision++
 		rev := m.revision
 		save := tea.Tick(400*time.Millisecond, func(time.Time) tea.Msg { return saveMsg(rev) })
@@ -379,6 +432,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmd, save)
 		}
 		return m, tea.Batch(cmd, save, tea.Tick(renderDelay, func(time.Time) tea.Msg { return renderTickMsg(rev) }))
+	}
+	if limited {
+		m.status = "Note reached the 10,000-line limit; extra lines were not added"
 	}
 	return m, cmd
 }
@@ -390,8 +446,10 @@ func (m *model) View() string {
 	var body string
 	switch {
 	case m.confirm:
-		body = pill("DELETE", p.onPill, p.danger) + " " + ink(p.danger).Bold(true).Render("Delete this note permanently?") +
+		body = pill("TRASH", p.onPill, p.warn) + " " + ink(p.danger).Bold(true).Render("Move this note to trash?") +
 			"\n\n" + pill("y", p.onPill, p.danger) + ink(p.muted).Render(" confirm   ") + pill("n / Esc", p.onPill, p.good) + ink(p.muted).Render(" cancel")
+	case m.picker != nil:
+		body = m.picker.View()
 	case m.help:
 		body = m.helpView(p)
 	case len(m.notes) == 0:
@@ -400,9 +458,9 @@ func (m *model) View() string {
 	case m.mode == 1:
 		body = m.preview.View()
 	case m.split():
-		body = lipgloss.JoinHorizontal(lipgloss.Top, colorHeadings(m.editor.View(), p), divider(p, m.editor.Height()), m.preview.View())
+		body = lipgloss.JoinHorizontal(lipgloss.Top, colorMarkdown(m.editor.View(), p), divider(p, m.editor.Height()), m.preview.View())
 	default:
-		body = colorHeadings(m.editor.View(), p)
+		body = colorMarkdown(m.editor.View(), p)
 	}
 	// Seven chrome rows: header, spacer, pane labels, spacer, status, keys, footer padding.
 	// Every surface is sized explicitly, including blank cells and nested ANSI resets.
@@ -428,4 +486,13 @@ func (m *model) applyTheme() {
 	m.editor.BlurredStyle = style
 	m.editor.Cursor.Style = ink(p.accent)
 	m.editor.Cursor.TextStyle = base
+}
+
+// Split preview tracks the logical cursor; full preview keeps manual scrolling.
+func (m *model) followCursor() {
+	if !m.split() {
+		return
+	}
+	ratio := float64(m.editor.Line()) / float64(max(1, m.editor.LineCount()-1))
+	m.preview.SetYOffset(int(ratio * float64(max(0, m.preview.TotalLineCount()-m.preview.Height))))
 }

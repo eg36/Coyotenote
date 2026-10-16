@@ -90,8 +90,12 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 			allowed[bgOf(c)] = true
 		}
 		for _, size := range [][2]int{{32, 10}, {40, 15}, {79, 24}, {80, 24}, {90, 24}, {101, 30}, {120, 40}} {
-			for mode := 0; mode < 3; mode++ {
-				m.mode = mode
+			for mode := 0; mode < 4; mode++ {
+				m.mode = min(mode, 2)
+				m.picker = nil
+				if mode == 3 {
+					m.openPicker()
+				}
 				m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 				settle(m)
 				view := m.View()
@@ -123,7 +127,7 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 				if !hint.MatchString(lines[size[1]-2]) || !strings.Contains(lines[size[1]-2], "^Q  quit") {
 					t.Fatal("essential hints clipped", lines[size[1]-2])
 				}
-				if m.split() {
+				if m.split() && m.picker == nil {
 					for y := 3; y < size[1]-4; y++ {
 						if !strings.Contains(lines[y], "│") {
 							t.Fatalf("divider missing on row %d", y)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real-terminal smoke test using only Python's standard library (Linux/macOS)."""
+"""Real-terminal smoke test using only Python's standard library (Linux only)."""
 import fcntl
 import os
 import pathlib

@@ -143,6 +143,8 @@ func (m *model) header(p palette) string {
 	left := mark + "  " + ink(p.blue).Bold(true).Render(position)
 	mode, color := "EDIT", p.good
 	switch {
+	case m.picker != nil:
+		mode, color = "NOTES", p.pink
 	case m.mode == 1:
 		mode, color = "PREVIEW", p.cyan
 	case m.split():
@@ -177,6 +179,9 @@ func (m *model) paneLabels(p palette) string {
 	} else if m.mode == 2 {
 		line += "  " + ink(p.muted).Italic(true).Render("split at 90+ columns")
 	}
+	if m.picker != nil {
+		line = ink(p.pink).Bold(true).Render("☰ NOTES")
+	}
 	return paintBlock("  "+line, m.width, 1, p.text, p.surface)
 }
 
@@ -187,26 +192,70 @@ func (p palette) headingColor(level int) string {
 	return []string{p.accent, p.pink, p.blue, p.good, p.warn, p.muted}[level-1]
 }
 
-// colorHeadings tints Markdown heading lines in the editor's rendered view. The
-// textarea cannot style its own text, so the heading color and bold are
-// reapplied after every SGR on those lines, keeping the surface background.
-// A heading that soft-wraps is only colored on its first row.
-func colorHeadings(view string, p palette) string {
+var listMarker = regexp.MustCompile(`^\s*([-*+]|\d+\.)\s`)
+var quoteLine = regexp.MustCompile(`^\s*>`)
+var inlineMarkdown = regexp.MustCompile("`[^`]+`|\\*\\*[^*]+\\*\\*")
+
+// tintMarkdown reapplies the foreground after nested textarea cursor styles,
+// preserving their backgrounds so the cursor remains visible.
+func tintMarkdown(line, color, attributes string) string {
+	c := lipgloss.ColorProfile().Color(color)
+	if c == nil || c.Sequence(false) == "" {
+		return line
+	}
+	tint := "\x1b[" + c.Sequence(false) + attributes + "m"
+	return tint + sgr.ReplaceAllStringFunc(line, func(seq string) string { return seq + tint }) + "\x1b[0m"
+}
+
+// colorMarkdown works on display rows. Fenced blocks and wrapped heading
+// continuations need logical lines above the viewport, which textarea hides;
+// they intentionally receive no special handling here.
+func colorMarkdown(view string, p palette) string {
 	lines := strings.Split(view, "\n")
 	for i, line := range lines {
-		match := headingLine.FindStringSubmatch(ansi.Strip(line))
-		if match == nil {
+		plain := ansi.Strip(line)
+		if match := headingLine.FindStringSubmatch(plain); match != nil {
+			lines[i] = tintMarkdown(line, p.headingColor(len(match[1])), ";1")
 			continue
 		}
-		c := lipgloss.ColorProfile().Color(p.headingColor(len(match[1])))
-		if c == nil || c.Sequence(false) == "" {
+		if quoteLine.MatchString(plain) {
+			lines[i] = tintMarkdown(line, p.muted, ";3")
 			continue
 		}
-		tint := "\x1b[" + c.Sequence(false) + ";1m"
-		lines[i] = tint + sgr.ReplaceAllStringFunc(line, func(seq string) string { return seq + tint })
+		type span struct {
+			start, end        int
+			color, attributes string
+		}
+		spans := []span{}
+		if match := listMarker.FindStringSubmatchIndex(plain); match != nil {
+			spans = append(spans, span{match[2], match[3], p.accent, ""})
+		}
+		for _, match := range inlineMarkdown.FindAllStringIndex(plain, -1) {
+			color, attributes := p.cyan, ""
+			if strings.HasPrefix(plain[match[0]:], "**") {
+				color, attributes = p.accent, ";1"
+			}
+			spans = append(spans, span{match[0], match[1], color, attributes})
+		}
+		if len(spans) == 0 {
+			continue
+		}
+		var out strings.Builder
+		column := 0
+		for _, span := range spans {
+			start, end := ansi.StringWidth(plain[:span.start]), ansi.StringWidth(plain[:span.end])
+			out.WriteString(ansi.Cut(line, column, start))
+			out.WriteString(tintMarkdown(ansi.Cut(line, start, end), span.color, span.attributes))
+			column = end
+		}
+		out.WriteString(ansi.Cut(line, column, ansi.StringWidth(line)))
+		lines[i] = out.String()
 	}
 	return strings.Join(lines, "\n")
 }
+
+// colorHeadings keeps existing callers using the complete editor highlighting.
+func colorHeadings(view string, p palette) string { return colorMarkdown(view, p) }
 
 // divider draws the split-view rule as a vertical violet-to-cyan gradient.
 func divider(p palette, rows int) string {
@@ -233,8 +282,8 @@ func (m *model) saveIndicator(p palette) string {
 	return ink(color).Bold(true).Render(icon + " " + label)
 }
 
-// statusLine shows messages worth reading (errors, warnings, "Deleted"); the
-// routine save state lives in the header so the bottom panel stays calm.
+// statusLine keeps errors, warnings and trash feedback visible; routine save
+// state lives in the header so the bottom panel stays calm.
 func (m *model) statusLine(p palette) string {
 	cells := 4
 	if m.width >= 64 {
@@ -243,8 +292,8 @@ func (m *model) statusLine(p palette) string {
 	left := aurora(p, cells)
 	switch {
 	case m.status == "Saved" || m.status == "Unsaved…":
-	case m.status == "Deleted":
-		left += "  " + ink(p.muted).Render("· Deleted")
+	case m.status == "Moved to trash · Ctrl+Z undo":
+		left += "  " + ink(p.muted).Render("· "+m.status)
 	case strings.Contains(m.status, "FAILED") || strings.HasPrefix(m.status, "Paste rejected"):
 		left += "  " + pill("! "+m.status, p.onPill, p.danger)
 	default:
@@ -261,7 +310,7 @@ type keyHint struct {
 
 func (m *model) shortcutLine(p palette) string {
 	hints := []keyHint{
-		{"^N", "new", 3}, {"^D", "delete", 1}, {"Alt+↑↓", "notes", 2}, {"^P", "view", 2},
+		{"^Z", "undo", 0}, {"^N", "new", 3}, {"^O", "find", 3}, {"^D", "delete", 1}, {"Alt+↑↓", "notes", 2}, {"^P", "view", 2},
 		{"^T", "theme", 1}, {"^S", "save", 0}, {"F1", "keys", 9}, {"^Q", "quit", 9},
 	}
 	colors := p.rainbow()
@@ -302,7 +351,7 @@ func (m *model) shortcutLine(p palette) string {
 // helpView lists every key with a colored key column.
 func (m *model) helpView(p palette) string {
 	rows := [][2]string{
-		{"Ctrl+N", "new note"}, {"Ctrl+D", "delete (asks first)"}, {"Alt+↑/↓", "previous / next note"},
+		{"Ctrl+N", "new note"}, {"Ctrl+O", "find a note"}, {"Ctrl+Z", "undo move to trash"}, {"Ctrl+D", "move to trash (asks first)"}, {"Alt+↑/↓", "previous / next note"},
 		{"Ctrl+PgUp/PgDn", "previous / next note"}, {"Ctrl+P", "editor → preview → split"},
 		{"Ctrl+T", "dark / light theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q / Ctrl+C", "save and quit"},
 		{"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},

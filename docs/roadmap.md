@@ -3,6 +3,15 @@
 _Planned 2026-10-16 from commit `bdb5763`. Co-authored by Claude Opus 5.5 (Claude Code) with eg36.
 Written for an agent (e.g. Codex) to implement task by task without further context._
 
+## Implementation status (2026-10-16)
+
+Tasks 1–6b are implemented locally. Optional 6c remains a documented limitation.
+Local validation is recorded in `docs/behavior.md`; native Windows console checks,
+GitHub CI execution and publishing the first release remain external follow-up.
+Bubbles list requires its existing upstream dependency `github.com/sahilm/fuzzy`;
+this indirect module and its checksums were added to enable the planned picker.
+Undo retains failed restores and reconciles completed moves with directory-sync warnings.
+
 **Target platforms: Linux and Windows.** macOS is out of scope for now: leave the existing
 `darwin` code paths alone, but don't test, document or design for them.
 

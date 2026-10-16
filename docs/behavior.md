@@ -83,3 +83,37 @@ after nested ANSI resets to avoid showing the terminal's default background.
 Appearance checks interpret background colors at every displayed cell in both
 themes and across terminal sizes. The PTY smoke test also exercises split view,
 theme switching and resizing below the split threshold.
+
+## Roadmap implementation (2026-10)
+
+CI checks Linux formatting, vet, race tests, build and PTY smoke; Windows runs
+vet, tests and build. Version tags build Linux/Windows amd64/arm64 archives and
+SHA256SUMS, then publish a GitHub release. Workflow execution needs GitHub runners.
+
+Windows stores notes under `%AppData%\coyotenote`, locks the notebook exclusively,
+and retries replacement rename for transient sharing/access errors. Directory
+sync is unavailable on Windows. Console close recovery requires a manual Windows
+Terminal check; cross-compilation does not validate console lifecycle behavior.
+Unbracketed input at the textarea line limit now shows a warning.
+
+Confirmed deletion moves notes to `.trash/`, which startup ignores. Ctrl+Z restores
+in reverse deletion order for the current session, refuses an existing destination,
+and keeps failed restores available to retry. Trash is never cleared automatically.
+
+Ctrl+O opens a note picker with the current note selected. Typing immediately
+filters fuzzy titles, followed by case-insensitive body substring matches. Results
+include a body excerpt and word count. Arrows select; Enter saves current edits
+before switching. Save failure keeps the picker open. Escape clears a nonempty
+filter, then closes without switching.
+
+Split preview follows the editor cursor proportionally after movement and rendering;
+full preview remains manually scrollable. Editor highlighting includes list markers,
+blockquotes, inline code and bold text, preserving the cursor background. Fenced
+code and soft-wrapped heading continuation highlighting remain limitations.
+
+Local validation passed: `gofmt -l .`, `go vet ./...`,
+`go test -race -count=1 ./...`, Linux build and PTY smoke. Windows amd64
+binary and test suite cross-compile; Linux arm64 and Windows arm64 release targets
+build with CGO disabled. A stamped Linux build prints `coyotenote v0.1.0`.
+GitHub jobs, published release artifacts and native Windows manual checks have
+not been executed in this workspace.
