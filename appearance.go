@@ -250,12 +250,7 @@ func (m *model) statusLine(p palette) string {
 	default:
 		left += "  " + ink(p.warn).Render("! "+m.status)
 	}
-	right := ""
-	if m.width >= 64 {
-		words := len(strings.Fields(m.editor.Value()))
-		right = ink(p.cyan).Bold(true).Render(strconv.Itoa(words)) + ink(p.muted).Render(" words · ") + ink(p.good).Bold(true).Render("LOCAL")
-	}
-	return paintBlock("  "+joinEdges(left, right, m.width-4), m.width, 1, p.text, p.chrome)
+	return paintBlock("  "+left, m.width, 1, p.text, p.chrome)
 }
 
 // keyHint is one footer entry; lower rank is dropped first when space runs out.
@@ -277,8 +272,18 @@ func (m *model) shortcutLine(p palette) string {
 		}
 		return strings.Join(parts, "  ")
 	}
+	// The word count sits on the same row, right-aligned, when there is room.
+	right := ""
+	if m.width >= 64 {
+		words := len(strings.Fields(m.editor.Value()))
+		right = ink(p.cyan).Bold(true).Render(strconv.Itoa(words)) + ink(p.muted).Render(" words · ") + ink(p.good).Bold(true).Render("LOCAL")
+	}
+	room := m.width - 4
+	if right != "" {
+		room -= ansi.StringWidth(right) + 2
+	}
 	line := render(hints)
-	for ansi.StringWidth(line) > m.width-4 && len(hints) > 2 {
+	for ansi.StringWidth(line) > room && len(hints) > 2 {
 		drop := 0
 		for i, h := range hints {
 			if h.rank < hints[drop].rank {
@@ -287,6 +292,9 @@ func (m *model) shortcutLine(p palette) string {
 		}
 		hints = append(hints[:drop], hints[drop+1:]...)
 		line = render(hints)
+	}
+	if right != "" {
+		line = joinEdges(line, right, m.width-4)
 	}
 	return paintBlock("  "+line, m.width, 1, p.text, p.chrome)
 }
