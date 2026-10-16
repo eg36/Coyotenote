@@ -4,6 +4,7 @@ import fcntl
 import os
 import pathlib
 import pty
+import re
 import select
 import signal
 import struct
@@ -37,7 +38,8 @@ def wait_for(fd, predicate, timeout=8):
                 os.write(fd, b'\x1b]11;rgb:1111/1111/1111\x1b\\')
             if b'\x1b[6n' in chunk:
                 os.write(fd, b'\x1b[1;1R')
-        if predicate(output):
+        # Match on visible text: gradients put color codes between letters.
+        if predicate(re.sub(rb'\x1b\[[0-9;:?]*[A-Za-z]', b'', output)):
             return output
     raise AssertionError('terminal or persistence check timed out: ' + repr(output[-300:]))
 

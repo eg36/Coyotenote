@@ -186,8 +186,14 @@ func renderMarkdown(body, theme string, width int) (string, error) {
 	style.Document.Color = &p.text
 	style.Document.BackgroundColor = &p.surface
 	style.Heading.Color = &p.cyan
-	style.H1.Color = &p.accent
-	style.H1.BackgroundColor = &p.surface
+	// H1 is a badge; lower levels step through the accent colors.
+	style.H1.Color = &p.onPill
+	style.H1.BackgroundColor = &p.accent
+	h2, h3, h4, h5, h6 := p.headingColor(2), p.headingColor(3), p.headingColor(4), p.headingColor(5), p.headingColor(6)
+	style.H2.Color, style.H3.Color, style.H4.Color, style.H5.Color, style.H6.Color = &h2, &h3, &h4, &h5, &h6
+	style.Link.Color = &p.blue
+	style.LinkText.Color = &p.cyan
+	style.Strong.Color = &p.warn
 	style.Code.BackgroundColor = &p.surface
 	// Named Chroma themes avoid Glamour's global first-theme-wins registry.
 	style.CodeBlock.Chroma = nil
@@ -384,18 +390,19 @@ func (m *model) View() string {
 	var body string
 	switch {
 	case m.confirm:
-		body = ink(p.danger).Bold(true).Render("Delete this note permanently?") + "\n\ny confirm · n / Esc cancel"
+		body = pill("DELETE", p.onPill, p.danger) + " " + ink(p.danger).Bold(true).Render("Delete this note permanently?") +
+			"\n\n" + pill("y", p.onPill, p.danger) + ink(p.muted).Render(" confirm   ") + pill("n / Esc", p.onPill, p.good) + ink(p.muted).Render(" cancel")
 	case m.help:
-		body = ink(p.accent).Bold(true).Render("KEYS") + "\nCtrl+N  new note    Ctrl+D  delete (confirm)\nAlt+↑/↓ or Ctrl+PgUp/PgDn  previous / next note\nCtrl+P  editor → preview → split\nCtrl+T  dark / light theme    Ctrl+S  save now\nCtrl+Q / Ctrl+C  save and quit    F1 / Esc  close help\nPreview: ↑/↓, PgUp/PgDn, Home/End\nSplit: type in editor; switch to preview to scroll.\nEditor: arrows, Alt/Ctrl+←/→ by word, Home/End, paste."
+		body = m.helpView(p)
 	case len(m.notes) == 0:
-		body = ink(p.accent).Render("A quiet place for your next thought.") + "\n\nCtrl+N creates a note. Your first line becomes its title."
+		body = gradient("A quiet place for your next thought.", true, p.accent, p.pink, p.cyan) +
+			"\n\n" + pill("Ctrl+N", p.onPill, p.accent) + ink(p.muted).Render(" creates a note. Your first line becomes its title.")
 	case m.mode == 1:
 		body = m.preview.View()
 	case m.split():
-		divider := ink(p.line).Render(strings.TrimSuffix(strings.Repeat(" │ \n", m.editor.Height()), "\n"))
-		body = lipgloss.JoinHorizontal(lipgloss.Top, m.editor.View(), divider, m.preview.View())
+		body = lipgloss.JoinHorizontal(lipgloss.Top, colorHeadings(m.editor.View(), p), divider(p, m.editor.Height()), m.preview.View())
 	default:
-		body = m.editor.View()
+		body = colorHeadings(m.editor.View(), p)
 	}
 	// Seven chrome rows: header, spacer, pane labels, spacer, status, keys, footer padding.
 	// Every surface is sized explicitly, including blank cells and nested ANSI resets.

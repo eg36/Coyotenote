@@ -4,10 +4,13 @@ A small, local-first Markdown notebook for the terminal. Write without leaving t
 keyboard, cycle through notes, and switch between source, rendered preview and a
 wide split view. No account, server or runtime network access.
 
-The padded header and labeled panes keep writing separate from navigation. Both
-manual themes share one consistent editor/preview surface. A colored shortcut
-footer includes a subtle violet-to-cyan accent, word count, and save indicator
-(● saved, ○ unsaved, ! warning/error); status text remains visible without color.
+The header carries a gradient title, the note title, a save indicator
+(● Saved, ○ Unsaved, ! Not saved) and a colored mode badge. The footer shows
+rainbow key pills with a gradient accent and word count; errors and warnings
+appear above the keys only when there is something to read. Markdown headings
+are colored by level in both the editor and the Glamour preview (H1 is a badge).
+Both manual themes share one editor/preview surface, and all text stays readable
+without color.
 
 ## Build and run
 
