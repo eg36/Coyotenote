@@ -3,6 +3,11 @@
 _Audit date: 2026-10-16. Co-authored by Claude Opus 5.5 (Claude Code) with eg36.
 Written as a handoff for later agents: each task lists the problem, where it is, and the fix._
 
+## Status
+All tasks 1–6 below are implemented on branch `review-fixes` (see the commit after this file's
+first commit). Regression tests cover each one; `go test -race`, `go vet`, Windows/macOS cross-builds
+and `scripts/smoke.py` pass.
+
 ## Context
 Codex left the "Claude review fixes" unfinished. Its in-progress edits (store.go, lock_unix.go,
 lock_unsupported.go) exist only in the cloud workspace — **none of them are in this local checkout**

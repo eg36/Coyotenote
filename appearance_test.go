@@ -82,6 +82,7 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 			for mode := 0; mode < 3; mode++ {
 				m.mode = mode
 				m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+				settle(m)
 				view := m.View()
 				rows := cellBackgrounds(view)
 				if len(rows) != size[1] {
@@ -148,6 +149,7 @@ func TestAppearanceWithoutColor(t *testing.T) {
 	press(m, tea.KeyCtrlN)
 	m.editor.SetValue("# Title\n\n**Text** and `code`")
 	m.mode = 1
+	settle(m)
 	view := m.View()
 	if strings.Contains(view, "\x1b[") {
 		t.Fatalf("color sequences in plain terminal output: %q", view)

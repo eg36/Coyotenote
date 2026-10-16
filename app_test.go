@@ -20,6 +20,13 @@ func testStore(t *testing.T) *store {
 	return s
 }
 func press(m *model, k tea.KeyType) { m.Update(tea.KeyMsg{Type: k}) }
+
+// settle runs the asynchronous preview render synchronously.
+func settle(m *model) {
+	if cmd := m.requestRender(); cmd != nil {
+		m.Update(cmd())
+	}
+}
 func TestCreateEditNavigateDelete(t *testing.T) {
 	s := testStore(t)
 	m, err := newModel(s)
@@ -79,9 +86,9 @@ func TestInterruptedWriteRecovery(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(s.dir, ".pending-interrupted"), []byte("partial"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	notes, orphans, err := s.load()
-	if err != nil || orphans != 1 || len(notes) != 1 || notes[0].Body != "committed" {
-		t.Fatalf("recovery %v %d %v", notes, orphans, err)
+	notes, report, err := s.load()
+	if err != nil || report.orphans != 1 || len(notes) != 1 || notes[0].Body != "committed" {
+		t.Fatalf("recovery %v %v %v", notes, report, err)
 	}
 	if _, err = os.Stat(filepath.Join(s.dir, ".pending-interrupted")); err != nil {
 		t.Fatal("recovery evidence removed")
@@ -195,19 +202,172 @@ func TestDeleteLastNoteAndRestart(t *testing.T) {
 		t.Fatal("empty notebook failed", err)
 	}
 }
-func TestRefuseUnsafeInputWithoutChangingFiles(t *testing.T) {
-	for _, body := range []string{strings.Repeat("line\n", 10000), string([]byte{0xff})} {
-		s := testStore(t)
-		path := filepath.Join(s.dir, "import.md")
-		if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
+	s := testStore(t)
+	if err := os.WriteFile(filepath.Join(s.dir, "good.md"), []byte("# Good"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	bad := map[string]string{"long.md": strings.Repeat("line\n", maxLines), "binary.md": string([]byte{0xff})}
+	for name, body := range bad {
+		if err := os.WriteFile(filepath.Join(s.dir, name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
-		if _, _, err := s.load(); err == nil {
-			t.Fatal("unsafe input accepted")
+	}
+	if err := os.Symlink(filepath.Join(s.dir, "good.md"), filepath.Join(s.dir, "link.md")); err != nil {
+		t.Fatal(err)
+	}
+	m, err := newModel(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.notes) != 1 || m.notes[0].ID != "good" {
+		t.Fatalf("valid note not loaded: %v", m.notes)
+	}
+	for _, name := range []string{"long.md", "binary.md", "link.md"} {
+		if !strings.Contains(m.status, name) {
+			t.Fatalf("no warning for %s: %q", name, m.status)
 		}
-		b, err := os.ReadFile(path)
-		if err != nil || string(b) != body {
-			t.Fatal("input changed")
+	}
+	for name, body := range bad {
+		if b, err := os.ReadFile(filepath.Join(s.dir, name)); err != nil || string(b) != body {
+			t.Fatal("input changed", name)
 		}
+	}
+}
+func TestFailedSaveWritesRecoveryAndSecondQuitExits(t *testing.T) {
+	s := testStore(t)
+	m, _ := newModel(s)
+	press(m, tea.KeyCtrlN)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("precious")})
+	if err := os.WriteFile(filepath.Join(s.dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ}); cmd != nil {
+		t.Fatal("first quit exited despite failed save")
+	}
+	b, err := os.ReadFile(m.recovery)
+	if err != nil || string(b) != "precious" || !strings.Contains(m.status, m.recovery) {
+		t.Fatalf("recovery copy %q %v %q", b, err, m.status)
+	}
+	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ}); cmd == nil {
+		t.Fatal("second quit did not exit")
+	}
+	if _, report, _ := s.load(); report.recoveries != 1 {
+		t.Fatal("recovery copy not reported on load")
+	}
+}
+func TestSignalExitAfterFailedSaveKeepsRecovery(t *testing.T) {
+	s := testStore(t)
+	m, _ := newModel(s)
+	press(m, tea.KeyCtrlN)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("unsaved")})
+	if err := os.WriteFile(filepath.Join(s.dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, cmd := m.Update(exitMsg{}); cmd == nil {
+		t.Fatal("signal exit blocked")
+	}
+	if b, err := os.ReadFile(m.recovery); err != nil || string(b) != "unsaved" {
+		t.Fatal("no recovery copy on signal exit", err)
+	}
+}
+func TestRecoveryFallsBackToTempDir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	s := testStore(t)
+	t.Setenv("TMPDIR", t.TempDir())
+	if err := os.Chmod(s.dir, 0500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(s.dir, 0700) })
+	path, err := s.writeRecovery(note{ID: "x"}, "body")
+	if err != nil || !strings.HasPrefix(path, os.Getenv("TMPDIR")) {
+		t.Fatal(path, err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "body" {
+		t.Fatal("fallback content")
+	}
+}
+func TestOversizedPasteRejected(t *testing.T) {
+	m, _ := newModel(testStore(t))
+	press(m, tea.KeyCtrlN)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("keep")})
+	for _, paste := range []string{strings.Repeat("x\n", maxLines), strings.Repeat("x", maxPasteBytes+1)} {
+		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(paste), Paste: true})
+		if m.editor.Value() != "keep" || !strings.Contains(m.status, "Paste rejected") {
+			t.Fatalf("oversized paste accepted: %d bytes", len(m.editor.Value()))
+		}
+	}
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ok"), Paste: true})
+	if m.editor.Value() != "keep ok" {
+		t.Fatal("small paste rejected")
+	}
+}
+func TestCursorStartsAtTopAndThemeWhitespace(t *testing.T) {
+	s := testStore(t)
+	if err := os.WriteFile(filepath.Join(s.dir, "a.md"), []byte("one\ntwo\nthree"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(s.dir, "theme"), []byte("light\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := newModel(s)
+	if m.editor.Line() != 0 || m.editor.LineInfo().ColumnOffset != 0 {
+		t.Fatalf("cursor at line %d", m.editor.Line())
+	}
+	if m.theme != "light" {
+		t.Fatal("trailing newline in theme file ignored")
+	}
+}
+func TestWordKeysMoveCursorNotNotes(t *testing.T) {
+	m, _ := newModel(testStore(t))
+	press(m, tea.KeyCtrlN)
+	press(m, tea.KeyCtrlN)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("alpha beta")})
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyLeft, Alt: true}, {Type: tea.KeyCtrlLeft}} {
+		m.Update(k)
+		if m.index != 1 {
+			t.Fatalf("%v switched notes", k)
+		}
+	}
+	if m.editor.LineInfo().ColumnOffset != 0 {
+		t.Fatal("word navigation did not move the cursor")
+	}
+	m.Update(tea.KeyMsg{Type: tea.KeyUp, Alt: true})
+	if m.index != 0 {
+		t.Fatal("Alt+Up did not switch notes")
+	}
+	m.Update(tea.KeyMsg{Type: tea.KeyCtrlPgDown})
+	if m.index != 1 {
+		t.Fatal("Ctrl+PgDn did not switch notes")
+	}
+}
+func TestStalePreviewRenderIgnored(t *testing.T) {
+	m, _ := newModel(testStore(t))
+	press(m, tea.KeyCtrlN)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("# Old")})
+	m.mode = 1 // keys reach the editor only outside preview mode
+	old := m.requestRender()
+	m.mode = 0
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" New")})
+	m.mode = 1
+	m.Update(old())
+	if strings.Contains(ansi.Strip(m.preview.View()), "Old") {
+		t.Fatal("stale render shown")
+	}
+	settle(m)
+	if !strings.Contains(ansi.Strip(m.preview.View()), "Old New") {
+		t.Fatal("current render missing")
+	}
+}
+func TestVersionString(t *testing.T) {
+	if versionString() == "" {
+		t.Fatal("empty version")
+	}
+	version = "v9.9.9"
+	t.Cleanup(func() { version = "" })
+	if versionString() != "v9.9.9" {
+		t.Fatal("ldflags version ignored")
 	}
 }

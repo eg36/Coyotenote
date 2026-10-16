@@ -19,14 +19,11 @@ go build -o bin/coyotenote .
 ./bin/coyotenote
 # Optional isolated notebook:
 ./bin/coyotenote -data-dir /tmp/my-notes
+./bin/coyotenote -version
 ```
 
-In this cloud workspace, Go is installed at `/workspace/toolchains/go/bin`:
-
-```sh
-export PATH=/workspace/toolchains/go/bin:$PATH
-export GOPATH=/workspace/go GOCACHE=/workspace/go-cache
-```
+Release builds can stamp a version: `go build -ldflags "-X main.version=v1.0.0" -o bin/coyotenote .`
+Otherwise the module version (or `dev`) is reported.
 
 ## Keys
 
@@ -34,17 +31,19 @@ export GOPATH=/workspace/go GOCACHE=/workspace/go-cache
 | --- | --- |
 | Ctrl+N | Create a note and start writing |
 | Ctrl+D | Delete current note; `y` confirms, `n` or Escape cancels |
-| Alt+Left / Alt+Right | Previous / next note, wrapping at the ends |
-| Ctrl+Left / Ctrl+Right | Alternative note navigation |
+| Alt+Up / Alt+Down | Previous / next note, wrapping at the ends |
+| Ctrl+PgUp / Ctrl+PgDn | Alternative note navigation |
+| Alt+Left/Right, Ctrl+Left/Right | Move by word in the editor |
 | Ctrl+P | Cycle editor → preview → split |
 | Ctrl+T | Switch and remember dark/light theme |
 | Ctrl+S | Save immediately; retry a failed save |
-| Ctrl+Q / Ctrl+C | Save and quit |
+| Ctrl+Q / Ctrl+C | Save and quit (after a failed save: first press writes a recovery copy, second quits) |
 | F1 | Show/hide key reference; Escape closes it |
 | Arrows, PgUp/PgDn, Home/End | Scroll in preview |
 
 Use your terminal's paste command (bracketed paste); no system clipboard service
-is invoked. Normal textarea movement and editing keys work in the editor.
+is invoked. Pastes over 1 MiB, or that would push a note past 10,000 lines, are
+rejected with a status message rather than silently truncated. Normal textarea movement and editing keys work in the editor.
 Split view requires 90 columns; narrower terminals show the editor instead.
 Switch to preview to scroll independently. Minimum usable size is 32×10; 80×24
 is recommended. The header shows the note number and title, derived from the first
@@ -64,15 +63,23 @@ database is required. Notes are sorted by filename (creation order). `theme` hol
 `dark` or `light`; `.lock` prevents simultaneous app instances using the same
 notebook. Files are created with mode 0600 and the data directory with 0700.
 Markdown preview supports headings, emphasis, lists, code, quotes, links and tables.
-It does not fetch links or images. Notes must have fewer than 10,000 lines, a Bubbles
-editor limit; oversized or invalid UTF-8 files cause a clear startup error and are
-left unchanged. This is a scratchpad, not a large-file editor.
+It does not fetch links or images. The preview renders in the background shortly
+after typing pauses, so large notes never block the editor. Notes must have fewer
+than 10,000 lines, a Bubbles editor limit. Oversized, invalid UTF-8, symlinked or
+unreadable `.md` files are skipped at startup with a status warning naming them, and
+are left unchanged; the rest of the notebook opens normally. This is a scratchpad,
+not a large-file editor.
 
 Autosave runs 400 ms after the last edit. Note changes and normal exits flush first.
 Each save writes a same-directory temporary file, syncs it, atomically renames it,
 and syncs the directory. SIGINT, SIGTERM and SIGHUP request a save and graceful exit.
-A failed save keeps the editor dirty and blocks navigation and quitting; correct
-the filesystem problem and press Ctrl+S. External changes detected before saving
+A failed save keeps the editor dirty and blocks navigation; correct the filesystem
+problem and press Ctrl+S. Quitting after a failed save writes the edits to a
+`.recovery-<note>-<time>.md` copy in the data directory (or, if that is not
+writable, a `coyotenote-recovery-*.md` file in the system temporary directory),
+shows its path, and quits on the second Ctrl+Q. SIGINT/SIGTERM/SIGHUP write the
+recovery copy and exit immediately, printing its path. Recovery copies are counted
+at startup and never merged automatically. External changes detected before saving
 also block overwrite: preserve your in-memory edits before restarting. Avoid editing
 the same note concurrently in other programs; the check is not a filesystem watcher.
 

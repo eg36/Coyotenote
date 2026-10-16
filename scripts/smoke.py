@@ -41,15 +41,25 @@ def wait_for(fd, predicate, timeout=8):
             return output
     raise AssertionError('terminal or persistence check timed out: ' + repr(output[-300:]))
 
-def reap(pid, timeout=5):
+def reap(pid, fd, timeout=5):
     deadline = time.monotonic()+timeout
     while time.monotonic()<deadline:
+        # Keep draining the PTY: a full buffer blocks the app's exit output.
+        try:
+            if select.select([fd],[],[],0)[0]:
+                os.read(fd,65536)
+        except OSError:
+            pass
         got,status=os.waitpid(pid,os.WNOHANG)
         if got:
             assert os.waitstatus_to_exitcode(status)==0, status
             return
         time.sleep(.05)
     raise AssertionError('process did not quit')
+
+import subprocess
+out=subprocess.run([binary,'-version'],capture_output=True,text=True,check=True).stdout
+assert out.startswith('coyotenote '), out
 
 with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
     pid,fd=start(directory)
@@ -83,9 +93,9 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
         os.write(fd,b'\x0e')
         wait_for(fd,lambda out:b'Untitled' in out)
         os.write(fd,b'Flushed on termination')
-        wait_for(fd,lambda out:b'Flushed' in out)
+        wait_for(fd,lambda out:b'termination' in out)
         os.kill(pid,signal.SIGTERM)
-        reap(pid)
+        reap(pid,fd)
         texts=[p.read_text() for p in pathlib.Path(directory).glob('*.md')]
         assert len(texts)==2 and 'Flushed on termination' in texts, texts
     finally:

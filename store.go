@@ -12,11 +12,22 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+)
 
-	"golang.org/x/sys/unix"
+// The editor holds at most maxLines lines (a Bubbles textarea limit). Pastes are
+// also capped at maxPasteBytes so a stray clipboard dump cannot stall the UI.
+const (
+	maxLines      = 10000
+	maxPasteBytes = 1 << 20
 )
 
 type note struct{ ID, Body string }
+
+// loadReport describes files that load() left alone for the user to inspect.
+type loadReport struct {
+	orphans, recoveries int
+	skipped             []string
+}
 type store struct {
 	dir  string
 	lock *os.File
@@ -47,42 +58,52 @@ func openStore(dir string) (*store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+	if err = lockFile(f); err != nil {
 		f.Close()
 		return nil, fmt.Errorf("notes are open in another coyotenote instance: %w", err)
 	}
 	return &store{dir, f}, nil
 }
-func (s *store) close() { _ = unix.Flock(int(s.lock.Fd()), unix.LOCK_UN); _ = s.lock.Close() }
-func (s *store) load() ([]note, int, error) {
+func (s *store) close() { _ = unlockFile(s.lock); _ = s.lock.Close() }
+
+// load reads every note it can. Files that are unsafe to edit (symlinks, invalid
+// UTF-8, too many lines, unreadable) are skipped and reported, never changed.
+func (s *store) load() ([]note, loadReport, error) {
+	var r loadReport
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
-		return nil, 0, err
+		return nil, r, err
 	}
 	var notes []note
-	orphans := 0
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".pending-") {
-			orphans++
+		name := e.Name()
+		switch {
+		case strings.HasPrefix(name, ".pending-"):
+			r.orphans++
+			continue
+		case strings.HasPrefix(name, ".recovery-"):
+			r.recoveries++
+			continue
+		case strings.HasPrefix(name, ".") || !strings.HasSuffix(name, ".md") || e.IsDir():
+			continue
+		case e.Type()&os.ModeSymlink != 0 || !e.Type().IsRegular():
+			r.skipped = append(r.skipped, name+" (not a regular file)")
 			continue
 		}
-		if !strings.HasSuffix(e.Name(), ".md") || e.IsDir() {
-			continue
+		b, err := os.ReadFile(filepath.Join(s.dir, name))
+		switch {
+		case err != nil:
+			r.skipped = append(r.skipped, name+" (unreadable)")
+		case !utf8.Valid(b):
+			r.skipped = append(r.skipped, name+" (not UTF-8)")
+		case strings.Count(string(b), "\n") >= maxLines:
+			r.skipped = append(r.skipped, fmt.Sprintf("%s (%d+ lines)", name, maxLines))
+		default:
+			notes = append(notes, note{strings.TrimSuffix(name, ".md"), string(b)})
 		}
-		if e.Type()&os.ModeSymlink != 0 {
-			return nil, orphans, fmt.Errorf("refusing symlink note %s", e.Name())
-		}
-		b, err := os.ReadFile(filepath.Join(s.dir, e.Name()))
-		if err != nil {
-			return nil, orphans, err
-		}
-		if !utf8.Valid(b) || strings.Count(string(b), "\n") >= 10000 {
-			return nil, orphans, fmt.Errorf("%s must be UTF-8 and fewer than 10000 lines; file left unchanged", e.Name())
-		}
-		notes = append(notes, note{strings.TrimSuffix(e.Name(), ".md"), string(b)})
 	}
 	sort.Slice(notes, func(i, j int) bool { return notes[i].ID < notes[j].ID })
-	return notes, orphans, nil
+	return notes, r, nil
 }
 func atomicWrite(dir, name string, b []byte) error {
 	f, err := os.CreateTemp(dir, ".pending-")
@@ -140,6 +161,30 @@ func (s *store) save(n note, body string) error {
 		return errors.New("note changed outside coyotenote; copy your edits before restarting")
 	}
 	return atomicWrite(s.dir, n.ID+".md", []byte(body))
+}
+
+// writeRecovery preserves unsaved edits beside the notes, or in the system
+// temporary directory when the data directory itself cannot be written.
+func (s *store) writeRecovery(n note, body string) (string, error) {
+	name := fmt.Sprintf(".recovery-%s-%s.md", n.ID, time.Now().UTC().Format("20060102T150405"))
+	err := atomicWrite(s.dir, name, []byte(body))
+	if err == nil {
+		return filepath.Join(s.dir, name), nil
+	}
+	// CreateTemp opens exclusively (0600), so a planted symlink cannot redirect it.
+	f, e := os.CreateTemp("", "coyotenote-recovery-"+n.ID+"-*.md")
+	if e == nil {
+		if _, e = f.Write([]byte(body)); e == nil {
+			e = f.Sync()
+		}
+		if ce := f.Close(); e == nil {
+			e = ce
+		}
+	}
+	if e != nil {
+		return "", fmt.Errorf("%v; temporary directory: %v", err, e)
+	}
+	return f.Name(), nil
 }
 func (s *store) remove(n note) error {
 	b, err := os.ReadFile(filepath.Join(s.dir, n.ID+".md"))

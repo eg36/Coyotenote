@@ -5,11 +5,24 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// version is set at build time with -ldflags "-X main.version=v1.2.3".
+var version = ""
+
+func versionString() string {
+	if version != "" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "dev"
+}
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "coyotenote:", err)
@@ -18,7 +31,12 @@ func main() {
 }
 func run() error {
 	dir := flag.String("data-dir", "", "override the standard application data directory")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("coyotenote", versionString())
+		return nil
+	}
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected arguments; use -help")
 	}
@@ -55,8 +73,11 @@ func run() error {
 		}
 	}()
 	final, err := p.Run()
-	if final != nil {
-		if e := final.(*model).flush(); e != nil {
+	if m, ok := final.(*model); ok {
+		if e := m.flush(); e != nil {
+			if m.recovery != "" {
+				return fmt.Errorf("%w; unsaved edits were copied to %s", e, m.recovery)
+			}
 			return e
 		}
 	}

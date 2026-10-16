@@ -57,6 +57,19 @@ PTY smoke test exercised actual terminal input, autosave, Markdown preview,
 SIGKILL/reopen recovery and SIGTERM flushing. Linux was executed; macOS uses the
 same Unix lock/filesystem APIs but has not been exercised on a Mac.
 
+## Review fixes (2026-10)
+
+- A failed save no longer traps the user: quitting writes a recovery copy (data
+  directory, else system temp via an exclusive create) and the second quit exits;
+  signals write the copy and exit at once.
+- Preview rendering is debounced (150 ms) and runs in a `tea.Cmd`; results carry
+  (revision, theme, width) and stale ones are dropped. `View` no longer renders.
+- Oversized pastes are rejected instead of silently truncated by the textarea;
+  unsafe note files are skipped with a warning instead of blocking startup.
+- The cursor starts at the top of a loaded note; the theme file is whitespace-trimmed;
+  note navigation moved to Alt+↑/↓ and Ctrl+PgUp/PgDn, so Alt/Ctrl+←/→ move by word.
+- `-version` flag; flock lives in `lock_unix.go` so other platforms still compile.
+
 ## Terminal polish
 
 Lip Gloss handles explicit shared surfaces, a padded header, pane labels and a

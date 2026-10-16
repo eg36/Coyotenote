@@ -153,7 +153,7 @@ func (m *model) shortcutLine(p palette) string {
 	hints := []key.Binding{withHint(keys.new, "^N", "new"), withHint(keys.mode, "^P", "view"), withHint(keys.help, "F1", "keys"), withHint(keys.quit, "^Q", "quit")}
 	if m.width >= 80 {
 		hints = []key.Binding{
-			withHint(keys.new, "^N", "new"), withHint(keys.del, "^D", "delete"), withHint(keys.next, "Alt+←/→", "notes"), withHint(keys.mode, "^P", "view"), withHint(keys.theme, "^T", "theme"), withHint(keys.help, "F1", "keys"), withHint(keys.quit, "^Q", "quit"),
+			withHint(keys.new, "^N", "new"), withHint(keys.del, "^D", "delete"), withHint(keys.next, "Alt+↑/↓", "notes"), withHint(keys.mode, "^P", "view"), withHint(keys.theme, "^T", "theme"), withHint(keys.help, "F1", "keys"), withHint(keys.quit, "^Q", "quit"),
 		}
 	} else if m.width < 40 {
 		hints = []key.Binding{withHint(keys.new, "^N", "new"), withHint(keys.help, "F1", "keys"), withHint(keys.quit, "^Q", "quit")}
