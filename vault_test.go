@@ -34,7 +34,8 @@ func ids(notes []note) string {
 func TestLoadWalksFoldersAndSkipsHidden(t *testing.T) {
 	s := testStore(t)
 	writeNote(t, s, "Work/Plan", "plan")
-	writeNote(t, s, "work/deep/Inner", "inner")
+	// Folder names differ by more than case: Windows folders ignore case.
+	writeNote(t, s, "workshop/deep/Inner", "inner")
 	writeNote(t, s, "Zebra", "z")
 	writeNote(t, s, "apple", "a")
 	for _, hidden := range []string{".obsidian/config.md", ".trash/old.md", ".git/x.md"} {
@@ -52,7 +53,7 @@ func TestLoadWalksFoldersAndSkipsHidden(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ids(notes); got != "apple,work/deep/Inner,Work/Plan,Zebra" {
+	if got := ids(notes); got != "apple,Work/Plan,workshop/deep/Inner,Zebra" {
 		t.Fatal(got)
 	}
 	if report.orphans != 1 {
