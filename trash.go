@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -107,7 +106,7 @@ func (s *store) restore(id string) (note, error) {
 	if err != nil {
 		return note{}, err
 	}
-	if !utf8.Valid(body) || strings.Count(string(body), "\n") >= maxLines {
+	if !utf8.Valid(body) || lineCount(string(body)) > maxLines {
 		return note{}, errors.New("trashed note is not valid UTF-8 or exceeds the line limit")
 	}
 	destination := s.path(id)

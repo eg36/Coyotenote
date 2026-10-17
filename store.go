@@ -23,6 +23,27 @@ const (
 
 type note struct{ ID, Body string }
 
+// editorText gives the editor LF line endings and reports whether the file used
+// CRLF, so saves can restore it. Lone CRs (classic Mac) become LF.
+func editorText(body string) (string, bool) {
+	crlf := strings.Contains(body, "\r\n")
+	return strings.ReplaceAll(strings.ReplaceAll(body, "\r\n", "\n"), "\r", "\n"), crlf
+}
+
+// diskText is the file form of editor text.
+func diskText(text string, crlf bool) string {
+	if crlf {
+		return strings.ReplaceAll(text, "\n", "\r\n")
+	}
+	return text
+}
+
+// lineCount counts lines as the editor will hold them.
+func lineCount(body string) int {
+	text, _ := editorText(body)
+	return strings.Count(text, "\n") + 1
+}
+
 // loadReport describes files that load() left alone for the user to inspect.
 type loadReport struct {
 	orphans, recoveries int
@@ -128,7 +149,7 @@ func (s *store) load() ([]note, loadReport, error) {
 			r.skipped = append(r.skipped, rel+" (unreadable)")
 		case !utf8.Valid(b):
 			r.skipped = append(r.skipped, rel+" (not UTF-8)")
-		case strings.Count(string(b), "\n") >= maxLines:
+		case lineCount(string(b)) > maxLines:
 			r.skipped = append(r.skipped, fmt.Sprintf("%s (%d+ lines)", rel, maxLines))
 		default:
 			notes = append(notes, note{id, string(b)})

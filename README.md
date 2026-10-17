@@ -155,6 +155,9 @@ unreadable `.md` files are skipped at startup with a status warning naming them,
 are left unchanged; the rest of the notebook opens normally. This is a scratchpad,
 not a large-file editor.
 
+The editor works in LF line endings. Notes saved with CRLF (common on Windows) are
+written back with CRLF; a note mixing endings is saved with CRLF throughout.
+
 Autosave runs 400 ms after the last edit. Note changes and normal exits flush first.
 Each save writes a same-directory temporary file, syncs it, atomically renames it,
 and syncs the directory on Unix. Windows retries replacement when a scanner briefly holds the target; directory sync is unavailable there. SIGINT, SIGTERM and SIGHUP request a save and graceful exit.

@@ -75,8 +75,10 @@ type model struct {
 	width, height, mode  int
 	theme, status        string
 	dirty, confirm, help bool
-	revision             uint64
-	shown, pending       previewKey
+	// crlf records that the open note uses CRLF line endings on disk.
+	crlf           bool
+	revision       uint64
+	shown, pending previewKey
 	// After a failed save, the first quit writes a recovery copy and arms the
 	// second quit; editing again disarms it.
 	quitArmed bool
@@ -126,8 +128,12 @@ func newModel(s *store) (*model, error) {
 func (m *model) Init() tea.Cmd { return textarea.Blink }
 func (m *model) loadNote() {
 	m.editor.SetValue("")
+	m.crlf = false
 	if len(m.notes) > 0 {
-		m.editor.SetValue(m.notes[m.index].Body)
+		// The editor works in LF; saves restore the file's CRLF endings.
+		var text string
+		text, m.crlf = editorText(m.notes[m.index].Body)
+		m.editor.SetValue(text)
 	}
 	// Source offsets avoid walking every soft-wrapped row in a long note.
 	m.editor.SetOffset(0)
@@ -144,7 +150,7 @@ func (m *model) flush() error {
 	if !m.dirty || len(m.notes) == 0 {
 		return nil
 	}
-	body := m.editor.Value()
+	body := m.diskBody()
 	if err := m.store.save(m.notes[m.index], body); err != nil {
 		m.status = "SAVE FAILED: " + err.Error()
 		return err
@@ -157,6 +163,9 @@ func (m *model) flush() error {
 	return nil
 }
 
+// diskBody is the editor text with the note's own line endings.
+func (m *model) diskBody() string { return diskText(m.editor.Value(), m.crlf) }
+
 // quit saves and quits. If saving fails, it copies the edits to a recovery file
 // and asks for a second quit, so a broken disk never traps the user.
 func (m *model) quit() tea.Cmd {
@@ -165,7 +174,7 @@ func (m *model) quit() tea.Cmd {
 		return tea.Quit
 	}
 	m.quitArmed = true
-	path, rerr := m.store.writeRecovery(m.notes[m.index], m.editor.Value())
+	path, rerr := m.store.writeRecovery(m.notes[m.index], m.diskBody())
 	if rerr != nil {
 		m.status = fmt.Sprintf("SAVE FAILED: %v; recovery copy FAILED: %v. Ctrl+Q again quits WITHOUT your edits", err, rerr)
 		return nil
@@ -285,7 +294,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Signals (often SIGHUP: the terminal is gone) cannot wait for a second
 		// quit. Preserve what we can, then exit; main reports any failure.
 		if m.flush() != nil {
-			if path, err := m.store.writeRecovery(m.notes[m.index], m.editor.Value()); err == nil {
+			if path, err := m.store.writeRecovery(m.notes[m.index], m.diskBody()); err == nil {
 				m.recovery = path
 			}
 		}
