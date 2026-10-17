@@ -10,12 +10,12 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/styles"
 	"github.com/charmbracelet/lipgloss"
+	textarea "github.com/eg36/coyotenote/internal/editor"
 	"github.com/muesli/termenv"
 )
 
@@ -43,10 +43,15 @@ func binding(keys ...string) key.Binding { return key.NewBinding(key.WithKeys(ke
 var keys = struct {
 	new, del, prev, next, mode, theme, save, help, quit, undo, picker key.Binding
 	rename, follow, back, backlinks                                   key.Binding
-}{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q", "ctrl+c"), binding("ctrl+z"), binding("ctrl+o"),
+}{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q"), binding("ctrl+z"), binding("ctrl+o"),
 	binding("ctrl+r"), binding("ctrl+g"), binding("ctrl+y"), binding("ctrl+l")}
 
 type model struct {
+	helpOffset    int
+	clipboard     clipboardBackend
+	clipboardBusy bool
+	inputEpoch    uint64
+
 	store           *store
 	notes           []note
 	trashed         []string
@@ -89,10 +94,10 @@ func newModel(s *store) (*model, error) {
 	e.Prompt = ""
 	e.MaxHeight = 0
 	e.MaxWidth = 0
-	e.KeyMap.Paste.SetEnabled(false) // Use terminal bracketed paste; no desktop clipboard process.
+	e.KeyMap.Paste.SetEnabled(false) // App-owned clipboard messages share the paste validation path.
 	e.KeyMap.WordForward.SetKeys("alt+right", "alt+f", "ctrl+right")
 	e.KeyMap.WordBackward.SetKeys("alt+left", "alt+b", "ctrl+left")
-	m := &model{store: s, notes: notes, editor: e, preview: viewport.New(40, 10), width: 80, height: 24, theme: "dark", status: "Saved", dismissed: [2]int{-1, -1}}
+	m := &model{clipboard: desktopClipboard{}, store: s, notes: notes, editor: e, preview: viewport.New(40, 10), width: 80, height: 24, theme: "dark", status: "Saved", dismissed: [2]int{-1, -1}}
 	if b, err := os.ReadFile(filepath.Join(s.config, "theme")); err == nil && strings.TrimSpace(string(b)) == "light" {
 		m.theme = "light"
 	}
@@ -121,11 +126,8 @@ func (m *model) loadNote() {
 	if len(m.notes) > 0 {
 		m.editor.SetValue(m.notes[m.index].Body)
 	}
-	// SetValue leaves the cursor at the end of the note; start at the top instead.
-	for m.editor.Line() > 0 {
-		m.editor.CursorUp()
-	}
-	m.editor.CursorStart()
+	// Source offsets avoid walking every soft-wrapped row in a long note.
+	m.editor.SetOffset(0)
 	m.dirty = false
 	m.quitArmed = false
 	m.revision++
@@ -272,6 +274,8 @@ func (m *model) requestRender() tea.Cmd {
 }
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
+	case clipboardResult:
+		return m, m.clipboardDone(v)
 	case tea.WindowSizeMsg:
 		m.width = v.Width
 		m.height = v.Height
@@ -312,6 +316,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.followCursor()
 		return m, nil
 	case tea.KeyMsg:
+		m.inputEpoch++
 		if key.Matches(v, keys.quit) {
 			return m, m.quit()
 		}
@@ -321,11 +326,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.prompt != nil {
 			return m, m.updatePrompt(v)
 		}
-		if m.complete != nil {
-			if cmd, handled := m.updateCompletionKeys(v); handled {
-				return m, cmd
-			}
-		}
+
 		if m.confirm {
 			if v.String() == "y" {
 				err := m.store.trash(m.notes[m.index])
@@ -350,14 +351,37 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.requestRender()
 		}
 		if key.Matches(v, keys.help) {
+			m.editor.ClearSelection()
+			m.complete = nil
 			m.help = !m.help
+			m.helpOffset = 0
 			return m, nil
 		}
 		if m.help {
-			if v.String() == "esc" {
+			switch v.String() {
+			case "esc":
 				m.help = false
+			case "down":
+				m.helpOffset++
+			case "up":
+				m.helpOffset = max(0, m.helpOffset-1)
+			case "pgdown":
+				m.helpOffset += max(1, m.height-9)
+			case "pgup":
+				m.helpOffset = max(0, m.helpOffset-max(1, m.height-9))
 			}
+			m.helpOffset = min(m.helpOffset, max(0, len(m.helpRows(paletteFor(m.theme)))-max(1, m.height-7)))
 			return m, nil
+		}
+		if len(m.notes) > 0 && m.mode != 1 {
+			if cmd, handled := m.selectionKeys(v); handled {
+				return m, cmd
+			}
+		}
+		if m.complete != nil {
+			if cmd, handled := m.updateCompletionKeys(v); handled {
+				return m, cmd
+			}
 		}
 		switch {
 		case key.Matches(v, keys.picker):
@@ -457,14 +481,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.preview, cmd = m.preview.Update(msg)
 		return m, cmd
 	}
-	if v, ok := msg.(tea.KeyMsg); ok && v.Paste {
-		// The editor silently drops lines past its limit; refuse instead.
-		text := string(v.Runes)
-		if len(text) > maxPasteBytes || strings.Count(m.editor.Value(), "\n")+strings.Count(text, "\n") >= maxLines {
-			m.status = fmt.Sprintf("Paste rejected: notes are limited to %d lines and pastes to %d KiB", maxLines, maxPasteBytes>>10)
-			return m, nil
-		}
-	}
+
 	before := m.editor.Value()
 	var cmd tea.Cmd
 	m.editor, cmd = m.editor.Update(msg)
@@ -545,6 +562,7 @@ func (m *model) applyTheme() {
 	style := textarea.Style{Base: base, Text: base, CursorLine: base, Placeholder: base.Foreground(lipgloss.Color(p.muted)), EndOfBuffer: base}
 	m.editor.FocusedStyle = style
 	m.editor.BlurredStyle = style
+	m.editor.SelectionStyle = base.Background(lipgloss.Color(p.line)).Underline(true)
 	m.editor.Cursor.Style = ink(p.accent)
 	m.editor.Cursor.TextStyle = base
 }

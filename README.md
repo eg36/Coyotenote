@@ -60,13 +60,32 @@ Download a Linux or Windows archive for amd64 or arm64 from
 | Ctrl+P | Cycle editor → preview → split |
 | Ctrl+T | Switch and remember dark/light theme |
 | Ctrl+S | Save immediately; retry a failed save |
-| Ctrl+Q / Ctrl+C | Save and quit (after a failed save: first press writes a recovery copy, second quits) |
+| Shift+arrows | Select text across lines and soft wraps |
+| Shift+Home / Shift+End | Extend selection to the start / end of the logical line |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut selected source / paste, replacing the selection |
+| Ctrl+Q | Save and quit (after a failed save: first press writes a recovery copy, second quits) |
 | F1 | Show/hide key reference; Escape closes it |
 | Arrows, PgUp/PgDn, Home/End | Scroll in preview |
 
-Use your terminal's paste command (bracketed paste); no system clipboard service
-is invoked. Pastes over 1 MiB, or that would push a note past 10,000 lines, are
-rejected with a status message rather than silently truncated. Normal textarea movement and editing keys work in the editor.
+Select source text with Shift+arrows, then use Ctrl+C to copy, Ctrl+X to cut,
+and Ctrl+V to paste. Typing, Enter, Backspace and Delete replace/remove a selection;
+Escape clears it. Ctrl+C no longer quits; use Ctrl+Q. With no selection, copy/cut
+leave the note and clipboard alone. Ctrl+A still moves to the line start, and
+Ctrl+Z still undoes trash operations, rather than text edits.
+
+Clipboard access uses native Windows APIs. On Linux, install `wl-clipboard` for
+Wayland or `xclip` / `xsel` for X11. Clipboard I/O runs in the background; a failed
+cut/paste or a result arriving after further input leaves text untouched. An
+empty clipboard does not remove selected text. Source whitespace and trailing
+newlines are retained; pasted CRLF/CR is normalized to LF and tabs follow the
+editor's existing expansion to spaces.
+
+Your terminal's paste command (bracketed paste) also replaces selected text and
+works without a desktop clipboard helper, including over SSH. Desktop clipboard
+shortcuts are unavailable over SSH. Some terminals intercept Ctrl+V or Shift
+combinations; use their paste command or configure key forwarding. Pastes over
+1 MiB, invalid text, or a result exceeding 10,000 lines are rejected before the
+selection changes. Normal textarea movement and editing keys work in the editor.
 Split view requires 90 columns; narrower terminals show the editor instead.
 Split preview follows the cursor proportionally. Switch to preview to scroll independently. Minimum usable size is 32×10; 80×24
 is recommended. The header shows the note number and path. Empty notebooks stay empty until Ctrl+N. Deleted notes move to `.trash/`; Ctrl+Z restores them during the current session.
@@ -149,7 +168,39 @@ go build -o bin/coyotenote .
 python3 scripts/smoke.py  # Linux PTY test, after building
 ```
 
-The implementation uses Bubble Tea, Bubbles, Glamour and Lip Gloss; versions and checksums are pinned
+The implementation uses Bubble Tea, Bubbles, Glamour and Lip Gloss. The source
+editor is a local adaptation of Bubbles textarea v0.21.0 with source-based
+selection rendering; its MIT license is retained in `internal/editor/LICENSE`
+and [third-party notices](THIRD_PARTY_NOTICES.md). Versions and checksums are pinned
 in `go.mod` and `go.sum`. Rendering is cached until content, width or theme changes.
 There are no attachments, tags, sync, accounts, desktop integration,
 global shortcuts or theme detection. Linux and Windows are the supported platforms.
+
+## Third-party editor license
+
+The adapted Bubbles editor is distributed under the following license (also
+available in `internal/editor/LICENSE` and `THIRD_PARTY_NOTICES.md`).
+
+```text
+MIT License
+
+Copyright (c) 2020-2023 Charmbracelet, Inc
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

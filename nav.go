@@ -176,10 +176,11 @@ func (m *model) acceptCompletion() tea.Cmd {
 	}
 	lines[c.row] = string(line[:c.start+2]) + insert + after
 	m.editor.SetValue(strings.Join(lines, "\n"))
-	for m.editor.Line() > c.row {
-		m.editor.CursorUp()
+	offset := 0
+	for _, line := range lines[:c.row] {
+		offset += utf8.RuneCountInString(line) + 1
 	}
-	m.editor.SetCursor(c.start + 2 + utf8.RuneCountInString(c.items[c.selected]) + 2)
+	m.editor.SetOffset(offset + c.start + 2 + utf8.RuneCountInString(c.items[c.selected]) + 2)
 	return m.edited()
 }
 

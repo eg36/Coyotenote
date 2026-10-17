@@ -4,10 +4,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	textarea "github.com/eg36/coyotenote/internal/editor"
 )
 
 type promptKind int
@@ -26,6 +26,7 @@ type namePrompt struct {
 }
 
 func (m *model) openPrompt(kind promptKind, value string) tea.Cmd {
+	m.editor.ClearSelection()
 	p := paletteFor(m.theme)
 	base := ink(p.text).Background(lipgloss.Color(p.surface))
 	in := textinput.New()

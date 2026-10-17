@@ -86,13 +86,21 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 		m.applyTheme()
 		p := paletteFor(theme)
 		allowed := map[string]bool{}
-		for _, c := range append(p.rainbow(), p.surface, p.chrome, p.danger, p.muted) {
+		for _, c := range append(p.rainbow(), p.surface, p.chrome, p.danger, p.muted, p.line) {
 			allowed[bgOf(c)] = true
 		}
 		for _, size := range [][2]int{{32, 10}, {40, 15}, {79, 24}, {80, 24}, {90, 24}, {101, 30}, {120, 40}} {
-			for mode := 0; mode < 4; mode++ {
+			for mode := 0; mode < 5; mode++ {
 				m.mode = min(mode, 2)
 				m.picker = nil
+				m.editor.ClearSelection()
+
+				if mode == 4 {
+					m.mode = 0
+					m.editor.SetOffset(0)
+					m.editor.StartSelection()
+					m.editor.SetOffset(20)
+				}
 				if mode == 3 {
 					m.openPicker()
 				}

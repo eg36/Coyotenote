@@ -181,6 +181,7 @@ func (m *model) paneLabels(p palette) string {
 	} else if m.mode == 2 {
 		line += "  " + ink(p.muted).Italic(true).Render("split at 90+ columns")
 	}
+
 	if m.picker != nil {
 		// Not ☰: Unicode 16 made the trigrams wide, and terminals using its
 		// tables draw them in two cells while the layout counts one.
@@ -305,6 +306,9 @@ func (m *model) statusLine(p palette) string {
 		cells = 8
 	}
 	left := aurora(p, cells)
+	if m.editor.HasSelection() {
+		left += "  " + ink(p.cyan).Bold(true).Render(fmt.Sprintf("%d selected", len([]rune(m.editor.SelectedText()))))
+	}
 	if c := m.complete; c != nil {
 		parts := make([]string, len(c.items))
 		for i, item := range c.items {
@@ -318,6 +322,8 @@ func (m *model) statusLine(p palette) string {
 	}
 	switch {
 	case m.status == "Saved" || m.status == "Unsaved…":
+	case m.status == "Copied selection" || m.status == "Cut selection" || strings.HasPrefix(m.status, "Theme:"):
+		left += "  " + ink(p.good).Render("· "+m.status)
 	case m.status == "Moved to trash · Ctrl+Z undo":
 		left += "  " + ink(p.muted).Render("· "+m.status)
 	case strings.Contains(m.status, "FAILED") || strings.HasPrefix(m.status, "Paste rejected"):
@@ -337,7 +343,7 @@ type keyHint struct {
 func (m *model) shortcutLine(p palette) string {
 	hints := []keyHint{
 		{"^Z", "undo", 0}, {"^N", "new", 3}, {"^O", "find", 3}, {"^G", "link", 2}, {"^Y", "back", 1}, {"^R", "rename", 1}, {"^D", "delete", 1}, {"Alt+↑↓", "notes", 2}, {"^P", "view", 2},
-		{"^T", "theme", 1}, {"^S", "save", 0}, {"F1", "keys", 9}, {"^Q", "quit", 9},
+		{"^C/X/V", "clipboard", 4}, {"^T", "theme", 1}, {"^S", "save", 0}, {"F1", "keys", 9}, {"^Q", "quit", 9},
 	}
 	colors := p.rainbow()
 	render := func(hs []keyHint) string {
@@ -383,20 +389,26 @@ func (m *model) shortcutLine(p palette) string {
 }
 
 // helpView lists every key with a colored key column.
-func (m *model) helpView(p palette) string {
+func (m *model) helpRows(p palette) []string {
 	rows := [][2]string{
 		{"Ctrl+N", "new note (Folder/Name)"}, {"Ctrl+R", "rename or move; updates [[links]]"}, {"Ctrl+O", "find a note"},
 		{"Ctrl+G", "open the [[link]] under the cursor"}, {"Ctrl+Y", "back to the previous note"}, {"Ctrl+L", "notes linking here"}, {"Ctrl+Z", "undo move to trash"}, {"Ctrl+D", "move to trash (asks first)"}, {"Alt+↑/↓", "previous / next note"},
 		{"Ctrl+PgUp/PgDn", "previous / next note"}, {"Ctrl+P", "editor → preview → split"},
-		{"Ctrl+T", "dark / light theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q / Ctrl+C", "save and quit"},
-		{"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},
+		{"Ctrl+T", "dark / light theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q", "save and quit"},
+		{"Shift+arrows", "select text"}, {"Ctrl+C / X / V", "copy / cut / paste"}, {"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},
 	}
 	colors := p.rainbow()
-	lines := []string{gradient("KEYS", true, p.accent, p.pink, p.cyan), ""}
+	lines := []string{gradient("KEYS · ↑↓ scroll", true, p.accent, p.pink, p.cyan), ""}
 	for i, r := range rows {
 		k := ink(colors[i%len(colors)]).Bold(true).Width(17).Render(r[0])
 		lines = append(lines, k+ink(p.text).Render(r[1]))
 	}
 	lines = append(lines, "", ink(p.muted).Italic(true).Render("Split: type in the editor; switch to preview to scroll."))
-	return strings.Join(lines, "\n")
+	return lines
+}
+
+func (m *model) helpView(p palette) string {
+	lines := m.helpRows(p)
+	offset := min(m.helpOffset, max(0, len(lines)-max(1, m.height-7)))
+	return strings.Join(lines[offset:], "\n")
 }

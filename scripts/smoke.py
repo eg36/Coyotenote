@@ -14,7 +14,7 @@ import time
 
 binary = str(pathlib.Path(__file__).resolve().parents[1] / 'bin/coyotenote')
 
-def start(directory, vault_argument=False):
+def start(directory, vault_argument=False, clipboard_tools=None):
     pid, fd = pty.fork()
     if pid == 0:
         os.environ['TERM'] = 'xterm-256color'
@@ -22,6 +22,12 @@ def start(directory, vault_argument=False):
         os.environ.pop('NO_COLOR', None)
         # Keep settings such as the theme away from the real data directory.
         os.environ['XDG_DATA_HOME'] = os.path.join(directory, '.xdg')
+        if clipboard_tools:
+            os.environ['WAYLAND_DISPLAY'] = 'coyotenote-test'
+            os.environ['PATH'] = str(clipboard_tools) + os.pathsep + os.environ['PATH']
+            os.environ['COYOTENOTE_TEST_CLIPBOARD'] = os.path.join(directory, '.clipboard')
+            os.environ.pop('SSH_CONNECTION', None)
+            os.environ.pop('SSH_TTY', None)
         args = [binary, directory] if vault_argument else [binary, '-data-dir', directory]
         os.execv(binary, args)
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 100, 0, 0))
@@ -83,7 +89,7 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
         wait_for(fd,lambda out:b'PREVIEW' in out)
         os.write(fd,b'\x10') # split
         wait_for(fd,lambda out:b'SPLIT' in out)
-        os.write(fd,b'\x14') # light theme, including preview
+        os.write(fd,b'\x14') # light theme
         wait_for(fd,lambda out:b'light' in out)
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 15, 40, 0, 0))
         os.kill(pid,signal.SIGWINCH)
@@ -152,4 +158,36 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-vault-') as directory:
         os.close(fd)
         try: os.kill(pid,signal.SIGKILL)
         except ProcessLookupError: pass
-print('PASS: real TUI create, edit, autosave, preview/split, theme/resize, SIGKILL recovery, SIGTERM flush, folders, [[link]] completion, follow, backlinks, rename and back')
+with tempfile.TemporaryDirectory(prefix='coyotenote-clipboard-') as directory:
+    vault = pathlib.Path(directory)
+    tools = vault/'.tools'
+    tools.mkdir()
+    for name, body in {'wl-copy': 'cat > "$COYOTENOTE_TEST_CLIPBOARD"',
+                       'wl-paste': 'cat "$COYOTENOTE_TEST_CLIPBOARD"'}.items():
+        helper = tools/name
+        helper.write_text('#!/bin/sh\n'+body+'\n')
+        helper.chmod(0o700)
+    (vault/'Selection.md').write_text('alpha beta')
+    pid,fd=start(directory, clipboard_tools=tools)
+    try:
+        wait_for(fd,lambda out:b'alpha beta' in out)
+        os.write(fd,b'\x1b[1;2C'*5) # Shift+Right selects alpha
+        wait_for(fd,lambda out:b'5 selected' in out)
+        os.write(fd,b'\x03') # Ctrl+C copies rather than quitting
+        wait_for(fd,lambda _: (vault/'.clipboard').exists() and (vault/'.clipboard').read_text()=='alpha')
+        os.write(fd,b'\x18') # Ctrl+X cuts only after the helper succeeds
+        wait_for(fd,lambda _: (vault/'Selection.md').read_text()==' beta')
+        os.write(fd,b'\x16') # Ctrl+V uses our own validated clipboard result
+        wait_for(fd,lambda _: (vault/'Selection.md').read_text()=='alpha beta')
+        os.write(fd,b'\x01') # home
+        os.write(fd,b'\x1b[1;2C'*5)
+        wait_for(fd,lambda out:b'5 selected' in out)
+        os.write(fd,b'\x1b[200~new\r\ntext\x1b[201~') # bracketed paste replaces selection
+        wait_for(fd,lambda _: (vault/'Selection.md').read_text()=='new\ntext beta')
+        os.write(fd,b'\x11')
+        reap(pid,fd)
+    finally:
+        os.close(fd)
+        try: os.kill(pid,signal.SIGKILL)
+        except ProcessLookupError: pass
+print('PASS: TUI autosave, recovery, preview/split, themes, folders, wiki links, Shift selection, copy/cut/paste and bracketed replacement')

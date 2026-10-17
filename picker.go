@@ -8,10 +8,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	textarea "github.com/eg36/coyotenote/internal/editor"
 )
 
 // pickerItem is a note, or with folder set, a folder whose path is id ("" is
@@ -46,6 +46,7 @@ func (m *model) openPicker() tea.Cmd {
 // openPickerFor lists the notes with ids. For backlinks, each description is
 // the line that links to the current note.
 func (m *model) openPickerFor(ids []string, backlinks bool) tea.Cmd {
+	m.editor.ClearSelection()
 	p := paletteFor(m.theme)
 	current := ""
 	if len(m.notes) > 0 {
