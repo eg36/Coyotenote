@@ -1,5 +1,10 @@
 # coyotenote
 
+> **AI-made software.** coyotenote was built with AI coding agents, Claude and
+> Codex, as an experiment to test what modern agents can do. It is not intended
+> to be used as a notepad for daily use; keep important notes in a tool built for
+> that.
+
 A small, local-first Markdown notebook for the terminal. Write without leaving the
 keyboard, keep notes in folders of a vault, connect them with `[[wiki links]]`, and
 switch between source, rendered preview and a wide split view. No account, server
