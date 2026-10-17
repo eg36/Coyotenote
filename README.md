@@ -86,8 +86,9 @@ Links inside code are ignored. Typing `[[` suggests notes: arrows select, Tab or
 Enter inserts, Escape hides the list. The preview shows links underlined; links to
 missing notes are dimmed. The footer's `← N` counts notes linking here.
 
-Renaming updates every link that pointed at the old name, keeping headings and
-aliases. A note changed outside coyotenote is not rewritten; the status lists it.
+Renaming preserves existing link destinations, keeping headings and aliases.
+This includes outgoing links in moved notes and links elsewhere that would
+otherwise change destination when a new name takes precedence. A note changed outside coyotenote is not rewritten; the status lists it.
 Notes created before 0.2 have timestamp names. They keep working and show their
 first line as the title; `-migrate` renames them after their titles once you
 confirm the printed plan.

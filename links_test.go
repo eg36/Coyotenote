@@ -176,3 +176,42 @@ func TestPreviewAndEditorShowLinks(t *testing.T) {
 		t.Fatalf("link not highlighted: %q", view)
 	}
 }
+
+func TestRenamePreservesOtherLinkDestinations(t *testing.T) {
+	for _, tc := range []struct{ from, to, source, before, want string }{
+		{"F/A", "G/A", "F/A", "[[B#Heading|alias]]", "[[F/B#Heading|alias]]"},
+		{"A", "B", "G/C", "[[B]]", "[[G/B]]"},
+	} {
+		t.Run(tc.from+"_"+tc.to, func(t *testing.T) {
+			s := testStore(t)
+			writeNote(t, s, "F/B", "")
+			writeNote(t, s, "G/B", "")
+			writeNote(t, s, tc.from, "")
+			writeNote(t, s, tc.source, tc.before)
+			m, _ := newModel(s)
+			m.selectID(tc.from)
+			m.loadNote()
+			if err := m.renameNote(tc.to); err != nil {
+				t.Fatal(err)
+			}
+			source := tc.source
+			if source == tc.from {
+				source = tc.to
+			}
+			assertFileBody(t, s.path(source), tc.want)
+		})
+	}
+}
+func TestParseLinksRespectsFenceClosingRules(t *testing.T) {
+	for _, body := range []string{
+		"````\n```\n[[Hidden]]\n````\n[[Visible]]",
+		"~~~~\n~~~\n[[Hidden]]\n~~~~~\n[[Visible]]",
+		"```\n```not a close\n[[Hidden]]\n```\n[[Visible]]",
+		"```\n    ```\n[[Hidden]]\n```\n[[Visible]]",
+	} {
+		links := parseLinks(body)
+		if len(links) != 1 || links[0].target != "Visible" {
+			t.Fatalf("%q: %+v", body, links)
+		}
+	}
+}

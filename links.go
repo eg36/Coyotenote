@@ -18,19 +18,26 @@ type link struct {
 // parseLinks finds wiki links outside fenced code blocks and inline code spans.
 func parseLinks(body string) []link {
 	var links []link
-	fence := ""
+	fence := byte(0)
+	fenceLen := 0
 	offset := 0
 	for _, line := range strings.SplitAfter(body, "\n") {
-		trimmed := strings.TrimSpace(line)
-		switch {
-		case fence != "":
-			if strings.HasPrefix(trimmed, fence) {
-				fence = ""
+		trimmed := strings.TrimLeft(line, " ")
+		indent := len(line) - len(trimmed)
+		ch, run := byte(0), 0
+		if len(trimmed) > 0 && (trimmed[0] == '`' || trimmed[0] == '~') {
+			ch = trimmed[0]
+			for run < len(trimmed) && trimmed[run] == ch {
+				run++
 			}
-		case strings.HasPrefix(trimmed, "```"):
-			fence = "```"
-		case strings.HasPrefix(trimmed, "~~~"):
-			fence = "~~~"
+		}
+		switch {
+		case fence != 0:
+			if indent <= 3 && ch == fence && run >= fenceLen && strings.TrimSpace(trimmed[run:]) == "" {
+				fence = 0
+			}
+		case indent <= 3 && run >= 3 && (ch != '`' || !strings.Contains(trimmed[run:], "`")):
+			fence, fenceLen = ch, run
 		default:
 			links = append(links, lineLinks(line, offset)...)
 		}
@@ -152,8 +159,9 @@ func (m *model) reindex() {
 	}
 }
 
-// rewriteLinks updates links that pointed at old (now renamed to id) in every
-// note, keeping headings and aliases. Notes changed on disk are left alone.
+// rewriteLinks preserves resolved destinations across a rename, including
+// outgoing links in moved notes and links affected by new name ambiguity.
+// Notes changed on disk are left alone.
 // It returns a status suffix describing the result.
 func (m *model) rewriteLinks(old, id string) string {
 	before := make([]note, len(m.notes))
@@ -172,12 +180,19 @@ func (m *model) rewriteLinks(old, id string) string {
 		links := parseLinks(body)
 		for j := len(links) - 1; j >= 0; j-- {
 			l := links[j]
-			if got, ok := oldR.resolve(l.target, from); !ok || got != old {
+			destination, ok := oldR.resolve(l.target, from)
+			if !ok {
 				continue
 			}
-			replacement := id
+			if destination == old {
+				destination = id
+			}
+			if got, ok := newR.resolve(l.target, n.ID); ok && got == destination {
+				continue
+			}
+			replacement := destination
 			if !strings.Contains(l.target, "/") {
-				replacement = newR.shortTarget(id, n.ID)
+				replacement = newR.shortTarget(destination, n.ID)
 			}
 			body = body[:l.targetStart] + replacement + body[l.targetEnd:]
 		}
