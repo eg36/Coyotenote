@@ -199,6 +199,12 @@ in `go.mod` and `go.sum`. Rendering is cached until content, width or theme chan
 There are no attachments, tags, sync, accounts, desktop integration,
 global shortcuts or theme detection. Linux and Windows are the supported platforms.
 
+## License
+
+coyotenote is released under the [MIT License](LICENSE). Release archives
+include the license file. The adapted editor component keeps its own MIT
+license, below.
+
 ## Third-party editor license
 
 The adapted Bubbles editor is distributed under the following license (also
