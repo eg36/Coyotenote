@@ -10,7 +10,8 @@ preserves source text and whole grapheme clusters, and vertical movement uses
 that wrapped grid instead of guessed offsets. textarea.go contains the selection
 fields, calls the source-span renderer, scrolls after refreshing viewport content,
 and clears selection when replacing/resetting the value. Tabs stay in the source
-instead of expanding to spaces; cellWidth and displayText draw each tab as four
-cells, and textarea.go measures text with cellWidth. sourceSanitizer also keeps
+instead of expanding to spaces; each tab advances to the next stop, every four
+cells from the start of a display row. clusterWidth, cellWidth and displayText
+share that rule, and textarea.go measures and wraps text with them. sourceSanitizer also keeps
 U+FFFD and drops only control characters. Clipboard I/O and paste
 validation remain owned by the app.

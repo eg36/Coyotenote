@@ -157,7 +157,7 @@ not a large-file editor.
 
 The editor works in LF line endings. Notes saved with CRLF (common on Windows) are
 written back with CRLF; a note mixing endings is saved with CRLF throughout.
-Tabs are kept as tabs and drawn four cells wide.
+Tabs are kept as tabs and drawn to tab stops every four cells.
 
 Autosave runs 400 ms after the last edit. Note changes and normal exits flush first.
 Each save writes a same-directory temporary file, syncs it, atomically renames it,

@@ -1335,10 +1335,11 @@ func wrap(runes []rune, width int) [][]rune {
 	lines := [][]rune{{}}
 	columns := 0
 	appendCluster := func(text string) {
-		cells := cellWidth(text)
+		cells := clusterWidth(text, columns)
 		if columns+cells > width && len(lines[len(lines)-1]) > 0 {
 			lines = append(lines, []rune{})
 			columns = 0
+			cells = clusterWidth(text, columns)
 		}
 		lines[len(lines)-1] = append(lines[len(lines)-1], []rune(text)...)
 		columns += cells

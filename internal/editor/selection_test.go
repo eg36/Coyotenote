@@ -91,8 +91,8 @@ func TestTabsStayInSourceAndFillTheirCells(t *testing.T) {
 			t.Fatalf("row %d drawn as %q", i, row)
 		}
 	}
-	if !strings.HasPrefix(ansi.Strip(m.View()), "    x    yz") {
-		t.Fatal("tabs not drawn four cells wide", ansi.Strip(m.View()))
+	if !strings.HasPrefix(ansi.Strip(m.View()), "    x   yz") {
+		t.Fatal("tabs not drawn to their tab stops", ansi.Strip(m.View()))
 	}
 	for _, row := range wrap([]rune("\t\t\tend"), 12) {
 		if cellWidth(string(row)) > 12 {
@@ -111,5 +111,37 @@ func TestSetValueKeepsNoteTextAndDropsControls(t *testing.T) {
 	m.SetValue("a\tb\uFFFD\r\nc\rd\x1b[31me")
 	if got := m.Value(); got != "a\tb\uFFFD\nc\nd[31me" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestTabsAlignToTabStops(t *testing.T) {
+	for text, want := range map[string]string{
+		"ab\tc":   "ab  c",
+		"abcd\te": "abcd    e",
+		"a\t\tb":  "a       b",
+		"界\tx":    "界  x",
+		"plain\t": "plain   ",
+	} {
+		if got := displayText(text); got != want {
+			t.Errorf("%q drawn as %q, want %q", text, got, want)
+		}
+		if cellWidth(text) != ansi.StringWidth(want) {
+			t.Errorf("%q measured %d cells, drawn %d", text, cellWidth(text), ansi.StringWidth(want))
+		}
+	}
+	// A tab that does not fit wraps and starts the next row at a full tab stop.
+	rows := wrap([]rune("abcdef\tg"), 7)
+	if len(rows) != 2 || string(rows[0]) != "abcdef" || string(rows[1]) != "\tg " {
+		t.Fatalf("wrapped as %q", rows)
+	}
+	m := New()
+	m.Prompt = ""
+	m.ShowLineNumbers = false
+	m.SetWidth(12)
+	m.SetValue("ab\tc\nabcdefgh")
+	m.SetOffset(len("ab\t"))
+	m.CursorDown()
+	if m.CursorOffset() != len("ab\tc\nabcd") {
+		t.Fatal("vertical movement ignored the tab stop", m.CursorOffset())
 	}
 }

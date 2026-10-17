@@ -9,14 +9,51 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// Tabs stay in the source and are drawn as tabWidth cells. cellWidth and
-// displayText keep wrapping, cursor movement and rendering on one grid.
+// Tabs stay in the source and advance to the next tab stop, every tabWidth
+// cells from the start of a display row. clusterWidth, cellWidth and
+// displayCluster keep wrapping, cursor movement and rendering on one grid.
 const tabWidth = 4
 
-var tabSpaces = strings.Repeat(" ", tabWidth)
+// clusterWidth is the number of cells grapheme text takes at cell column col.
+func clusterWidth(text string, col int) int {
+	if text == "\t" {
+		return tabWidth - col%tabWidth
+	}
+	return uniseg.StringWidth(text)
+}
 
-func cellWidth(s string) int      { return uniseg.StringWidth(s) + strings.Count(s, "\t")*tabWidth }
-func displayText(s string) string { return strings.ReplaceAll(s, "\t", tabSpaces) }
+// cellWidth measures text that starts at a tab stop, such as a display row.
+func cellWidth(s string) int {
+	cells := 0
+	g := uniseg.NewGraphemes(s)
+	for g.Next() {
+		cells += clusterWidth(g.Str(), cells)
+	}
+	return cells
+}
+
+// displayCluster is grapheme text as drawn at cell column col.
+func displayCluster(text string, col int) string {
+	if text == "\t" {
+		return strings.Repeat(" ", clusterWidth(text, col))
+	}
+	return text
+}
+
+// displayText is a display row as drawn, with tabs expanded to their stops.
+func displayText(s string) string {
+	if !strings.Contains(s, "\t") {
+		return s
+	}
+	var out strings.Builder
+	cells := 0
+	g := uniseg.NewGraphemes(s)
+	for g.Next() {
+		out.WriteString(displayCluster(g.Str(), cells))
+		cells += clusterWidth(g.Str(), cells)
+	}
+	return out.String()
+}
 
 // sourceSanitizer keeps tabs and U+FFFD, which are valid note text, and drops
 // other control characters so they never reach the terminal. CRLF and lone CR
@@ -120,6 +157,7 @@ func (m Model) renderSource(row, column, base, lo, hi int, runes []rune, style l
 	g := uniseg.NewGraphemes(string(runes))
 	var out, run strings.Builder
 	previousSelected := false
+	cells := 0
 	flush := func() {
 		if run.Len() == 0 {
 			return
@@ -142,15 +180,16 @@ func (m Model) renderSource(row, column, base, lo, hi int, runes []rune, style l
 			previousSelected = selected
 		}
 		if cursor {
-			m.Cursor.SetChar(displayText(text))
+			m.Cursor.SetChar(displayCluster(text, cells))
 			cellStyle := style
 			if selected {
 				cellStyle = m.SelectionStyle.Inherit(style)
 			}
 			out.WriteString(cellStyle.Render(m.Cursor.View()))
 		} else {
-			run.WriteString(displayText(text))
+			run.WriteString(displayCluster(text, cells))
 		}
+		cells += clusterWidth(text, cells)
 		column += size
 	}
 	flush()
@@ -212,7 +251,7 @@ func (m *Model) cursorVertical(delta int) {
 	for clusters.Next() {
 		text := clusters.Str()
 		size := utf8.RuneCountInString(text)
-		width := cellWidth(text)
+		width := clusterWidth(text, cells)
 		if cells+width > desired || column+size > len(m.value[row]) || (displayRow < len(grid)-1 && column+size >= rowStart+len(grid[displayRow])) {
 			break
 		}
