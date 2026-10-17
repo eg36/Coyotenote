@@ -57,6 +57,14 @@ func (b *clipboardBuffer) Write(p []byte) (int, error) {
 	}
 	return b.data.Write(p)
 }
+
+// emptyClipboard matches helper errors for an empty clipboard: wl-paste prints
+// "Nothing is copied" or "No selection", xclip "target ... not available".
+func emptyClipboard(stderr string) bool {
+	stderr = strings.ToLower(stderr)
+	return strings.Contains(stderr, "nothing is copied") || strings.Contains(stderr, "no selection") ||
+		(strings.Contains(stderr, "target") && strings.Contains(stderr, "not available"))
+}
 func (desktopClipboard) Read(ctx context.Context) (string, error) {
 	name, args, err := clipboardHelper(true)
 	if err != nil {
@@ -64,9 +72,14 @@ func (desktopClipboard) Read(ctx context.Context) (string, error) {
 	}
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.WaitDelay = 200 * time.Millisecond
-	var out clipboardBuffer
+	var out, stderr clipboardBuffer
 	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 	if err = cmd.Run(); err != nil {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) && emptyClipboard(stderr.data.String()) {
+			return "", nil // The app reports an empty clipboard.
+		}
 		return "", fmt.Errorf("read failed: %w; use terminal paste", err)
 	}
 	return out.data.String(), nil

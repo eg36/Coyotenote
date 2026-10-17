@@ -66,3 +66,21 @@ func TestLinuxClipboardTimeoutAndUnavailable(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestLinuxClipboardEmptyIsNotAnError(t *testing.T) {
+	dir, _ := fakeClipboardHelpers(t)
+	for _, message := range []string{"Nothing is copied", "No selection", "Error: target STRING not available"} {
+		script := "#!/bin/sh\necho '" + message + "' >&2\nexit 1\n"
+		if err := os.WriteFile(filepath.Join(dir, "wl-paste"), []byte(script), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if text, err := (desktopClipboard{}).Read(context.Background()); err != nil || text != "" {
+			t.Fatalf("%s: %q %v", message, text, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "wl-paste"), []byte("#!/bin/sh\necho 'broken' >&2\nexit 1\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (desktopClipboard{}).Read(context.Background()); err == nil {
+		t.Fatal("helper failure reported as empty clipboard")
+	}
+}
