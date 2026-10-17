@@ -89,8 +89,10 @@ with tempfile.TemporaryDirectory(prefix='coyotenote-smoke-') as directory:
         wait_for(fd,lambda out:b'PREVIEW' in out)
         os.write(fd,b'\x10') # split
         wait_for(fd,lambda out:b'SPLIT' in out)
-        os.write(fd,b'\x14') # light theme
-        wait_for(fd,lambda out:b'light' in out)
+        os.write(fd,b'\x14') # searchable theme chooser
+        wait_for(fd,lambda out:b'THEMES' in out)
+        os.write(fd,b'catppuccin mocha\r')
+        wait_for(fd,lambda out:b'catppuccin-mocha' in out)
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 15, 40, 0, 0))
         os.kill(pid,signal.SIGWINCH)
         wait_for(fd,lambda out:b'split at 90+' in out and b'F1' in out)

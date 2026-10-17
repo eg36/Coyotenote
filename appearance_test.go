@@ -81,7 +81,8 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 	}
 	newNote(m)
 	m.editor.SetValue("# A quiet place\n\n**Write** something `small`.\n\n```go\nfmt.Println(\"hello\")\n```\n\n- [ ] Keep writing")
-	for _, theme := range []string{"dark", "light", "dark"} {
+	for _, spec := range themes {
+		theme := spec.id
 		m.theme = theme
 		m.applyTheme()
 		p := paletteFor(theme)
@@ -90,12 +91,15 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 			allowed[bgOf(c)] = true
 		}
 		for _, size := range [][2]int{{32, 10}, {40, 15}, {79, 24}, {80, 24}, {90, 24}, {101, 30}, {120, 40}} {
-			for mode := 0; mode < 5; mode++ {
+			for mode := 0; mode < 6; mode++ {
 				m.mode = min(mode, 2)
 				m.picker = nil
+				m.themePicker = nil
 				m.editor.ClearSelection()
-
 				if mode == 4 {
+					m.openThemePicker()
+				}
+				if mode == 5 {
 					m.mode = 0
 					m.editor.SetOffset(0)
 					m.editor.StartSelection()
@@ -135,7 +139,7 @@ func TestAppearanceSurfacesAndResponsiveLayout(t *testing.T) {
 				if !hint.MatchString(lines[size[1]-2]) || !strings.Contains(lines[size[1]-2], "^Q  quit") {
 					t.Fatal("essential hints clipped", lines[size[1]-2])
 				}
-				if m.split() && m.picker == nil {
+				if m.split() && m.picker == nil && m.themePicker == nil {
 					for y := 3; y < size[1]-4; y++ {
 						if !strings.Contains(lines[y], "│") {
 							t.Fatalf("divider missing on row %d", y)

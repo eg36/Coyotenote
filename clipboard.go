@@ -62,7 +62,7 @@ func (m *model) clipboardDone(result clipboardResult) tea.Cmd {
 		m.status = "Copied selection"
 		return nil
 	}
-	if len(m.notes) == 0 || m.notes[m.index].ID != result.id || m.inputEpoch != result.epoch || m.revision != result.revision || m.picker != nil || m.prompt != nil || m.help || m.confirm || m.mode == 1 {
+	if len(m.notes) == 0 || m.notes[m.index].ID != result.id || m.inputEpoch != result.epoch || m.revision != result.revision || m.picker != nil || m.prompt != nil || m.themePicker != nil || m.help || m.confirm || m.mode == 1 {
 		m.status = "Clipboard finished; editor changed, so text was left untouched"
 		return nil
 	}

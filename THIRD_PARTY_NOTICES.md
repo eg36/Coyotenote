@@ -29,3 +29,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Theme palettes
+
+Theme colors are adapted to application UI roles from the original projects:
+
+- Ayu — https://github.com/ayu-theme/ayu-colors
+- Catppuccin — https://catppuccin.com/palette/
+- Nord — https://www.nordtheme.com/docs/colors-and-palettes/
+- Tokyo Night — https://github.com/folke/tokyonight.nvim
+- Dracula — https://github.com/dracula/dracula-theme
+- Gruvbox — https://github.com/morhetz/gruvbox
+
+These themes are community adaptations; they do not imply endorsement by their
+original authors. The existing Go module dependencies retain their own licenses.

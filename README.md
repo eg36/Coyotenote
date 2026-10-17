@@ -12,7 +12,7 @@ appear above the keys only when there is something to read. Markdown headings
 are colored by level in both the editor and the Glamour preview (H1 is a badge).
 The editor also highlights list markers, blockquotes, inline code, bold spans and `[[links]]`.
 Fenced code and continuation rows of wrapped headings have no special editor highlighting.
-Both manual themes share one editor/preview surface, and all text stays readable
+All themes share one editor/preview surface, and all text stays readable
 without color.
 
 ## Build and run
@@ -58,7 +58,7 @@ Download a Linux or Windows archive for amd64 or arm64 from
 | Ctrl+PgUp / Ctrl+PgDn | Alternative note navigation |
 | Alt+Left/Right, Ctrl+Left/Right | Move by word in the editor |
 | Ctrl+P | Cycle editor → preview → split |
-| Ctrl+T | Switch and remember dark/light theme |
+| Ctrl+T | Choose a theme: type to filter, arrows preview, Enter keeps, Escape cancels |
 | Ctrl+S | Save immediately; retry a failed save |
 | Shift+arrows | Select text across lines and soft wraps |
 | Shift+Home / Shift+End | Extend selection to the start / end of the logical line |
@@ -89,6 +89,24 @@ selection changes. Normal textarea movement and editing keys work in the editor.
 Split view requires 90 columns; narrower terminals show the editor instead.
 Split preview follows the cursor proportionally. Switch to preview to scroll independently. Minimum usable size is 32×10; 80×24
 is recommended. The header shows the note number and path. Empty notebooks stay empty until Ctrl+N. Deleted notes move to `.trash/`; Ctrl+Z restores them during the current session.
+
+## Themes
+
+Ctrl+T opens a searchable chooser. Arrows preview the palette immediately;
+Enter saves the choice, and Escape restores the previous theme. The same palette
+colors the editor, selection, preview, code blocks and UI. Existing `dark` and
+`light` settings remain valid; unknown names fall back to dark.
+
+There are 14 built-in choices: Coyote Dark/Light, Ayu Dark/Mirage/Light,
+Catppuccin Mocha/Macchiato/Frappé/Latte, Nord, Tokyo Night, Dracula, and
+Gruvbox Dark/Light. Colors are adapted to terminal UI roles, with some light-theme
+accents darkened for readability. Palette sources:
+[Ayu](https://github.com/ayu-theme/ayu-colors/tree/master/themes),
+[Catppuccin](https://catppuccin.com/palette/),
+[Nord](https://www.nordtheme.com/docs/colors-and-palettes/),
+[Tokyo Night](https://github.com/folke/tokyonight.nvim),
+[Dracula](https://github.com/dracula/dracula-theme), and
+[Gruvbox](https://github.com/morhetz/gruvbox).
 
 ## Vaults, folders and links
 
@@ -126,7 +144,7 @@ folder path. After restarting, restore a trashed note by moving its `.md` file f
 before switching to the restored note.
 
 Each note is a plain UTF-8 `.md` file; no metadata header or database is required.
-Notes are sorted by path, ignoring case. `theme` holds `dark` or `light`; it lives in
+Notes are sorted by path, ignoring case. `theme` holds the selected theme ID; it lives in
 the data directory, never in a vault given as an argument. `.lock` in the vault
 prevents simultaneous app instances using the same notes. Files are created with mode 0600 and the data directory with 0700.
 Markdown preview supports headings, emphasis, lists, code, quotes, links and tables.

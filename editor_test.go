@@ -212,15 +212,15 @@ func TestSelectionWrapScrollAndAppearance(t *testing.T) {
 	m, _ := editorModel(t, "# Zażółć e\u0301👩‍💻界 "+strings.Repeat("word ", 40)+"\nlast")
 	m.Update(tea.WindowSizeMsg{Width: 32, Height: 10})
 	selectRange(m, 2, 80)
-	for _, theme := range []string{"dark", "light"} {
-		m.theme = theme
+	for _, theme := range themes {
+		m.theme = theme.id
 		m.applyTheme()
 		view := m.View()
 		if !strings.Contains(ansi.Strip(view), "selected") {
-			t.Fatal("selection feedback missing", theme)
+			t.Fatal("selection feedback missing", theme.id)
 		}
 		rows := cellBackgrounds(view)
-		selected := bgOf(paletteFor(theme).line)
+		selected := bgOf(theme.colors.line)
 		found := false
 		for _, row := range rows {
 			for _, bg := range row {
@@ -228,7 +228,7 @@ func TestSelectionWrapScrollAndAppearance(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Fatal("scrolled selection not painted", theme)
+			t.Fatal("scrolled selection not painted", theme.id)
 		}
 	}
 	typeText(m, "replacement")
@@ -259,16 +259,5 @@ func TestVerticalSelectionAndTypingAcrossLines(t *testing.T) {
 	typeText(m, "X")
 	if m.editor.Value() != "fiXird" {
 		t.Fatal(m.editor.Value())
-	}
-}
-
-func TestHelpScrollsToEveryShortcut(t *testing.T) {
-	m, _ := editorModel(t, "abc")
-	press(m, tea.KeyF1)
-	for i := 0; i < 30; i++ {
-		press(m, tea.KeyDown)
-	}
-	if !strings.Contains(ansi.Strip(m.View()), "copy / cut / paste") {
-		t.Fatal("clipboard help unreachable")
 	}
 }

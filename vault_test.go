@@ -209,6 +209,8 @@ func TestThemeLivesInConfigDirectory(t *testing.T) {
 	s.config = t.TempDir()
 	m, _ := newModel(s)
 	press(m, tea.KeyCtrlT)
+	press(m, tea.KeyDown)
+	press(m, tea.KeyEnter)
 	assertFileBody(t, filepath.Join(s.config, "theme"), "light")
 	if _, err := os.Stat(filepath.Join(s.dir, "theme")); !os.IsNotExist(err) {
 		t.Fatal("theme written into the vault")

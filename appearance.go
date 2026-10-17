@@ -13,13 +13,6 @@ import (
 
 type palette struct{ surface, chrome, text, muted, accent, cyan, good, warn, danger, line, pink, blue, onPill string }
 
-func paletteFor(theme string) palette {
-	if theme == "light" {
-		return palette{"#FAF8F5", "#ECE8F0", "#343044", "#6C657A", "#7953B3", "#257A87", "#33744B", "#94610B", "#B43B55", "#C9C1D3", "#B8327A", "#3B63C4", "#FFFFFF"}
-	}
-	return palette{"#22252D", "#2D313D", "#DDE2EF", "#A3ADC2", "#C4A7FF", "#89DCEB", "#A6DA95", "#EED49F", "#F29BAA", "#475069", "#FF8CC6", "#8AADF4", "#1B1D24"}
-}
-
 // rainbow is the cycle of pill colors used for key hints.
 func (p palette) rainbow() []string {
 	return []string{p.accent, p.pink, p.warn, p.good, p.cyan, p.blue}
@@ -143,6 +136,8 @@ func (m *model) header(p palette) string {
 	left := mark + "  " + ink(p.blue).Bold(true).Render(position)
 	mode, color := "EDIT", p.good
 	switch {
+	case m.themePicker != nil:
+		mode, color = "THEMES", p.accent
 	case m.picker != nil:
 		mode, color = "NOTES", p.pink
 	case m.prompt != nil:
@@ -181,7 +176,9 @@ func (m *model) paneLabels(p palette) string {
 	} else if m.mode == 2 {
 		line += "  " + ink(p.muted).Italic(true).Render("split at 90+ columns")
 	}
-
+	if m.themePicker != nil {
+		return paintBlock("  "+ink(p.accent).Bold(true).Render("THEMES · preview your palette"), m.width, 1, p.text, p.surface)
+	}
 	if m.picker != nil {
 		// Not ☰: Unicode 16 made the trigrams wide, and terminals using its
 		// tables draw them in two cells while the layout counts one.
@@ -343,7 +340,7 @@ type keyHint struct {
 func (m *model) shortcutLine(p palette) string {
 	hints := []keyHint{
 		{"^Z", "undo", 0}, {"^N", "new", 3}, {"^O", "find", 3}, {"^G", "link", 2}, {"^Y", "back", 1}, {"^R", "rename", 1}, {"^D", "delete", 1}, {"Alt+↑↓", "notes", 2}, {"^P", "view", 2},
-		{"^C/X/V", "clipboard", 4}, {"^T", "theme", 1}, {"^S", "save", 0}, {"F1", "keys", 9}, {"^Q", "quit", 9},
+		{"^C/X/V", "clipboard", 4}, {"^T", "themes", 1}, {"^S", "save", 0}, {"F1", "keys", 9}, {"^Q", "quit", 9},
 	}
 	colors := p.rainbow()
 	render := func(hs []keyHint) string {
@@ -394,7 +391,7 @@ func (m *model) helpRows(p palette) []string {
 		{"Ctrl+N", "new note (Folder/Name)"}, {"Ctrl+R", "rename or move; updates [[links]]"}, {"Ctrl+O", "find a note"},
 		{"Ctrl+G", "open the [[link]] under the cursor"}, {"Ctrl+Y", "back to the previous note"}, {"Ctrl+L", "notes linking here"}, {"Ctrl+Z", "undo move to trash"}, {"Ctrl+D", "move to trash (asks first)"}, {"Alt+↑/↓", "previous / next note"},
 		{"Ctrl+PgUp/PgDn", "previous / next note"}, {"Ctrl+P", "editor → preview → split"},
-		{"Ctrl+T", "dark / light theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q", "save and quit"},
+		{"Ctrl+T", "choose a theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q", "save and quit"},
 		{"Shift+arrows", "select text"}, {"Ctrl+C / X / V", "copy / cut / paste"}, {"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},
 	}
 	colors := p.rainbow()

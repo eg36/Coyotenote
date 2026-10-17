@@ -174,6 +174,8 @@ func TestLockThemeExitAndAtomicSave(t *testing.T) {
 		t.Fatal("exit did not flush")
 	}
 	press(m, tea.KeyCtrlT)
+	press(m, tea.KeyDown)
+	press(m, tea.KeyEnter)
 	reopened, err := newModel(s)
 	if err != nil || reopened.theme != "light" {
 		t.Fatal("theme not persisted")

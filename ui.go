@@ -51,6 +51,7 @@ type model struct {
 	clipboard     clipboardBackend
 	clipboardBusy bool
 	inputEpoch    uint64
+	themePicker   *themeChooser
 
 	store           *store
 	notes           []note
@@ -98,8 +99,10 @@ func newModel(s *store) (*model, error) {
 	e.KeyMap.WordForward.SetKeys("alt+right", "alt+f", "ctrl+right")
 	e.KeyMap.WordBackward.SetKeys("alt+left", "alt+b", "ctrl+left")
 	m := &model{clipboard: desktopClipboard{}, store: s, notes: notes, editor: e, preview: viewport.New(40, 10), width: 80, height: 24, theme: "dark", status: "Saved", dismissed: [2]int{-1, -1}}
-	if b, err := os.ReadFile(filepath.Join(s.config, "theme")); err == nil && strings.TrimSpace(string(b)) == "light" {
-		m.theme = "light"
+	if b, err := os.ReadFile(filepath.Join(s.config, "theme")); err == nil {
+		if name := strings.TrimSpace(string(b)); validTheme(name) {
+			m.theme = name
+		}
 	}
 	var warnings []string
 	if len(report.skipped) > 0 {
@@ -203,7 +206,7 @@ func renderMarkdown(body, theme string, width int) (string, error) {
 	// Use explicit styles, with the same writing surface as the editor.
 	// Leave layout padding to the app, rather than Glamour's document margins.
 	style := styles.DarkStyleConfig
-	if theme == "light" {
+	if themeIsLight(theme) {
 		style = styles.LightStyleConfig
 	}
 	p := paletteFor(theme)
@@ -225,10 +228,7 @@ func renderMarkdown(body, theme string, width int) (string, error) {
 	style.Code.BackgroundColor = &p.surface
 	// Named Chroma themes avoid Glamour's global first-theme-wins registry.
 	style.CodeBlock.Chroma = nil
-	style.CodeBlock.Theme = "github-dark"
-	if theme == "light" {
-		style.CodeBlock.Theme = "github"
-	}
+	style.CodeBlock.Theme = "coyotenote-" + themeByID(theme).id
 	if lipgloss.ColorProfile() == termenv.Ascii {
 		style.CodeBlock.Theme = ""
 	}
@@ -319,6 +319,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputEpoch++
 		if key.Matches(v, keys.quit) {
 			return m, m.quit()
+		}
+		if m.themePicker != nil {
+			return m, m.updateThemePicker(v)
 		}
 		if m.picker != nil {
 			return m, m.updatePicker(v)
@@ -457,17 +460,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(textarea.Blink, m.requestRender())
 		case key.Matches(v, keys.theme):
-			theme := "light"
-			if m.theme == "light" {
-				theme = "dark"
-			}
-			if err := atomicWrite(m.store.config, "theme", []byte(theme)); err != nil {
-				m.status = err.Error()
-			} else {
-				m.theme = theme
-				m.applyTheme()
-			}
-			return m, m.requestRender()
+			return m, m.openThemePicker()
 		}
 	}
 	if m.picker != nil {
@@ -521,6 +514,8 @@ func (m *model) View() string {
 	}
 	var body string
 	switch {
+	case m.themePicker != nil:
+		body = m.themePickerView(p)
 	case m.confirm:
 		body = pill("TRASH", p.onPill, p.warn) + " " + ink(p.danger).Bold(true).Render("Move this note to trash?") +
 			"\n\n" + pill("y", p.onPill, p.danger) + ink(p.muted).Render(" confirm   ") + pill("n / Esc", p.onPill, p.good) + ink(p.muted).Render(" cancel")
