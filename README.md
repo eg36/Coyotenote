@@ -48,7 +48,7 @@ older console hosts may show fewer colors.
 ## Download
 
 Download a Linux or Windows archive for amd64 or arm64 from
-[GitHub Releases](https://github.com/eg36/coyotenote/releases). Each release includes
+[GitHub Releases](https://github.com/eg36/Coyotenote/releases). Each release includes
 `SHA256SUMS` to verify the archives.
 
 ## Keys
