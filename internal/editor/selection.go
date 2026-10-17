@@ -2,6 +2,7 @@ package editor
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
@@ -16,6 +17,27 @@ var tabSpaces = strings.Repeat(" ", tabWidth)
 
 func cellWidth(s string) int      { return uniseg.StringWidth(s) + strings.Count(s, "\t")*tabWidth }
 func displayText(s string) string { return strings.ReplaceAll(s, "\t", tabSpaces) }
+
+// sourceSanitizer keeps tabs and U+FFFD, which are valid note text, and drops
+// other control characters so they never reach the terminal. CRLF and lone CR
+// become one newline.
+type sourceSanitizer struct{}
+
+func (sourceSanitizer) Sanitize(runes []rune) []rune {
+	out := make([]rune, 0, len(runes))
+	for i, r := range runes {
+		switch {
+		case r == '\r':
+			if i+1 < len(runes) && runes[i+1] == '\n' {
+				continue
+			}
+			out = append(out, '\n')
+		case r == '\n' || r == '\t' || !unicode.IsControl(r):
+			out = append(out, r)
+		}
+	}
+	return out
+}
 
 // CursorOffset is a rune offset in the complete source, independent of wrapping.
 func (m Model) CursorOffset() int {

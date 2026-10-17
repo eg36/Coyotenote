@@ -150,7 +150,8 @@ Markdown preview supports headings, emphasis, lists, code, quotes, links and tab
 It does not fetch links or images. The preview renders in the background shortly
 after typing pauses, so large notes never block the editor. Notes may have up to
 10,000 lines, a Bubbles editor limit. Oversized, invalid UTF-8, symlinked or
-unreadable `.md` files are skipped at startup with a status warning naming them, and
+unreadable `.md` files, and files holding control characters other than tabs and
+line endings, are skipped at startup with a status warning naming them, and
 are left unchanged; the rest of the notebook opens normally. This is a scratchpad,
 not a large-file editor.
 

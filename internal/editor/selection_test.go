@@ -105,3 +105,11 @@ func TestTabsStayInSourceAndFillTheirCells(t *testing.T) {
 		t.Fatal("vertical movement ignored tab width", m.Line(), m.CursorOffset())
 	}
 }
+
+func TestSetValueKeepsNoteTextAndDropsControls(t *testing.T) {
+	m := New()
+	m.SetValue("a\tb\uFFFD\r\nc\rd\x1b[31me")
+	if got := m.Value(); got != "a\tb\uFFFD\nc\nd[31me" {
+		t.Fatalf("got %q", got)
+	}
+}

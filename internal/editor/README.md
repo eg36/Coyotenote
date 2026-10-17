@@ -11,5 +11,6 @@ that wrapped grid instead of guessed offsets. textarea.go contains the selection
 fields, calls the source-span renderer, scrolls after refreshing viewport content,
 and clears selection when replacing/resetting the value. Tabs stay in the source
 instead of expanding to spaces; cellWidth and displayText draw each tab as four
-cells, and textarea.go measures text with cellWidth. Clipboard I/O and paste
+cells, and textarea.go measures text with cellWidth. sourceSanitizer also keeps
+U+FFFD and drops only control characters. Clipboard I/O and paste
 validation remain owned by the app.

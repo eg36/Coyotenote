@@ -228,13 +228,13 @@ func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(s.dir, "good.md"), []byte("# Good"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	bad := map[string]string{"long.md": strings.Repeat("line\n", maxLines), "long-cr.md": strings.Repeat("line\r", maxLines), "binary.md": string([]byte{0xff})}
+	bad := map[string]string{"long.md": strings.Repeat("line\n", maxLines), "long-cr.md": strings.Repeat("line\r", maxLines), "control.md": "page\fbreak", "binary.md": string([]byte{0xff})}
 	for name, body := range bad {
 		if err := os.WriteFile(filepath.Join(s.dir, name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	unsafeNames := []string{"long.md", "long-cr.md", "binary.md"}
+	unsafeNames := []string{"long.md", "long-cr.md", "control.md", "binary.md"}
 	if err := os.Symlink(filepath.Join(s.dir, "good.md"), filepath.Join(s.dir, "link.md")); err != nil {
 		if runtime.GOOS != "windows" {
 			t.Fatal(err)

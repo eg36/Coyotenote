@@ -65,6 +65,7 @@ func TestRestoreRefusesExistingAndInvalidFiles(t *testing.T) {
 		{"invalid UTF-8", string([]byte{0xff}), false},
 		{"too many lines", strings.Repeat("\n", maxLines), false},
 		{"too many CR lines", strings.Repeat("\r", maxLines), false},
+		{"control characters", "bell\a", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := testStore(t)

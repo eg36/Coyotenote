@@ -106,8 +106,8 @@ func (s *store) restore(id string) (note, error) {
 	if err != nil {
 		return note{}, err
 	}
-	if !utf8.Valid(body) || lineCount(string(body)) > maxLines {
-		return note{}, errors.New("trashed note is not valid UTF-8 or exceeds the line limit")
+	if !utf8.Valid(body) || lineCount(string(body)) > maxLines || hasControl(string(body)) {
+		return note{}, errors.New("trashed note is not valid UTF-8, exceeds the line limit or holds control characters")
 	}
 	destination := s.path(id)
 	if err = requireAbsent(destination); err != nil {

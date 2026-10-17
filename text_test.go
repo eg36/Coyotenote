@@ -29,8 +29,9 @@ func editAndSave(t *testing.T, body string) string {
 }
 func TestEditingKeepsNoteText(t *testing.T) {
 	for name, body := range map[string]string{
-		"LF":   "# Title\n\none\ntwo\n",
-		"CRLF": "# Title\r\n\r\none\r\ntwo\r\n",
+		"LF":     "# Title\n\none\ntwo\n",
+		"CRLF":   "# Title\r\n\r\none\r\ntwo\r\n",
+		"U+FFFD": "decoded badly: \uFFFD\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := editAndSave(t, body); got != body {
@@ -58,5 +59,12 @@ func TestEditingKeepsTabs(t *testing.T) {
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("\ty"), Paste: true})
 	if got := m.editor.Value(); got != "x\ty" {
 		t.Fatalf("pasted tab became %q", got)
+	}
+}
+func TestPasteKeepsReplacementCharacter(t *testing.T) {
+	m, _ := editorModel(t, "")
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a\uFFFDb"), Paste: true})
+	if got := m.editor.Value(); got != "a\uFFFDb" {
+		t.Fatalf("paste became %q", got)
 	}
 }

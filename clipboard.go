@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
-	"github.com/charmbracelet/bubbles/runeutil"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -83,12 +81,10 @@ func normalizedInput(text string) (string, error) {
 		return "", errors.New("text is not valid UTF-8")
 	}
 	text = strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
-	for _, r := range text {
-		if unicode.IsControl(r) && r != '\n' && r != '\t' {
-			return "", errors.New("text contains unsupported control characters")
-		}
+	if hasControl(text) {
+		return "", errors.New("text contains unsupported control characters")
 	}
-	return string(runeutil.NewSanitizer(runeutil.ReplaceTabs("\t")).Sanitize([]rune(text))), nil
+	return text, nil
 }
 func (m *model) insertText(text string, paste bool) tea.Cmd {
 	if paste && text == "" {

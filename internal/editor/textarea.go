@@ -547,8 +547,7 @@ func (m *Model) Reset() {
 // san initializes or retrieves the rune sanitizer.
 func (m *Model) san() runeutil.Sanitizer {
 	if m.rsan == nil {
-		// Tabs stay in the source; cellWidth draws them as tabWidth cells.
-		m.rsan = runeutil.NewSanitizer(runeutil.ReplaceTabs("\t"))
+		m.rsan = sourceSanitizer{}
 	}
 	return m.rsan
 }

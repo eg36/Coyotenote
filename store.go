@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -36,6 +37,14 @@ func diskText(text string, crlf bool) string {
 		return strings.ReplaceAll(text, "\n", "\r\n")
 	}
 	return text
+}
+
+// hasControl reports control characters other than line endings and tabs. The
+// editor drops them, so notes holding them are left alone instead of rewritten.
+func hasControl(body string) bool {
+	return strings.ContainsFunc(body, func(r rune) bool {
+		return unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t'
+	})
 }
 
 // lineCount counts lines as the editor will hold them.
@@ -151,6 +160,8 @@ func (s *store) load() ([]note, loadReport, error) {
 			r.skipped = append(r.skipped, rel+" (not UTF-8)")
 		case lineCount(string(b)) > maxLines:
 			r.skipped = append(r.skipped, fmt.Sprintf("%s (%d+ lines)", rel, maxLines))
+		case hasControl(string(b)):
+			r.skipped = append(r.skipped, rel+" (control characters)")
 		default:
 			notes = append(notes, note{id, string(b)})
 		}
