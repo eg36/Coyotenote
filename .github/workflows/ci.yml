@@ -1,9 +1,28 @@
 name: CI
 
-on: [push, pull_request]
+# Tags are already tested on main and are built by the Release workflow.
+# Changes touching only docs, the logo or the license skip CI.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'logo.png'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'logo.png'
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+# A newer push to the same branch cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   linux:
