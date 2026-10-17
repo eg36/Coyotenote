@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="coyotenote logo: a fox holding a note" width="280">
+</p>
+
 # coyotenote
 
 > **AI-made software.** coyotenote was built with AI coding agents, Claude and
