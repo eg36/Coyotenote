@@ -155,6 +155,9 @@ func (m *model) selectionKeys(k tea.KeyMsg) (tea.Cmd, bool) {
 			return nil, true
 		}
 	}
+	if (name == "tab" || name == "shift+tab") && m.complete == nil {
+		return m.tabKey(name == "shift+tab"), true
+	}
 	if k.Paste {
 		return m.insertText(string(k.Runes), true), true
 	}

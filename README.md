@@ -63,6 +63,7 @@ Download a Linux or Windows archive for amd64 or arm64 from
 | Shift+arrows | Select text across lines and soft wraps |
 | Shift+Home / Shift+End | Extend selection to the start / end of the logical line |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut selected source / paste, replacing the selection |
+| Tab / Shift+Tab | Insert a tab, or indent every line of a multi-line selection / remove one tab or up to four spaces of indentation. Tab accepts a `[[` suggestion while the list is open |
 | Ctrl+Q | Save and quit (after a failed save: first press writes a recovery copy, second quits) |
 | F1 | Show/hide key reference; Escape closes it |
 | Arrows, PgUp/PgDn, Home/End | Scroll in preview |

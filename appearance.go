@@ -392,7 +392,7 @@ func (m *model) helpRows(p palette) []string {
 		{"Ctrl+G", "open the [[link]] under the cursor"}, {"Ctrl+Y", "back to the previous note"}, {"Ctrl+L", "notes linking here"}, {"Ctrl+Z", "undo move to trash"}, {"Ctrl+D", "move to trash (asks first)"}, {"Alt+↑/↓", "previous / next note"},
 		{"Ctrl+PgUp/PgDn", "previous / next note"}, {"Ctrl+P", "editor → preview → split"},
 		{"Ctrl+T", "choose a theme"}, {"Ctrl+S", "save now"}, {"Ctrl+Q", "save and quit"},
-		{"Shift+arrows", "select text"}, {"Ctrl+C / X / V", "copy / cut / paste"}, {"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},
+		{"Shift+arrows", "select text"}, {"Tab / Shift+Tab", "indent / outdent"}, {"Ctrl+C / X / V", "copy / cut / paste"}, {"F1 / Esc", "close this help"}, {"Alt/Ctrl+←/→", "move by word"}, {"↑↓ PgUp PgDn", "scroll preview"},
 	}
 	colors := p.rainbow()
 	lines := []string{gradient("KEYS · ↑↓ scroll", true, p.accent, p.pink, p.cyan), ""}
