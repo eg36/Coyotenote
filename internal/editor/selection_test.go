@@ -74,3 +74,34 @@ func TestVerticalMovementMakesProgressAtWrapBoundary(t *testing.T) {
 	}
 	t.Fatal("never reached first line")
 }
+
+func TestTabsStayInSourceAndFillTheirCells(t *testing.T) {
+	m := New()
+	m.Prompt = ""
+	m.ShowLineNumbers = false
+	m.SetWidth(12)
+	m.SetHeight(4)
+	m.SetValue("\tx\tyz\n\t\t\tend")
+	if m.Value() != "\tx\tyz\n\t\t\tend" {
+		t.Fatalf("tabs changed: %q", m.Value())
+	}
+	m.SetOffset(1)
+	for i, row := range strings.Split(ansi.Strip(m.View()), "\n") {
+		if strings.Contains(row, "\t") || ansi.StringWidth(row) != 12 {
+			t.Fatalf("row %d drawn as %q", i, row)
+		}
+	}
+	if !strings.HasPrefix(ansi.Strip(m.View()), "    x    yz") {
+		t.Fatal("tabs not drawn four cells wide", ansi.Strip(m.View()))
+	}
+	for _, row := range wrap([]rune("\t\t\tend"), 12) {
+		if cellWidth(string(row)) > 12 {
+			t.Fatalf("wrapped row too wide: %q", string(row))
+		}
+	}
+	// "x" sits at cell 4 on the first line; moving down lands after the first tab.
+	m.CursorDown()
+	if m.Line() != 1 || m.CursorOffset() != len("\tx\tyz\n\t") {
+		t.Fatal("vertical movement ignored tab width", m.Line(), m.CursorOffset())
+	}
+}

@@ -471,7 +471,7 @@ func (m Model) Value() string {
 func (m *Model) Length() int {
 	var l int
 	for _, row := range m.value {
-		l += uniseg.StringWidth(string(row))
+		l += cellWidth(string(row))
 	}
 	// We add len(m.value) to include the newline characters.
 	return l + len(m.value) - 1
@@ -547,9 +547,8 @@ func (m *Model) Reset() {
 // san initializes or retrieves the rune sanitizer.
 func (m *Model) san() runeutil.Sanitizer {
 	if m.rsan == nil {
-		// Textinput has all its input on a single line so collapse
-		// newlines/tabs to single spaces.
-		m.rsan = runeutil.NewSanitizer()
+		// Tabs stay in the source; cellWidth draws them as tabWidth cells.
+		m.rsan = runeutil.NewSanitizer(runeutil.ReplaceTabs("\t"))
 	}
 	return m.rsan
 }
@@ -774,19 +773,19 @@ func (m Model) LineInfo() LineInfo {
 				RowOffset:    i + 1,
 				StartColumn:  m.col,
 				Width:        len(grid[i+1]),
-				CharWidth:    uniseg.StringWidth(string(line)),
+				CharWidth:    cellWidth(string(line)),
 			}
 		}
 
 		if counter+len(line) >= m.col {
 			return LineInfo{
-				CharOffset:   uniseg.StringWidth(string(line[:max(0, m.col-counter)])),
+				CharOffset:   cellWidth(string(line[:max(0, m.col-counter)])),
 				ColumnOffset: m.col - counter,
 				Height:       len(grid),
 				RowOffset:    i,
 				StartColumn:  counter,
 				Width:        len(line),
-				CharWidth:    uniseg.StringWidth(string(line)),
+				CharWidth:    cellWidth(string(line)),
 			}
 		}
 
@@ -1093,7 +1092,7 @@ func (m Model) View() string {
 				widestLineNumber = lnw
 			}
 
-			strwidth := uniseg.StringWidth(string(wrappedLine))
+			strwidth := cellWidth(string(wrappedLine))
 			padding := m.width - strwidth
 			// If the trailing space causes the line to be wider than the
 			// width, we should not draw it to the screen since it will result
@@ -1337,7 +1336,7 @@ func wrap(runes []rune, width int) [][]rune {
 	lines := [][]rune{{}}
 	columns := 0
 	appendCluster := func(text string) {
-		cells := uniseg.StringWidth(text)
+		cells := cellWidth(text)
 		if columns+cells > width && len(lines[len(lines)-1]) > 0 {
 			lines = append(lines, []rune{})
 			columns = 0
@@ -1354,7 +1353,7 @@ func wrap(runes []rune, width int) [][]rune {
 		if text == "" {
 			return
 		}
-		cells := uniseg.StringWidth(text)
+		cells := cellWidth(text)
 		if cells <= width && columns+cells > width && len(lines[len(lines)-1]) > 0 {
 			lines = append(lines, []rune{})
 			columns = 0

@@ -88,7 +88,7 @@ func normalizedInput(text string) (string, error) {
 			return "", errors.New("text contains unsupported control characters")
 		}
 	}
-	return string(runeutil.NewSanitizer().Sanitize([]rune(text))), nil
+	return string(runeutil.NewSanitizer(runeutil.ReplaceTabs("\t")).Sanitize([]rune(text))), nil
 }
 func (m *model) insertText(text string, paste bool) tea.Cmd {
 	if paste && text == "" {

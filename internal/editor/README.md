@@ -9,5 +9,7 @@ ranges; rendering uses the component's own wrapped rows and viewport. Wrapping
 preserves source text and whole grapheme clusters, and vertical movement uses
 that wrapped grid instead of guessed offsets. textarea.go contains the selection
 fields, calls the source-span renderer, scrolls after refreshing viewport content,
-and clears selection when replacing/resetting the value. Clipboard I/O and
-paste validation remain owned by the app.
+and clears selection when replacing/resetting the value. Tabs stay in the source
+instead of expanding to spaces; cellWidth and displayText draw each tab as four
+cells, and textarea.go measures text with cellWidth. Clipboard I/O and paste
+validation remain owned by the app.

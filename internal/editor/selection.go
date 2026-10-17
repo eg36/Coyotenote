@@ -8,6 +8,15 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// Tabs stay in the source and are drawn as tabWidth cells. cellWidth and
+// displayText keep wrapping, cursor movement and rendering on one grid.
+const tabWidth = 4
+
+var tabSpaces = strings.Repeat(" ", tabWidth)
+
+func cellWidth(s string) int      { return uniseg.StringWidth(s) + strings.Count(s, "\t")*tabWidth }
+func displayText(s string) string { return strings.ReplaceAll(s, "\t", tabSpaces) }
+
 // CursorOffset is a rune offset in the complete source, independent of wrapping.
 func (m Model) CursorOffset() int {
 	offset := m.col
@@ -84,7 +93,7 @@ func (m *Model) MoveCluster(forward bool) {
 // styles are applied to whole graphemes so wide and combining text stays intact.
 func (m Model) renderSource(row, column, base, lo, hi int, runes []rune, style lipgloss.Style) string {
 	if row != m.row && (lo == hi || base+column >= hi || base+column+len(runes) <= lo) {
-		return style.Render(string(runes))
+		return style.Render(displayText(string(runes)))
 	}
 	g := uniseg.NewGraphemes(string(runes))
 	var out, run strings.Builder
@@ -111,14 +120,14 @@ func (m Model) renderSource(row, column, base, lo, hi int, runes []rune, style l
 			previousSelected = selected
 		}
 		if cursor {
-			m.Cursor.SetChar(text)
+			m.Cursor.SetChar(displayText(text))
 			cellStyle := style
 			if selected {
 				cellStyle = m.SelectionStyle.Inherit(style)
 			}
 			out.WriteString(cellStyle.Render(m.Cursor.View()))
 		} else {
-			run.WriteString(text)
+			run.WriteString(displayText(text))
 		}
 		column += size
 	}
@@ -181,7 +190,7 @@ func (m *Model) cursorVertical(delta int) {
 	for clusters.Next() {
 		text := clusters.Str()
 		size := utf8.RuneCountInString(text)
-		width := uniseg.StringWidth(text)
+		width := cellWidth(text)
 		if cells+width > desired || column+size > len(m.value[row]) || (displayRow < len(grid)-1 && column+size >= rowStart+len(grid[displayRow])) {
 			break
 		}

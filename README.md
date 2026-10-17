@@ -77,8 +77,7 @@ Clipboard access uses native Windows APIs. On Linux, install `wl-clipboard` for
 Wayland or `xclip` / `xsel` for X11. Clipboard I/O runs in the background; a failed
 cut/paste or a result arriving after further input leaves text untouched. An
 empty clipboard does not remove selected text. Source whitespace and trailing
-newlines are retained; pasted CRLF/CR is normalized to LF and tabs follow the
-editor's existing expansion to spaces.
+newlines are retained; pasted CRLF/CR is normalized to LF and tabs are kept.
 
 Your terminal's paste command (bracketed paste) also replaces selected text and
 works without a desktop clipboard helper, including over SSH. Desktop clipboard
@@ -157,6 +156,7 @@ not a large-file editor.
 
 The editor works in LF line endings. Notes saved with CRLF (common on Windows) are
 written back with CRLF; a note mixing endings is saved with CRLF throughout.
+Tabs are kept as tabs and drawn four cells wide.
 
 Autosave runs 400 ms after the last edit. Note changes and normal exits flush first.
 Each save writes a same-directory temporary file, syncs it, atomically renames it,

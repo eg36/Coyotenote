@@ -48,3 +48,15 @@ func TestEditorUsesLFForCRLFNotes(t *testing.T) {
 		t.Fatalf("mixed endings saved as %q", got)
 	}
 }
+func TestEditingKeepsTabs(t *testing.T) {
+	body := "```go\nfunc f() {\n\treturn\n}\n```\na\tb\n"
+	if got := editAndSave(t, body); got != body {
+		t.Fatalf("saved %q, want %q", got, body)
+	}
+	m, _ := editorModel(t, "x")
+	m.editor.SetOffset(1)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("\ty"), Paste: true})
+	if got := m.editor.Value(); got != "x\ty" {
+		t.Fatalf("pasted tab became %q", got)
+	}
+}
