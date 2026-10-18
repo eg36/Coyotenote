@@ -26,7 +26,7 @@ without color.
 
 ## Build and run
 
-Requires Go 1.24 or newer, Linux and Windows, and a UTF-8 terminal.
+Requires Go 1.24 or newer, Linux, and a UTF-8 terminal.
 
 ```sh
 go mod download
@@ -41,13 +41,9 @@ go build -o bin/coyotenote .
 Release builds can stamp a version: `go build -ldflags "-X main.version=v1.0.0" -o bin/coyotenote .`
 Otherwise the module version (or `dev`) is reported.
 
-On Windows, build with `go build -o bin\coyotenote.exe .` and run
-`bin\coyotenote.exe`. Windows Terminal is recommended for truecolor and Alt keys;
-older console hosts may show fewer colors.
-
 ## Download
 
-Download a Linux or Windows archive for amd64 or arm64 from
+Download the Linux amd64 archive from
 [GitHub Releases](https://github.com/eg36/Coyotenote/releases). Each release includes
 `SHA256SUMS` to verify the archives.
 
@@ -83,7 +79,7 @@ Escape clears it. Ctrl+C no longer quits; use Ctrl+Q. With no selection, copy/cu
 leave the note and clipboard alone. Ctrl+A still moves to the line start, and
 Ctrl+Z still undoes trash operations, rather than text edits.
 
-Clipboard access uses native Windows APIs. On Linux, install `wl-clipboard` for
+For clipboard access, install `wl-clipboard` for
 Wayland or `xclip` / `xsel` for X11. Clipboard I/O runs in the background; a failed
 cut/paste or a result arriving after further input leaves text untouched. An
 empty clipboard does not remove selected text. Source whitespace and trailing
@@ -145,7 +141,6 @@ Default data locations:
 
 - Linux: `$XDG_DATA_HOME/coyotenote`, or `~/.local/share/coyotenote` when unset
   (relative XDG paths are ignored).
-- Windows: `%AppData%\coyotenote`.
 
 Trash is never emptied automatically; `.trash/` at the vault root keeps each note's
 folder path. After restarting, restore a trashed note by moving its `.md` file from
@@ -171,7 +166,7 @@ Tabs are kept as tabs and drawn to tab stops every four cells.
 
 Autosave runs 400 ms after the last edit. Note changes and normal exits flush first.
 Each save writes a same-directory temporary file, syncs it, atomically renames it,
-and syncs the directory on Unix. Windows retries replacement when a scanner briefly holds the target; directory sync is unavailable there. SIGINT, SIGTERM and SIGHUP request a save and graceful exit.
+and syncs the directory. SIGINT, SIGTERM and SIGHUP request a save and graceful exit.
 A failed save keeps the editor dirty and blocks navigation; correct the filesystem
 problem and press Ctrl+S. Quitting after a failed save writes the edits to a
 `.recovery-<note>-<time>.md` copy in the data directory (or, if that is not
@@ -206,7 +201,7 @@ selection rendering; its MIT license is retained in `internal/editor/LICENSE`
 and [third-party notices](THIRD_PARTY_NOTICES.md). Versions and checksums are pinned
 in `go.mod` and `go.sum`. Rendering is cached until content, width or theme changes.
 There are no attachments, tags, sync, accounts, desktop integration,
-global shortcuts or theme detection. Linux and Windows are the supported platforms.
+global shortcuts or theme detection. Linux on amd64 is the only supported and tested platform.
 
 ## License
 
