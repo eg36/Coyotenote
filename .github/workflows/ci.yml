@@ -1,7 +1,8 @@
 name: CI
 
 # Tags are already tested on main and are built by the Release workflow.
-# Changes touching only docs, the logo or the license skip CI.
+# Changes touching only docs, the logo, the license or the release workflow
+# (which CI never runs) skip CI.
 on:
   push:
     branches: [main]
@@ -9,11 +10,13 @@ on:
       - '**.md'
       - 'LICENSE'
       - 'logo.png'
+      - '.github/workflows/release.yml'
   pull_request:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - 'logo.png'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 permissions:
