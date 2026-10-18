@@ -30,8 +30,7 @@ jobs:
           set -euo pipefail
           mkdir -p package dist
           go build -trimpath -ldflags "-s -w -X main.version=$GITHUB_REF_NAME" -o package/coyotenote .
-          cp README.md package/
-          if [ -f LICENSE ]; then cp LICENSE package/; fi
+          cp README.md LICENSE THIRD_PARTY_NOTICES.md package/
           tar -czf "dist/coyotenote_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}.tar.gz" -C package .
       - name: Publish release
         env:
