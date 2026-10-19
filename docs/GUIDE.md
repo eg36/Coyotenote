@@ -317,8 +317,9 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm test
 Editing `web/src/` requires `npm run build` **then** rebuilding the Go binary.
 Refresh the browser afterwards. The 0.9 frontend migration is incremental:
 shared state, API requests, front matter, icons, attachments, outline and writing
-settings now use strict TypeScript. The app entry point, editors, drafts, lists,
-dialogs, menus, palette, history, daily notes and shortcuts are still JavaScript.
+settings and both editor adapters now use strict TypeScript. The app entry
+point, note lifecycle, drafts, lists, dialogs, menus, palette, history, daily
+notes and shortcuts are still JavaScript.
 `allowJs` keeps both working together; `checkJs` is off for the pending JavaScript
 modules. New and converted `.ts` files must pass `npm run typecheck` in CI.
 Existing `.js` import specifiers resolve to the converted `.ts` sources in both

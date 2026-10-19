@@ -1,3 +1,14 @@
+import type { CompletionContext } from "@codemirror/autocomplete";
+import type { Note, SourceEditor } from "./types.js";
+
+interface SourceOptions {
+  onChange(body: string): void;
+  getNotes(): Note[];
+  onWarning(message: string): void;
+  onFiles(files: File[]): void;
+  imageFiles(transfer: DataTransfer | null): File[];
+}
+
 import { EditorState, Compartment } from "@codemirror/state";
 import {
   EditorView,
@@ -26,9 +37,9 @@ import { searchKeymap, highlightSelectionMatches, openSearchPanel } from "@codem
 import { tags } from "@lezer/highlight";
 
 export function createSource(
-  element,
-  { onChange, getNotes, onWarning, onFiles, imageFiles },
-) {
+  element: HTMLElement,
+  { onChange, getNotes, onWarning, onFiles, imageFiles }: SourceOptions,
+): SourceEditor {
   let updating = false;
   const readOnly = new Compartment();
   const colors = HighlightStyle.define([
@@ -43,7 +54,7 @@ export function createSource(
     { tag: [tags.quote, tags.meta], color: "var(--muted)" },
     { tag: tags.processingInstruction, color: "var(--pink)" },
   ]);
-  const completion = (context) => {
+  const completion = (context: CompletionContext) => {
     const match = context.matchBefore(/\[\[[^\]\n]*/);
     if (!match) return null;
     return {

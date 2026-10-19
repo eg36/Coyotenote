@@ -1,3 +1,17 @@
+import type { RichEditor } from "./types.js";
+type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+type FileUrl = (src: string) => string | null;
+interface RichOptions {
+  onChange(body: string): void;
+  onSelection?(): void;
+  onWarning(message: string): void;
+  onWiki(raw: string): void;
+  onFiles(files: File[]): void;
+  fileUrl: FileUrl;
+  imageFiles(transfer: DataTransfer | null): File[];
+}
+
 import { marked } from "marked";
 import { Editor, Node, InputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -43,7 +57,7 @@ const WikiLink = Node.create({
     ];
   },
   renderText({ node }) {
-    return `[[${node.attrs.raw}]]`;
+    return `[[${node.attrs?.raw || ""}]]`;
   },
   markdownTokenName: "wikiLink",
   markdownTokenizer: {
@@ -59,17 +73,18 @@ const WikiLink = Node.create({
     return { type: "wikiLink", attrs: { raw: token.text } };
   },
   renderMarkdown(node) {
-    return `[[${node.attrs.raw}]]`;
+    return `[[${node.attrs?.raw || ""}]]`;
   },
   addInputRules() {
     return [
       new InputRule({
         find: /\[\[([^\]\n]+)\]\]$/,
-        handler: ({ range, match, commands }) =>
+        handler: ({ range, match, commands }) => {
           commands.insertContentAt(range, {
             type: this.name,
             attrs: { raw: match[1] },
-          }),
+          });
+        },
       }),
     ];
   },
@@ -78,7 +93,7 @@ const WikiLink = Node.create({
 // imageNode shows a picture through fileUrl while keeping the address the
 // Markdown gives it, so saving writes back exactly what was there. Remote
 // images, which fileUrl refuses, show as their description.
-function imageNode(fileUrl) {
+function imageNode(fileUrl: FileUrl) {
   return Node.create({
     name: "image",
     group: "inline",
@@ -119,7 +134,7 @@ function imageNode(fileUrl) {
       };
     },
     renderMarkdown(node) {
-      const { src, alt, title } = node.attrs;
+      const { src = "", alt = "", title } = node.attrs || {};
       const destination = /[\s()<>]/.test(src) ? `<${src}>` : src;
       const caption = title ? ` "${title.replace(/"/g, '\\"')}"` : "";
       return `![${alt.replace(/([\\[\]])/g, "\\$1")}](${destination}${caption})`;
@@ -134,11 +149,12 @@ const ImageParagraph = Paragraph.extend({
     const tokens = token.tokens || [];
     if (tokens.length === 1 && tokens[0].type === "image")
       return helpers.createNode("paragraph", undefined, helpers.parseInline(tokens));
+    if (!this.parent) throw new Error("Missing paragraph Markdown parser");
     return this.parent(token, helpers);
   },
 });
 
-export function supportsRich(body) {
+export function supportsRich(body: string) {
   // YAML (---) or TOML (+++) front matter, possibly after a byte order mark.
   if (/^\uFEFF?(---|\+\+\+)\r?\n/.test(body))
     return "This note has front matter. Use Markdown to keep it intact.";
@@ -169,14 +185,14 @@ export function supportsRich(body) {
 }
 
 export function createRich(
-  element,
-  { onChange, onSelection, onWarning, onWiki, onFiles, fileUrl, imageFiles },
-) {
-  let editor = null,
+  element: HTMLElement,
+  { onChange, onSelection, onWarning, onWiki, onFiles, fileUrl, imageFiles }: RichOptions,
+): RichEditor {
+  let editor: Editor | null = null,
     loading = false,
     last = "",
     currentId = "";
-  function make(body) {
+  function make(body: string) {
     editor?.destroy();
     element.replaceChildren();
     loading = true;
@@ -233,17 +249,18 @@ export function createRich(
           const files = moved ? [] : imageFiles(event.dataTransfer);
           if (!files.length) return false;
           const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
-          if (at) editor.commands.setTextSelection(at.pos);
+          if (at) editor?.commands.setTextSelection(at.pos);
           onFiles(files);
           return true;
         },
         handleClick(view, pos, event) {
-          const link = event.target.closest("[data-wiki]");
+          const target = event.target instanceof Element ? event.target : null;
+          const link = target?.closest<HTMLElement>("[data-wiki]");
           if (link) {
-            onWiki(link.dataset.wiki);
+            onWiki(link.dataset.wiki || "");
             return true;
           }
-          const anchor = event.target.closest("a[href]");
+          const anchor = target?.closest<HTMLAnchorElement>("a[href]");
           if (anchor) {
             event.preventDefault();
             if (event.ctrlKey || event.metaKey) {
@@ -386,9 +403,9 @@ export function createRich(
           chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
           break;
         case "block":
-          value === "p"
-            ? chain.setParagraph().run()
-            : chain.setHeading({ level: Number(value[1]) }).run();
+          if (value === "p") chain.setParagraph().run();
+          else if (value && /^h[1-6]$/.test(value))
+            chain.setHeading({ level: Number(value[1]) as HeadingLevel }).run();
           break;
         case "link":
           if (value)
