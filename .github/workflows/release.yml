@@ -11,7 +11,8 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-# Linux amd64 is the only supported platform.
+# Linux amd64 is the only supported platform. Each archive holds both apps,
+# stamped with the tag as their version.
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -29,8 +30,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p package dist
-          go build -trimpath -ldflags "-s -w -X main.version=$GITHUB_REF_NAME" -o package/coyotenote ./cmd/coyotenote
+          ldflags="-s -w -X github.com/eg36/coyotenote/internal/version.Version=$GITHUB_REF_NAME"
+          go build -trimpath -ldflags "$ldflags" -o package/coyotenote ./cmd/coyotenote
+          go build -trimpath -ldflags "$ldflags" -o package/coyotenote-web ./cmd/coyotenote-web
+          test "$(package/coyotenote -version)" = "coyotenote $GITHUB_REF_NAME"
+          test "$(package/coyotenote-web -version)" = "coyotenote-web $GITHUB_REF_NAME"
+          mkdir -p package/docs
           cp README.md LICENSE THIRD_PARTY_NOTICES.md package/
+          cp -r docs/WEB.md docs/licenses package/docs/
           tar -czf "dist/coyotenote_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}.tar.gz" -C package .
       - name: Publish release
         env:
@@ -39,10 +46,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          notes="$PWD/.github/release-notes/$GITHUB_REF_NAME.md"
           cd dist
           sha256sum coyotenote_* > SHA256SUMS
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" coyotenote_* SHA256SUMS --clobber
+          elif [ -f "$notes" ]; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "coyotenote $GITHUB_REF_NAME" --notes-file "$notes" coyotenote_* SHA256SUMS
           else
             gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes coyotenote_* SHA256SUMS
           fi

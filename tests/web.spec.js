@@ -839,3 +839,30 @@ test("search results show the matching passage with the match marked", async ({
   await page.locator("#search").fill("");
   await expect(row.locator("mark")).toHaveCount(0);
 });
+
+test("typing in search after closing a dialog never lands in the note", async ({
+  page,
+}) => {
+  // Emulate a slow machine whose animation frames run late.
+  await page.addInitScript(() => {
+    const frame = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (callback) =>
+      setTimeout(() => frame(callback), 300);
+  });
+  const stamp = Date.now();
+  const kept = `Kept ${stamp}`;
+  await seed(page, kept, "Kept body.");
+  await openSeed(page, "Leaving.", `Leaving ${stamp}`);
+  await page
+    .getByRole("button", { name: "Move note to trash", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Move to trash", exact: true }).click();
+  await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+  const opened = await page.locator("#breadcrumb-name").textContent();
+  await page.locator("#search").click();
+  await page.keyboard.type(`k${stamp}`, { delay: 40 });
+  await expect(page.locator("#search")).toHaveValue(`k${stamp}`);
+  await expect(page.locator("#search")).toBeFocused();
+  await page.waitForTimeout(600);
+  expect(await diskBody(page, opened)).not.toContain(String(stamp));
+});

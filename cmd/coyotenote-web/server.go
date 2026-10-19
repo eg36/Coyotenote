@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/eg36/coyotenote/internal/vault"
+	"github.com/eg36/coyotenote/internal/version"
 	"github.com/eg36/coyotenote/web"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -99,7 +100,7 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "/healthz" {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": versionString()})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": version.String()})
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -158,7 +159,7 @@ func decode(w http.ResponseWriter, r *http.Request) (mutation, error) {
 func validateBody(body string) error {
 	switch {
 	case len(body) > maxBodyBytes:
-		return &apiError{status: 422, message: "A note can contain up to 4 MiB in this web alpha."}
+		return &apiError{status: 422, message: "A note can contain up to 4 MiB in the web app."}
 	case !utf8.ValidString(body) || vault.HasControl(body):
 		return &apiError{status: 422, message: "Notes must be UTF-8 text without control characters."}
 	case vault.LineCount(body) > vault.MaxLines:
@@ -175,7 +176,7 @@ func (a *webApp) load() ([]vault.Note, vault.LoadReport, error) {
 	allowed := notes[:0]
 	for _, n := range notes {
 		if len(n.Body) > maxBodyBytes {
-			report.Skipped = append(report.Skipped, n.ID+" (over the web alpha 4 MiB limit)")
+			report.Skipped = append(report.Skipped, n.ID+" (over the web app's 4 MiB limit)")
 		} else {
 			allowed = append(allowed, n)
 		}
@@ -308,7 +309,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.Recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.Recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": versionString(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/note" || route == "GET /api/export" {

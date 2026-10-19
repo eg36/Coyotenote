@@ -209,7 +209,10 @@ export function createRich(
       }
     },
     focus() {
-      editor?.commands.focus();
+      // Focus now: Tiptap's focus command waits for the next frame, and a
+      // late frame could take focus back after the user moved on, sending
+      // what they type in the search box into the note.
+      if (editor && !editor.isDestroyed) editor.view.focus();
     },
     get editor() {
       return editor;

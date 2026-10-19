@@ -9,13 +9,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"time"
 
 	"github.com/eg36/coyotenote/internal/vault"
+	"github.com/eg36/coyotenote/internal/version"
 )
-
-var version = "web-alpha"
 
 func main() {
 	if err := run(); err != nil {
@@ -29,12 +27,12 @@ func run() error {
 	dir := flag.String("data-dir", "", "isolated notes/settings directory (default: coyotenote-web in application data)")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Usage = func() {
-		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote [flags] [vault]\n\nLocal web alpha; opens a folder of Markdown files in your browser.")
+		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote-web [flags] [vault]\n\nOpens a folder of Markdown notes in your browser, served only to this computer.")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("coyotenote", versionString())
+		fmt.Println("coyotenote-web", version.String())
 		return nil
 	}
 	if flag.NArg() > 1 || flag.NArg() == 1 && *dir != "" {
@@ -58,7 +56,7 @@ func run() error {
 	}
 	ip := net.ParseIP(host)
 	if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-		return errors.New("the web alpha must bind to a loopback address, such as 127.0.0.1:4280")
+		return errors.New("coyotenote-web must listen on a loopback address, such as 127.0.0.1:4280")
 	}
 	s, err := vault.Open(vaultDir)
 	if err != nil {
@@ -99,7 +97,7 @@ func run() error {
 		case <-done:
 		}
 	}()
-	fmt.Printf("coyotenote %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", versionString(), listener.Addr(), s.Dir)
+	fmt.Printf("coyotenote-web %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", version.String(), listener.Addr(), s.Dir)
 	err = server.Serve(listener)
 	close(done)
 	<-shutdownDone
@@ -111,15 +109,4 @@ func run() error {
 		return nil
 	}
 	return err
-}
-
-func versionString() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" && len(setting.Value) >= 7 {
-				return version + " (" + setting.Value[:7] + ")"
-			}
-		}
-	}
-	return version
 }

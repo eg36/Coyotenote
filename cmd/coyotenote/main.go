@@ -5,25 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eg36/coyotenote/internal/vault"
+	"github.com/eg36/coyotenote/internal/version"
 )
 
-// version is set at build time with -ldflags "-X main.version=v1.2.3".
-var version = ""
-
-func versionString() string {
-	if version != "" {
-		return version
-	}
-	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
-		return info.Main.Version
-	}
-	return "dev"
-}
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "coyotenote:", err)
@@ -41,7 +29,7 @@ func run() error {
 	}
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("coyotenote", versionString())
+		fmt.Println("coyotenote", version.String())
 		return nil
 	}
 	switch {

@@ -1,19 +1,22 @@
-# coyotenote web alpha
+# coyotenote web
 
 A local-first writing space in your browser, powered by Go. The notes, vault paths,
 wiki links, trash, autosave rules and **all 14 themes** come from the terminal app
 on `main`. The web app adds a WYSIWYG editor, Markdown source, rendered preview,
 split view, body search, focus mode and browser draft recovery.
 
-**This is an experimental alpha for testing. There is no release or deployment.**
-It lives beside the terminal app in this repository as `cmd/coyotenote-web`.
-Keep important notes backed up and test a copy of your vault first. Coyotenote is AI-made software, built with Claude and Codex.
+**The web app is experimental.** It lives beside the terminal app in this
+repository as `cmd/coyotenote-web`. Keep important notes backed up and try it on
+a copy of your vault first. Coyotenote is AI-made software, built with Claude and Codex.
 
 ## Try it locally
 
-Go **1.24+** is the only requirement to build and run. Linux amd64 matches the current
-`main` CI target. Browser assets are bundled and committed: Node and npm are **not**
-needed to run the app, and there are no CDNs or runtime third-party requests.
+Release archives on the [Releases](https://github.com/eg36/Coyotenote/releases)
+page include `coyotenote-web` next to the terminal app; run it from the unpacked
+folder. To build it instead, Go **1.26+** is the only requirement. Linux amd64 is
+the CI and release target. Browser assets are bundled and committed: Node and npm
+are **not** needed to run the app, and there are no CDNs or runtime third-party
+requests.
 
 ```sh
 git clone https://github.com/eg36/Coyotenote.git
@@ -24,9 +27,9 @@ go build -o bin/coyotenote-web ./cmd/coyotenote-web
 
 Open **http://127.0.0.1:4280** in a current Chrome/Chromium, Firefox or Safari. The
 terminal prints the URL and vault path. Chromium on Linux is tested; Firefox and
-Safari are not yet verified by the alpha CI. Keep that process running while using the
+Safari are not yet verified by CI. Keep that process running while using the
 app; Ctrl+C stops it. The binary runs an embedded local HTTP server, not the TUI.
-This branch has no account, cloud sync, telemetry, database or remote access mode.
+There is no account, cloud sync, telemetry, database or remote access mode.
 
 If the repository is already on your computer:
 
@@ -50,7 +53,7 @@ file and may still be the terminal application.
 ./bin/coyotenote-web -version
 ```
 
-Flags go **before** the optional vault path. The alpha only accepts loopback
+Flags go **before** the optional vault path. The app only accepts loopback
 listeners; it cannot be exposed on `0.0.0.0`, a LAN IP or a public host. Browser and
 server must be on the same computer. This is not a hosted multi-user service.
 
@@ -58,7 +61,7 @@ The default vault is **separate from the terminal app**:
 
 - Linux: `$XDG_DATA_HOME/coyotenote-web`, or `~/.local/share/coyotenote-web`.
 - macOS: `~/Library/Application Support/coyotenote-web` (not verified on a Mac).
-- Windows: `%AppData%\coyotenote-web` (cross-build only; not supported by this alpha's CI).
+- Windows: `%AppData%\coyotenote-web` (cross-build only; not tested in CI).
 
 With an explicit vault, web theme preferences stay in that default web data
 directory. `-data-dir` keeps both notes and settings in the given directory.
@@ -113,10 +116,10 @@ insert one, or finish typing `[[a note]]`. The source editor suggests existing n
 while typing `[[`. Missing notes can be created from a link.
 
 Write deliberately falls back to Markdown for front matter, footnotes, raw HTML
-and image references. This keeps syntax that the alpha's rich editor cannot
+and image references. This keeps syntax that the rich editor cannot
 round-trip intact. Use source mode for exact whitespace or Markdown dialects beyond
 GFM. File attachments, embedded media, math rendering and collaborative editing are
-outside this alpha.
+not supported.
 
 ### Keyboard shortcuts
 
@@ -158,9 +161,10 @@ a persistent message tells you to keep the tab open until its file is saved.
 Saves include a hash of the disk revision originally loaded. Another tab or an
 external program changing the file produces a **conflict**, with no overwrite.
 Restoring an old browser draft keeps its original revision, so it also cannot
-silently overwrite a newer file. Use **Download edits** or **Recovery copy** to
-preserve it, then explicitly reload the disk version. The latter requires confirmation.
-There is no automatic merge or force-overwrite button in this alpha.
+silently overwrite a newer file. **Compare versions** shows your edits and the disk
+version side by side with changed lines marked; keep either one. **Download edits**
+and **Recovery copy** preserve your edits first, and reloading the disk version
+requires confirmation. There is no automatic merge.
 
 Recovery copies use `.recovery-*.md` in the vault, with a temporary-directory
 fallback when the vault cannot be written; the UI shows the path. Recovery and
@@ -173,13 +177,14 @@ the server's data folder remain entirely on your computer.
 
 Deletion moves files into `.trash/` with folder paths preserved. The **Undo** toast
 restores the latest deletion during this session; it refuses to replace an
-existing file. After restarting, restore manually from `.trash/` while the app is
-closed. Trash is never purged automatically.
+existing file. The **Trash** button lists every note in `.trash/` with its last edit
+and an excerpt, and restores any of them. Trash is never purged automatically.
 
-The alpha accepts notes up to **10,000 lines and 4 MiB**, with a **1 MiB** rich-editor
+The app accepts notes up to **10,000 lines and 4 MiB**, with a **1 MiB** rich-editor
 paste limit. Invalid UTF-8, control characters, unsafe names and symlinks are
 rejected/skipped. Use a local filesystem and back up the vault. External filesystem
-edits are picked up on refresh/open/search; this alpha does not watch files live.
+edits are picked up when you return to the tab, search or open a note; a note with
+unsaved edits is never replaced. Files are not watched live.
 
 ## Development and CI
 
@@ -212,8 +217,8 @@ included at `/assets/THIRD_PARTY_LICENSES.txt`.
 
 The shared Linux CI job also builds the web app and runs its smoke script, which
 checks HTTP, persistence, trash, themes, conflicts and restart recovery. A browser
-job builds the assets and runs Playwright. The release workflow ships only the
-terminal app; **the web alpha has no release, tag or deployment.**
+job builds the assets and runs Playwright. Each release archive ships both apps,
+stamped with the release version; there is no hosted deployment.
 
 ## Provenance and architecture
 
@@ -238,7 +243,7 @@ browser dependency license bundle for upstream attributions.
 ## Implementation notes
 
 Reference: terminal `main` at dcb6a51c5dbf79efd6859cb506dd736bdc061996.
-The web alpha was developed on the `web_alpha` branch, from an empty initial
+The web app was developed on the `web_alpha` branch, from an empty initial
 commit, and later merged with the terminal app into this repository.
 
 ## Functional mapping
@@ -295,7 +300,7 @@ workflow does not ship the web app. The Go/API checks and a
 standard-library Python smoke test run without npm; frontend CI rebuilds assets
 and verifies the committed output before browser tests.
 
-## Morning test checklist
+## Manual test checklist
 
 1. Build `bin/coyotenote-web` from `./cmd/coyotenote-web`, run it with a temporary vault.
 2. Open the printed localhost URL and create a note in Write mode.
@@ -309,4 +314,4 @@ and verifies the committed output before browser tests.
 8. Stop the server, type a draft, restart the server, and reload. Restore the draft,
    then save; no draft should silently replace a newer disk revision.
 9. Narrow the browser: notes become a drawer and Split stacks vertically.
-10. Only after these alpha checks should a web release be considered.
+10. Use the Trash button to restore an older deletion.

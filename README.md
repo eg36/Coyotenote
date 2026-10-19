@@ -9,18 +9,20 @@
 > to be used as a notepad for daily use; keep important notes in a tool built for
 > that.
 
-A small, local-first Markdown notebook for the terminal: folders of plain `.md`
-files, `[[wiki links]]`, live preview, autosave and 14 themes. No account, server
-or network access.
+A small, local-first Markdown notebook for the terminal, with an experimental
+browser version: folders of plain `.md` files, `[[wiki links]]`, live preview,
+autosave and 14 themes. No account, cloud service or network access.
 
 ## Install
 
 Download the Linux amd64 archive from
 [Releases](https://github.com/eg36/Coyotenote/releases) and check it against
-`SHA256SUMS`, or build it with Go 1.24+:
+`SHA256SUMS`. It holds both apps: `coyotenote` for the terminal and
+`coyotenote-web` for the browser. Or build them with Go 1.26+:
 
 ```sh
 go build -o bin/coyotenote ./cmd/coyotenote
+go build -o bin/coyotenote-web ./cmd/coyotenote-web
 ```
 
 ## Usage
@@ -71,19 +73,19 @@ terminal's own paste always works, including over SSH.
   control characters) are skipped with a warning and left untouched.
 - Line endings (LF or CRLF) and tabs are preserved.
 
-## Web alpha
+## Web app
 
 `coyotenote-web` is an experimental browser version that runs a local server and
-uses the same vault format, links, trash and themes. It is an alpha for testing,
-with no release yet; its default vault (`~/.local/share/coyotenote-web`) is
-separate from the terminal app's.
+uses the same vault format, links, trash and themes. It is experimental; its
+default vault (`~/.local/share/coyotenote-web`) is separate from the terminal
+app's.
 
 ```sh
-go build -o bin/coyotenote-web ./cmd/coyotenote-web
-./bin/coyotenote-web            # then open http://127.0.0.1:4280
+coyotenote-web                  # then open http://127.0.0.1:4280
+coyotenote-web ~/Notes          # any folder as a vault
 ```
 
-See [docs/WEB_ALPHA.md](docs/WEB_ALPHA.md) for features, safety and development.
+See [docs/WEB.md](docs/WEB.md) for features, safety and development.
 
 ## Development
 
@@ -93,7 +95,7 @@ go build -o bin/coyotenote ./cmd/coyotenote && python3 scripts/smoke_terminal.py
 go build -o bin/coyotenote-web ./cmd/coyotenote-web && python3 scripts/smoke_web.py
 ```
 
-Browser tests for the web alpha need Node 24+: `npm ci && npm run build && npm test`.
+Browser tests for the web app need Node 24+: `npm ci && npm run build && npm test`.
 
 Linux amd64 is the only supported platform.
 
