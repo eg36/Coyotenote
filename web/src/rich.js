@@ -89,6 +89,15 @@ export function supportsRich(body) {
         "This note references an image. Use Markdown to keep its reference intact; images are not fetched.";
     if (token.type === "text" && /\[\^[^\]]+\]/.test(token.raw))
       reason = "This note has footnotes. Use Markdown to keep them intact.";
+    // Write keeps &amp;, &lt;, &gt; and &quot; but would show other named
+    // references such as &copy; as literal text and save them escaped.
+    if (
+      token.type === "text" &&
+      !token.tokens &&
+      /&(?!(?:amp|lt|gt|quot);)[A-Za-z][A-Za-z0-9]*;/.test(token.raw)
+    )
+      reason =
+        "This note has HTML entities such as &copy;. Use Markdown to keep them intact.";
   });
   if (/^\s*\[\^[^\]]+\]:/m.test(body))
     reason = "This note has footnotes. Use Markdown to keep them intact.";

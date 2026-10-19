@@ -488,6 +488,32 @@ test("other front matter and link definitions also stay in source", async ({
   }
 });
 
+test("named HTML entities keep their meaning through edits", async ({ page }) => {
+  // Write would turn &copy; and &nbsp; into literal text, so the note stays in Markdown.
+  const named = "Copyright &copy; 2026, &amp;, &#169;, &nbsp; and &lt;tag&gt;.\n";
+  let id = await openSeed(page, named);
+  await mode(page, "Write");
+  await expect(page.locator("#source-pane")).toBeVisible();
+  await expect(page.locator("#rich-pane")).toBeHidden();
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("\nAppended.");
+  await expect.poll(() => diskBody(page, id)).toBe(named + "\nAppended.");
+  await page.reload();
+  await expect(page.locator("#source-pane")).toBeVisible();
+  expect(await diskBody(page, id)).toBe(named + "\nAppended.");
+
+  // Entities Write keeps, and named ones inside code, still open in Write.
+  const kept = "Fish &amp; chips, &lt;tag&gt; and `&copy;` in code.";
+  id = await openSeed(page, kept);
+  await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await page.locator(".tiptap p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" More.");
+  await expect.poll(() => diskBody(page, id)).toBe(kept + " More.");
+});
+
 test("restoring a draft Write cannot keep intact opens it in source", async ({
   page,
 }) => {
