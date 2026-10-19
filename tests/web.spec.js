@@ -183,7 +183,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
   );
 });
 
-test("every theme draws text, muted text, accents and pills at AA contrast", async ({ page }) => {
+test("every theme draws text, accents, pills and focus rings at AA contrast", async ({ page }) => {
   await openSeed(page, "Contrast.");
   await page.locator("#theme-button").click();
   const ids = await page.locator(".theme-option").evaluateAll((options) => options.map((o) => o.dataset.themeId));
@@ -209,12 +209,14 @@ test("every theme draws text, muted text, accents and pills at AA contrast", asy
       return {
         text: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("text"), b))),
         muted: Math.min(...plain.map((b) => ratio(rgb("muted"), b))),
-        accentText: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("accent-text"), b))),
+        accentText: Math.min(...plain.map((b) => ratio(rgb("accent-text"), b))),
         onPill: ratio(rgb("onPill"), rgb("accent")),
+        focus: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("focus"), b))),
       };
     });
+    // Text needs 4.5:1; focus rings, like other non-text cues, 3:1.
     for (const [role, value] of Object.entries(worst))
-      expect(value, `${id} ${role}`).toBeGreaterThanOrEqual(4.5);
+      expect(value, `${id} ${role}`).toBeGreaterThanOrEqual(role === "focus" ? 3 : 4.5);
   }
   await page.keyboard.press("Escape");
 });

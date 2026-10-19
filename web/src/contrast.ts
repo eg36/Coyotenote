@@ -27,12 +27,13 @@ function contrast(a: RGB, b: RGB) {
   const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (light + 0.05) / (dark + 0.05);
 }
-// readable moves color toward `toward` in small steps until it reaches AA
-// on every background, and returns it unchanged when it already does.
-function readable(color: RGB, toward: RGB, backgrounds: RGB[]) {
+// readable moves color toward `toward` in small steps until it reaches the
+// target contrast (AA for text) on every background, and returns it
+// unchanged when it already does.
+function readable(color: RGB, toward: RGB, backgrounds: RGB[], target = 4.5) {
   for (let step = 0; step <= 50; step++) {
     const candidate = mix(toward, color, step / 50);
-    if (backgrounds.every((b) => contrast(candidate, b) >= 4.5)) return candidate;
+    if (backgrounds.every((b) => contrast(candidate, b) >= target)) return candidate;
   }
   return toward;
 }
@@ -56,9 +57,11 @@ function readableRoles(colors: Record<string, string>) {
   const text = readable(rgb(colors.text || "#000000"), extreme, [surface, chrome, ...tinted]);
   const plain = [surface, chrome, mix(text, surface, 0.08), mix(text, chrome, 0.08)];
   const muted = readable(rgb(colors.muted || "#000000"), text, plain);
-  // Links, list markers, key hints and focus rings use the accent on
-  // plain and accent-tinted backgrounds alike.
-  const accentText = readable(accent, extreme, [surface, chrome, ...tinted]);
+  // Links, list markers and key hints use the accent as text, also on the
+  // light accent tints of tags and the chosen quick-open row.
+  const accentText = readable(accent, extreme, [surface, chrome, mix(accent, surface, 0.16)]);
+  // Focus rings need 3:1 (WCAG non-text contrast), also on selected rows.
+  const focus = readable(accent, extreme, [surface, chrome, ...tinted], 3);
   const pill = rgb(colors.onPill || "#000000");
   const onPill = readable(pill, luminance(pill) < luminance(accent) ? black : white, [accent]);
   const marked = [surface, chrome, mix(accent, chrome, 0.16)].map((b) => mix(warn, b, 0.3));
@@ -67,6 +70,7 @@ function readableRoles(colors: Record<string, string>) {
     text: hex(text),
     muted: hex(muted),
     "accent-text": hex(accentText),
+    focus: hex(focus),
     onPill: hex(onPill),
     "mark-text": hex(markText),
   };
