@@ -70,11 +70,19 @@ func run() error {
 	if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
 		return errors.New("labradorite must listen on a loopback address, such as 127.0.0.1:4280")
 	}
+	// Only the default notebook, created on this run, gets a welcome note;
+	// folders given on the command line are left as they are.
+	fresh := flag.NArg() == 0 && *dir == "" && firstRun(vaultDir)
 	s, err := vault.Open(vaultDir)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
+	if fresh {
+		if err := welcome(s); err != nil {
+			fmt.Printf("Could not write the welcome note: %v\n", err)
+		}
+	}
 	if *dir != "" {
 		config = *dir
 	}

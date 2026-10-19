@@ -35,7 +35,8 @@ labradorite -version
 ```
 
 The app opens in your default browser (pass `-no-browser` to only print the
-address). Keep the process running while you write; Ctrl+C stops it. Chrome
+address). A new default notebook starts with a short welcome note. Keep the
+process running while you write; Ctrl+C stops it. Chrome
 and Edge can install it as an app with its own window. See
 [docs/GUIDE.md](docs/GUIDE.md) for everything the app does, its shortcuts and
 its safety rules.

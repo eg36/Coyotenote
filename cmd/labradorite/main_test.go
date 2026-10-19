@@ -39,3 +39,36 @@ func TestFormerDataMovesOnceAndNeverOverwrites(t *testing.T) {
 		t.Fatalf("moved over an existing folder: %v %v", moved, err)
 	}
 }
+
+func TestWelcomeNoteOnlyForANewNotebook(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "labradorite")
+	if !firstRun(dir) {
+		t.Fatal("a missing folder is a first run")
+	}
+	s, err := vault.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if firstRun(dir) {
+		t.Fatal("an existing folder is not a first run")
+	}
+	if err = welcome(s); err != nil {
+		t.Fatal(err)
+	}
+	notes, _, err := s.Load()
+	if err != nil || len(notes) != 1 || notes[0].ID != welcomeID {
+		t.Fatalf("notes %v, %v", notes, err)
+	}
+	// Examples sit in code, so the note brings no tags or links of its own.
+	if tags, links := vault.Tags(notes[0].Body), vault.ParseLinks(notes[0].Body); len(tags) != 0 || len(links) != 0 {
+		t.Fatalf("welcome adds tags %v or links %v", tags, links)
+	}
+	if err = validateBody(notes[0].Body); err != nil {
+		t.Fatal(err)
+	}
+	// A notebook keeps its notes: writing it again never replaces one.
+	if err = welcome(s); err == nil {
+		t.Fatal("welcome overwrote an existing note")
+	}
+}

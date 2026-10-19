@@ -8,6 +8,10 @@ browser draft recovery.
 **Labradorite is experimental** AI-made software, built with Claude and Codex.
 Keep important notes backed up and try it on a copy of your vault first.
 
+The first time it starts without a vault argument, Labradorite creates its notebook
+with a short **Welcome to Labradorite** note; delete it whenever you like. Folders
+you open yourself are never given one.
+
 ## Run it
 
 Release archives on the [Releases](https://github.com/eg36/Labradorite/releases)
