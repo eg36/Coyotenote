@@ -1827,9 +1827,15 @@ test("find and replace keeps Split open and fits a narrow screen", async ({ page
   await page.keyboard.press("Enter");
   await expect(page.locator(".cm-search")).toBeVisible();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
-  await page.setViewportSize({width:390,height:844});
-  await expect(page.locator('.cm-search button[name="replaceAll"]')).toBeInViewport();
-  expect(await page.locator(".cm-search").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({width,height:844});
+    await expect(page.locator('.cm-search button[name="replaceAll"]')).toBeInViewport();
+    expect(await page.locator(".cm-search").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+    const findBox = await page.locator('.cm-search input[name="search"]').boundingBox();
+    const replaceBox = await page.locator('.cm-search input[name="replace"]').boundingBox();
+    expect(replaceBox.y).toBeGreaterThan(findBox.y);
+    expect(replaceBox.x).toBeCloseTo(findBox.x, 0);
+  }
 });
 
 test("writing settings persist across modes, reloads and rich editor recreation", async ({ page }) => {
@@ -1879,7 +1885,16 @@ test("invalid saved preferences fall back safely and unavailable storage is expl
 });
 
 test("phone menus keep journal commands and settings reachable without a keyboard", async ({ page }) => {
+  // Persistent recovery warnings must not intercept clicks on an open menu,
+  // including when the menu scrolls over the toast on a short screen.
+  await page.route("**/api/state*", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    data.warnings.push("Recovery copies retained in the vault.");
+    await route.fulfill({response, json:data});
+  });
   await openSeed(page, "A phone-sized writing space.", `A long document title that must leave room for the menus ${Date.now()}`);
+  await expect(page.locator("#toast")).toBeVisible();
   for (const width of [320, 390, 530]) {
     await page.setViewportSize({width,height:720});
     await page.locator('[data-menu="view"]').click();
