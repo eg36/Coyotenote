@@ -52,7 +52,7 @@ import {
   undoTrash,
 } from "./dialogs.js";
 import { compareDialog } from "./compare.js";
-import { navigate, shortcutChords } from "./shortcuts.js";
+import { navigate, shortcutChords, showNotes } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
@@ -61,6 +61,12 @@ import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
 
 async function initialize() {
+  const topbar = document.querySelector(".topbar");
+  const measureTopbar = () => $("app").style.setProperty(
+    "--topbar-height", `${topbar.getBoundingClientRect().height}px`,
+  );
+  measureTopbar();
+  new ResizeObserver(measureTopbar).observe(topbar);
   await claimTab();
   applyWritingSettings();
   hydrateIcons();
@@ -123,7 +129,9 @@ $("note-sort").onchange = () => {
   renderList();
 };
 let searchTimer;
+$("search").onfocus = showNotes;
 $("search").oninput = () => {
+  showNotes();
   state.search = $("search").value;
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => refresh().catch(showError), 120);

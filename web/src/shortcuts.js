@@ -22,8 +22,12 @@ async function navigate(delta) {
     : (index + delta + notes.length) % notes.length;
   openNote(notes[next].id).catch(showError);
 }
+function showNotes() {
+  if (window.innerWidth < 800) $("app").classList.add("sidebar-open");
+  else $("app").classList.remove("sidebar-hidden", "focus-mode");
+}
 function findNotes() {
-  $("app").classList.add("sidebar-open");
+  showNotes();
   $("search").focus();
 }
 function cycleMode() {
@@ -69,4 +73,4 @@ const shortcutChords = new Map(
   ),
 );
 
-export { findNotes, navigate, shortcutChords, shortcuts, toggleFocus };
+export { findNotes, navigate, shortcutChords, shortcuts, showNotes, toggleFocus };

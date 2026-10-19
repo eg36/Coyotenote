@@ -186,6 +186,9 @@ input[type="search"]::-webkit-search-cancel-button {
   font-size: 14px;
   font-weight: 550;
   border-color: transparent;
+  height: 48px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 .new-button svg {
   width: 18px;
@@ -207,9 +210,11 @@ input[type="search"]::-webkit-search-cancel-button {
 .search {
   display: flex;
   align-items: center;
-  margin: 8px 0 16px;
+  margin: 0 12px;
   padding: 0 8px;
   gap: 4px;
+  flex: 0 1 320px;
+  min-width: 160px;
 }
 .search:focus-within {
   outline: 2px solid var(--accent);
@@ -506,6 +511,8 @@ input[type="search"]::-webkit-search-cancel-button {
   background: var(--surface);
 }
 .topbar {
+  position: relative;
+  z-index: 21;
   grid-area: top;
   min-height: 58px;
   background: var(--chrome);
@@ -991,6 +998,17 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--muted);
 }
 @media (max-width: 799px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+  .topbar .search {
+    order: 1;
+    flex: 1 0 100%;
+    margin: 4px 0 0;
+  }
+  .topbar .document-actions {
+    display: none;
+  }
   .outline-panel {
     position: absolute;
     inset: 0 0 0 auto;
@@ -2176,7 +2194,7 @@ dialog.danger #modal-submit {
   }
   .sidebar {
     position: fixed;
-    inset: 0 auto 0 0;
+    inset: var(--topbar-height, 104px) auto 0 0;
     width: min(300px, 85vw);
     transform: translateX(-100%);
     transition: transform 0.2s;
@@ -2187,7 +2205,7 @@ dialog.danger #modal-submit {
   .sidebar-open .sidebar-scrim {
     display: block;
     position: fixed;
-    inset: 0;
+    inset: var(--topbar-height, 104px) 0 0;
     background: #0008;
     z-index: 19;
   }
@@ -2257,6 +2275,12 @@ dialog.danger #modal-submit {
   .topbar .brand {
     grid-column: 1;
     grid-row: 1 / 3;
+  }
+  .topbar .search {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    min-width: 0;
+    margin: 4px 0 6px;
   }
   .title-block {
     display: contents;

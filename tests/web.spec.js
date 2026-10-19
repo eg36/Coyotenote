@@ -772,11 +772,40 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
   expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
 });
 
+test("header search stays usable above the notes drawer and reveals search results", async ({ page }) => {
+  const stamp = Date.now();
+  const id = await openSeed(page, `Find headerquery${stamp} in this note.`, `Header search ${stamp}`);
+  const search = page.getByLabel("Search notes", { exact: true });
+  await expect(page.locator(".topbar #search")).toBeVisible();
+  await page.locator("#sidebar-toggle").click();
+  await expect(page.locator("#sidebar")).toBeHidden();
+  await page.keyboard.press("Control+Shift+e");
+  await expect(search).toBeFocused();
+  await expect(page.locator("#sidebar")).toBeVisible();
+  for (const width of [1440, 900, 720, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await search.click();
+    await search.fill(`headerquery${stamp}`);
+    await expect(page.locator("#note-list .note-row")).toHaveCount(1);
+    await expect(page.locator("#note-list")).toContainText(id);
+    await expect(search).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    if (width < 800) {
+      const header = await page.locator(".topbar").boundingBox();
+      const drawer = await page.locator("#sidebar").boundingBox();
+      expect(drawer.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+      await search.click(); // The open drawer/scrim must not cover search.
+      await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 100 } });
+      await expect(search).toBeVisible();
+    }
+  }
+});
+
 test("writing starts below one header and one editor bar, even when zoomed", async ({ page }) => {
   await openSeed(page, "# Close to the top\n\nThe first paragraph should be in view.");
   for (const [width, height] of [[1440, 900], [720, 450], [390, 844]]) {
     await page.setViewportSize({ width, height });
-    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 150 : 120);
+    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 220 : width < 800 ? 170 : 120);
     await expect(page.locator(".tiptap p")).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
