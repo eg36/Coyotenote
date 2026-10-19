@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -58,6 +59,7 @@ type noteView struct {
 	Modified  string   `json:"modified"`
 	Words     int      `json:"words"`
 	Backlinks []string `json:"backlinks"`
+	Tags      []string `json:"tags"`
 	Warning   string   `json:"warning,omitempty"`
 }
 
@@ -200,7 +202,8 @@ func (a *webApp) load() ([]vault.Note, vault.LoadReport, error) {
 
 func view(s *vault.Store, n vault.Note, includeBody bool) noteView {
 	text, _ := vault.EditorText(n.Body)
-	fields := strings.Fields(text)
+	_, content := vault.SplitFrontMatter(text)
+	fields := strings.Fields(content)
 	excerpt := ""
 	for _, word := range fields {
 		if excerpt != "" {
@@ -218,7 +221,10 @@ func view(s *vault.Store, n vault.Note, includeBody bool) noteView {
 			modified = info.ModTime()
 		}
 	}
-	v := noteView{ID: n.ID, Title: vault.DisplayName(n.ID, n.Body), Excerpt: excerpt, Revision: revision(n.Body), Words: len(fields), Backlinks: []string{}}
+	v := noteView{ID: n.ID, Title: vault.DisplayName(n.ID, n.Body), Excerpt: excerpt, Revision: revision(n.Body), Words: len(fields), Backlinks: []string{}, Tags: vault.Tags(n.Body)}
+	if v.Tags == nil {
+		v.Tags = []string{}
+	}
 	if !modified.IsZero() {
 		v.Modified = modified.UTC().Format(time.RFC3339Nano)
 	}
@@ -719,6 +725,14 @@ func (a *webApp) localImages(document ast.Node, from string) {
 }
 
 func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
+	// Front matter is properties, not text: show it apart, as written.
+	front, body := vault.SplitFrontMatter(body)
+	properties := ""
+	if front != "" {
+		lines := strings.Split(strings.TrimRight(strings.TrimPrefix(front, "\uFEFF"), "\r\n"), "\n")
+		inner := strings.Join(lines[1:len(lines)-1], "\n")
+		properties = `<pre class="front-matter" aria-label="Properties">` + html.EscapeString(inner) + "</pre>\n"
+	}
 	resolver := vault.NewResolver(notes)
 	links := vault.ParseLinks(body)
 	for i := len(links) - 1; i >= 0; i-- {
@@ -753,7 +767,7 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	}
 	// No remote images in a local notebook: replace other image tags with
 	// their alt text so opening a note cannot make a tracking request.
-	return suppressImages(output.String()), nil
+	return properties + suppressImages(output.String()), nil
 }
 
 // snippet is the passage of body around the first match of the lower-case

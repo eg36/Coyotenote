@@ -234,6 +234,45 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--muted);
   opacity: 1;
 }
+.tag-filter {
+  width: 100%;
+  height: var(--control);
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+.tag-filter.active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+#preview .front-matter {
+  margin: 0 0 24px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--chrome);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.prose .tag {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.9em;
+}
+.prose .tag:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
 .list-heading {
   display: flex;
   align-items: center;

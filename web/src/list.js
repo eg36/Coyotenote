@@ -28,10 +28,15 @@ const noteCollator = new Intl.Collator(undefined, {
   numeric: true,
   sensitivity: "base",
 });
+// hasTag reports whether note carries tag, ignoring letter case.
+const hasTag = (note, tag) =>
+  note.tags?.some((t) => t.toLowerCase() === tag.toLowerCase());
 function visibleNotes() {
-  const notes = state.filteredIds
-    ? state.notes.filter((note) => state.filteredIds.has(note.id))
-    : [...state.notes];
+  const notes = state.notes.filter(
+    (note) =>
+      (!state.filteredIds || state.filteredIds.has(note.id)) &&
+      (!state.tag || hasTag(note, state.tag)),
+  );
   const folder = (note) => note.id.slice(0, Math.max(0, note.id.lastIndexOf("/")));
   const title = (note) => note.title.split("/").pop();
   return notes.sort((a, b) => {
@@ -93,7 +98,42 @@ function revealNote(id) {
   setCollapsed(id.split("/").slice(0, -1).join("/"), false);
 }
 const noteType = "application/x-coyote-note";
+// renderTags offers the vault's tags, with how many notes carry each, as a
+// filter for the list. It hides while the vault has no tags.
+function renderTags() {
+  const counts = new Map();
+  for (const note of state.notes)
+    for (const tag of note.tags || []) {
+      const key = tag.toLowerCase();
+      counts.set(key, { tag: counts.get(key)?.tag || tag, n: (counts.get(key)?.n || 0) + 1 });
+    }
+  const select = $("tag-filter");
+  if (state.tag && !counts.has(state.tag.toLowerCase())) state.tag = "";
+  select.hidden = counts.size === 0;
+  const options = [...counts.values()]
+    .sort((a, b) => noteCollator.compare(a.tag, b.tag))
+    .map(({ tag, n }) => [`#${tag} · ${n}`, tag]);
+  // Rebuilding the menu while it is open would close it, so only on change.
+  const signature = JSON.stringify(options);
+  if (select.dataset.signature !== signature) {
+    select.dataset.signature = signature;
+    select.replaceChildren(new Option("All tags", ""));
+    for (const [label, tag] of options) select.append(new Option(label, tag));
+  }
+  select.value = state.tag
+    ? [...select.options].find((o) => o.value.toLowerCase() === state.tag.toLowerCase())?.value || ""
+    : "";
+  select.classList.toggle("active", Boolean(state.tag));
+}
+// filterTag shows only notes with tag, or every note for "".
+function filterTag(tag) {
+  state.tag = tag;
+  renderTags();
+  renderList();
+  if (tag) $("app").classList.add("sidebar-open");
+}
 function renderList() {
+  renderTags();
   const notes = visibleNotes();
   const list = $("note-list");
   list.replaceChildren();
@@ -103,12 +143,14 @@ function renderList() {
     el.className = "list-empty";
     el.textContent = state.search
       ? "No matching notes. Try a different word."
-      : "No notes yet.";
+      : state.tag
+        ? "No notes with this tag."
+        : "No notes yet.";
     list.append(el);
     return;
   }
   list.classList.toggle("searching", Boolean(state.filteredIds));
-  const collapsed = state.filteredIds ? new Set() : collapsedFolders();
+  const collapsed = state.filteredIds || state.tag ? new Set() : collapsedFolders();
   const folderOf = (note) => note.id.split("/").slice(0, -1).join("/");
   let lastFolder = null;
   for (const note of notes) {
@@ -225,6 +267,7 @@ function updateBacklinks() {
 
 export {
   excerpt,
+  filterTag,
   renderList,
   revealNote,
   setupDragging,

@@ -80,6 +80,11 @@ are at least 12 px.
   there; while dragging, a zone at the end of the list moves it out of folders.
   Resolved wiki links in other notes are rewritten to keep pointing at it;
   externally changed files are left alone and reported.
+- **Tags** come from a `tags` (or `tag`) property in front matter, as a list or
+  comma-separated, and from `#tags` in the text outside code, as in Obsidian; a
+  tag needs a letter, so `#2026` is not one. When the vault has tags, a menu under
+  the search box filters the note list by one, showing how many notes carry each.
+  In Preview, tags are buttons that apply the filter.
 - Click a folder's name in the sidebar to **collapse** it. Collapsed folders show
   how many notes they hold and stay collapsed in this browser; searching still
   lists their matches, and opening a note inside one expands it.
@@ -120,7 +125,8 @@ while typing `[[`. Missing notes can be created from a link.
 Write as an editable **Properties** box above the text. Write edits only the text
 below it, so untouched front matter is saved byte for byte; edited properties keep
 the block's delimiter and byte order mark. "Add properties" in Quick open starts
-front matter with a `tags` field.
+front matter with a `tags` field. Preview shows front matter as a properties
+block above the text, and note excerpts and word counts leave it out.
 
 Write deliberately falls back to Markdown for unclosed front matter,
 footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named

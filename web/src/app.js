@@ -19,7 +19,7 @@ import {
   releaseDraft,
   storeDraft,
 } from "./drafts.js";
-import { renderList, setupDragging, visibleNotes } from "./list.js";
+import { filterTag, renderList, setupDragging, visibleNotes } from "./list.js";
 import {
   applyEditability,
   buildBlockMenu,
@@ -132,6 +132,7 @@ $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
 $("outline-button").onclick = () => toggleOutline();
 $("history-button").onclick = () => historyDialog().catch(showError);
+$("tag-filter").onchange = () => filterTag($("tag-filter").value);
 $("properties-text").oninput = () => editProperties($("properties-text").value);
 $("focus-button").onclick = toggleFocus;
 for (const button of document.querySelectorAll("[data-mode]"))
@@ -274,6 +275,10 @@ $("export-note").onclick = async () => {
   }
 };
 $("backlinks-button").onclick = backlinksDialog;
+$("preview").addEventListener("click", (event) => {
+  const tag = event.target.closest("button.tag");
+  if (tag) filterTag(tag.dataset.tag);
+});
 $("preview").onclick = (event) => {
   const anchor = event.target.closest("a[href]");
   if (!anchor) return;

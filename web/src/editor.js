@@ -304,6 +304,7 @@ function schedulePreview(immediate = false) {
         if (generation === state.previewGeneration) {
           $("preview").innerHTML = data.html;
           decorateLinks();
+          decorateTags($("preview"));
         }
       } catch (error) {
         if (generation === state.previewGeneration)
@@ -323,6 +324,38 @@ function decorateLinks() {
         a.rel = "noopener noreferrer";
       }
     });
+}
+// decorateTags turns #tags in rendered text into buttons that filter the
+// note list, leaving code and links alone.
+function decorateTags(root) {
+  const tag = /(^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      node.parentElement.closest("code, pre, a, h1, h2, h3, h4, h5, h6")
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT,
+  });
+  const nodes = [];
+  while (walker.nextNode()) if (walker.currentNode.data.includes("#")) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const parts = [];
+    let last = 0;
+    for (const match of node.data.matchAll(tag)) {
+      const start = match.index + match[1].length;
+      parts.push(node.data.slice(last, start));
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "tag";
+      button.dataset.tag = match[2];
+      button.textContent = "#" + match[2];
+      button.title = "Show notes tagged #" + match[2];
+      parts.push(button);
+      last = start + match[2].length + 1;
+    }
+    if (!parts.length) continue;
+    parts.push(node.data.slice(last));
+    node.replaceWith(...parts);
+  }
 }
 function updateToolbar() {
   const editor = state.rich?.editor;

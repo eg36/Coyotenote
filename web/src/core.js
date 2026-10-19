@@ -32,6 +32,7 @@ const state = {
   ready: false,
   restoring: false,
   busy: false,
+  tag: "",
 };
 let toastTimer = null;
 const storage = {

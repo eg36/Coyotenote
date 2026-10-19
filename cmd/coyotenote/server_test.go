@@ -600,3 +600,19 @@ func TestHistoryKeepsReplacedTextAndRestoresIt(t *testing.T) {
 		t.Fatalf("history did not follow the rename: %v", got)
 	}
 }
+
+func TestFrontMatterIsPropertiesNotText(t *testing.T) {
+	a := testApp(t)
+	body := "---\ntags: [travel]\ntitle: <b>x</b>\n---\n# Lisbon\n\nTrams and #food."
+	n := request(t, a, "POST", "/api/note", mutation{ID: "Lisbon", Body: body}, 201)
+	if n["excerpt"] != "# Lisbon Trams and #food." || n["words"] != float64(5) {
+		t.Fatalf("excerpt %q, words %v", n["excerpt"], n["words"])
+	}
+	if tags := fmt.Sprint(n["tags"]); tags != "[food travel]" {
+		t.Fatalf("tags %s", tags)
+	}
+	html := request(t, a, "POST", "/api/render", mutation{ID: "Lisbon", Body: body}, 200)["html"].(string)
+	if !strings.HasPrefix(html, `<pre class="front-matter" aria-label="Properties">tags: [travel]`+"\n"+`title: &lt;b&gt;x&lt;/b&gt;</pre>`) || strings.Contains(html, "<hr") || !strings.Contains(html, "<h1") {
+		t.Fatalf("render: %s", html)
+	}
+}

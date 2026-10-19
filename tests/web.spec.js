@@ -1589,3 +1589,27 @@ test("front matter shows as properties in Write and keeps its exact form", async
   await page.keyboard.type("journal");
   await expect.poll(() => diskBody(page, plain)).toBe("---\ntags: journal\n---\n\nPlain text.");
 });
+
+test("tags from properties and text filter the note list", async ({ page }) => {
+  const stamp = Date.now();
+  const tag = `trip${stamp}`;
+  await seed(page, `Tagged A ${stamp}`, `---\ntags: [${tag}]\n---\nFirst.`);
+  await seed(page, `Tagged B ${stamp}`, `Second, about #${tag.toUpperCase()} and #other${stamp}.`);
+  await seed(page, `Untagged ${stamp}`, "Third, `#${tag}` in code only.");
+  await openSeed(page, `Read about #${tag} here.`, `Reader ${stamp}`);
+  const filter = page.getByLabel("Show notes with a tag");
+  await expect(filter).toBeVisible();
+  await expect(filter.locator("option", { hasText: `#${tag} · 3` })).toHaveCount(1);
+  await filter.selectOption(tag);
+  await expect(page.locator("#note-list .note-row")).toHaveCount(3);
+  await expect(page.locator("#note-list")).not.toContainText(`Untagged ${stamp}`);
+  await filter.selectOption("");
+  await expect(page.locator("#note-list")).toContainText(`Untagged ${stamp}`);
+
+  // Tags in Preview are buttons that apply the filter.
+  await mode(page, "Preview");
+  await page.locator("#preview .tag", { hasText: `#${tag}` }).click();
+  await expect(filter).toHaveValue(tag);
+  await expect(page.locator("#note-list .note-row")).toHaveCount(3);
+  await filter.selectOption("");
+});
