@@ -1,0 +1,63 @@
+// Keyboard shortcuts and the note navigation they trigger.
+import { $, showError, state } from "./core.js";
+import { visibleNotes } from "./list.js";
+import { openNote, save, setMode } from "./editor.js";
+import {
+  deleteDialog,
+  helpDialog,
+  newNoteDialog,
+  renameDialog,
+  themeDialog,
+} from "./dialogs.js";
+
+async function navigate(delta) {
+  const notes = visibleNotes();
+  if (!notes.length) return;
+  const index = notes.findIndex((n) => n.id === state.current?.id);
+  const next = index < 0
+    ? (delta > 0 ? 0 : notes.length - 1)
+    : (index + delta + notes.length) % notes.length;
+  openNote(notes[next].id).catch(showError);
+}
+function findNotes() {
+  $("app").classList.add("sidebar-open");
+  $("search").focus();
+}
+function cycleMode() {
+  const modes = ["write", "source", "preview", "split"];
+  setMode(modes[(modes.indexOf(state.mode) + 1) % modes.length]).catch(
+    showError,
+  );
+}
+function toggleFocus() {
+  $("app").classList.toggle("focus-mode");
+  state.source.refresh();
+}
+// One table drives both the key handler and the help dialog. Chords name
+// "mod" for Ctrl or ⌘; rows without chords are handled by the editors.
+const shortcuts = [
+  ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
+  ["Alt K / Ctrl / ⌘ K", "Find notes", ["alt+k", "mod+k"], findNotes],
+  ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],
+  ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views", ["alt+m", "mod+shift+m"], cycleMode],
+  ["Alt T / Ctrl / ⌘ Shift T", "Choose a theme", ["alt+t", "mod+shift+t"], themeDialog],
+  ["Ctrl / ⌘ Shift F", "Focus mode", ["mod+shift+f"], toggleFocus],
+  ["Ctrl / ⌘ Shift R", "Rename or move note", ["mod+shift+r"], renameDialog],
+  ["Ctrl / ⌘ Shift D", "Move note to trash", ["mod+shift+d"], deleteDialog],
+  ["Alt ↑ / ↓", "Previous / next note", ["alt+arrowup", "alt+arrowdown"],
+    (chord) => navigate(chord.endsWith("up") ? -1 : 1)],
+  ["Ctrl / ⌘ B, I", "Bold / italic in Write"],
+  ["Ctrl / ⌘ Alt 0–6", "Normal text / heading level in Write"],
+  ["Ctrl / ⌘ Z", "Undo an edit"],
+  ["Ctrl / ⌘ Shift Z", "Redo an edit"],
+  ["F1", "Keyboard shortcuts", ["f1"], helpDialog],
+  ["Escape", "Close a dialog or the notes drawer", ["escape"],
+    () => $("app").classList.remove("sidebar-open"), { keepDefault: true }],
+];
+const shortcutChords = new Map(
+  shortcuts.flatMap(([, , chords = [], run, options = {}]) =>
+    chords.map((chord) => [chord, { run, options }]),
+  ),
+);
+
+export { navigate, shortcutChords, shortcuts, toggleFocus };
