@@ -514,6 +514,7 @@ test("a pending draft is read-only until acknowledged and survives another reloa
   page.on("dialog", (dialog) => dialog.accept());
   await page.reload();
   await expect(page.locator("#draft-banner")).toBeVisible();
+  await expect(page.locator("#save-label")).toHaveText("Unsaved draft found");
   await expect(page.locator(".cm-content")).toHaveAttribute(
     "aria-readonly",
     "true",
@@ -810,6 +811,9 @@ test("a conflict compares both versions and keeps whichever is chosen", async ({
   await expect.poll(() => diskBody(page, id)).toContain("First tab ending.");
   await second.locator(".cm-content").fill("Shared line.\nSecond tab ending.");
   await expect(second.locator("#compare-versions")).toBeVisible();
+  await expect(second.locator("#compare-versions")).toHaveClass(/primary/);
+  await expect(second.locator("#retry-save")).not.toHaveClass(/primary/);
+  await expect(second.locator("#save-label")).toHaveText("Not saved");
   await second.locator("#compare-versions").click();
   const disk = second.getByLabel("On disk", { exact: true });
   const mine = second.getByLabel("Your edits", { exact: true });

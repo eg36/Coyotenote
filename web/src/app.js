@@ -137,16 +137,24 @@ function showToast(message, { undo = false, persistent = false } = {}) {
       $("toast").hidden = true;
     }, 6000);
 }
+// showError explains a failure in the banner. Recovery actions appear only
+// while there are unsaved edits, and a conflict leads with comparing versions.
 function showError(error) {
   state.lastError = error;
-  $("error-text").textContent = error.message || String(error);
-  $("compare-versions").hidden = !(
+  const conflict =
     error.status === 409 &&
     error.current &&
-    error.current.id === state.current?.id
-  );
+    error.current.id === state.current?.id;
+  const unsaved = Boolean(state.current && state.dirty);
+  $("error-title").hidden = conflict || !unsaved;
+  $("error-text").textContent = error.message || String(error);
+  $("compare-versions").hidden = !conflict;
+  $("retry-save").classList.toggle("primary", !conflict);
+  $("retry-save").textContent = unsaved ? "Retry save" : "Try again";
+  for (const id of ["download-draft", "recovery-copy", "reload-note"])
+    $(id).hidden = !unsaved;
   $("error-banner").hidden = false;
-  setSaveState("error", "Not saved");
+  if (unsaved) setSaveState("error", "Not saved");
 }
 function clearError() {
   state.lastError = null;
@@ -442,7 +450,8 @@ async function openNote(
   $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
-  setSaveState("saved", "All changes saved");
+  if (state.pendingDraft) setSaveState("dirty", "Unsaved draft found");
+  else setSaveState("saved", "All changes saved");
   updateCounts();
   renderList();
   updateBacklinks();
@@ -1271,7 +1280,7 @@ $("reload-note").onclick = () => {
   content.textContent =
     "Download your edits first if you want to keep them. Reloading replaces this tab’s draft with the current file on disk.";
   openModal(
-    "Reload the disk version?",
+    "Reload from disk?",
     content,
     async () => {
       storage.remove(draftKey());
@@ -1279,7 +1288,7 @@ $("reload-note").onclick = () => {
       state.dirty = false;
       await openNote(id, { skipSave: true });
     },
-    { submit: "Reload disk version" },
+    { submit: "Reload from disk" },
   );
 };
 $("restore-draft").onclick = () => {
@@ -1298,7 +1307,7 @@ $("restore-draft").onclick = () => {
   storeDraft();
   updateCounts();
   schedulePreview(true);
-  setSaveState("dirty", "Draft restored · save to keep");
+  setSaveState("dirty", "Restored draft not saved yet");
   if (conflict)
     showToast(
       "The file changed since this draft. Saving will report a conflict; download your edits or make a recovery copy to keep both versions.",
@@ -1310,6 +1319,7 @@ $("discard-draft").onclick = () => {
   state.pendingDraft = null;
   $("draft-banner").hidden = true;
   applyEditability();
+  setSaveState("saved", "All changes saved");
 };
 $("export-note").onclick = async () => {
   try {

@@ -136,20 +136,29 @@
           hidden
         >
           <span data-icon="alert"></span>
-          <p id="error-text"></p>
-          <div>
-            <button id="compare-versions" hidden>Compare versions</button
-            ><button id="retry-save">Retry save</button
+          <p>
+            <strong id="error-title">Your latest edits are not saved.</strong>
+            <span id="error-text"></span>
+          </p>
+          <div class="banner-actions">
+            <button id="compare-versions" class="primary" hidden>
+              Compare versions</button
+            ><button id="retry-save" class="primary">Retry save</button
             ><button id="download-draft">Download edits</button
-            ><button id="recovery-copy">Recovery copy</button
-            ><button id="reload-note">Reload disk version</button>
+            ><button id="recovery-copy">Save recovery copy</button
+            ><button id="reload-note">Reload from disk</button>
           </div>
         </section>
         <section id="draft-banner" class="banner draft-banner" hidden>
           <span data-icon="history"></span>
-          <p>An unsaved local draft is available for this note.</p>
-          <button id="restore-draft">Restore draft</button
-          ><button id="discard-draft">Discard draft</button>
+          <p>
+            <strong>Unsaved edits to this note were found in this browser.</strong>
+            Editing is paused until you restore or discard them.
+          </p>
+          <div class="banner-actions">
+            <button id="restore-draft" class="primary">Restore draft</button
+            ><button id="discard-draft">Discard draft</button>
+          </div>
         </section>
         <div class="editor-frame" id="editor-frame" hidden>
         <div class="editor-bar">

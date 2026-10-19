@@ -1083,37 +1083,70 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .banner {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 24px;
+  align-items: flex-start;
+  gap: 10px 12px;
+  padding: 10px 12px 10px 16px;
   flex-wrap: wrap;
-  font-size: var(--font-small);
+  font-size: 13px;
+  line-height: 1.5;
   border-bottom: 1px solid var(--line);
-  background: var(--chrome);
   flex-shrink: 0;
 }
-.banner > span {
-  color: var(--danger);
+.banner > [data-icon] {
+  padding-top: 1px;
+}
+.banner > [data-icon] svg {
+  width: 18px;
+  height: 18px;
 }
 .banner p {
   margin: 0;
-  flex: 1;
-  min-width: 140px;
-  line-height: 1.6;
+  flex: 1 1 280px;
+  min-width: 0;
+  padding-top: 1px;
+}
+.banner strong {
+  font-weight: 650;
+}
+.banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .banner button {
-  font-size: var(--font-small);
-  color: var(--accent);
-  background: transparent;
-  padding: 4px 7px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: 5px;
-  margin: 2px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
 }
-.banner.error-banner {
-  border-bottom-color: color-mix(in srgb, var(--danger) 40%, transparent);
+.banner button:hover {
+  background: color-mix(in srgb, var(--text) 6%, var(--surface));
 }
-.draft-banner > span {
+.banner button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--onPill);
+  font-weight: 600;
+}
+.banner button.primary:hover {
+  background: color-mix(in srgb, var(--accent) 85%, var(--text));
+}
+.error-banner {
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  border-bottom-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+.error-banner > [data-icon] {
+  color: var(--danger);
+}
+.draft-banner {
+  background: color-mix(in srgb, var(--warn) 11%, var(--surface));
+  border-bottom-color: color-mix(in srgb, var(--warn) 40%, transparent);
+}
+.draft-banner > [data-icon] {
   color: var(--warn);
 }
 dialog.compare {
