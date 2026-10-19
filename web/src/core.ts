@@ -15,7 +15,7 @@ interface AppElements {
   "tag-filter": HTMLDetailsElement;
   "note-sort": HTMLSelectElement;
   "trash-button": HTMLButtonElement;
-  "theme-button": HTMLButtonElement;
+  "settings-button": HTMLButtonElement;
   "sidebar-scrim": HTMLButtonElement;
   "sidebar-toggle": HTMLButtonElement;
   "history-back": HTMLButtonElement;

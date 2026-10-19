@@ -83,10 +83,11 @@ The interface and writing pane use locally bundled **Lexend**. The writing size
 defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints
 are at least 12 px.
 
-**Writing settings** (View menu or Quick open command) offers text sizes from
+**Settings** (the button at the bottom of the sidebar, View → Settings…, Quick
+open or Ctrl/⌘ Shift T) holds the theme and, under Writing, text sizes from
 14–24 px, Narrow/Standard/Wide line widths for Write and Preview, and spellcheck
-in Write. Markdown text stays 2 px smaller than the chosen size. Save settings
-to keep them in this browser; Cancel leaves the current settings in place.
+in Write. Markdown text stays 2 px smaller than the chosen size. Every change
+applies at once and is kept; Done closes the window.
 Spelling uses the browser's own language and dictionary. These preferences do
 not change the Markdown files or follow the vault to another browser.
 
@@ -151,10 +152,11 @@ not change the Markdown files or follow the vault to another browser.
   **Alt+Up / Alt+Down** cycles the visible sorted notes; the back arrow returns
   from linked-note navigation. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
-- Click the theme name for all **14 palettes**, including the four Catppuccin
+- **Settings → Appearance** lists all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
   neutral white/charcoal surfaces and blue accents. Hover, focus or ↑/↓ previews a
-  theme; Enter/click keeps it; Escape restores the previous theme. Palettes stay as
+  theme; Enter/click keeps it; closing the window without choosing restores the
+  kept theme. Palettes stay as
   published; where one of their text colors would fall below WCAG AA contrast (as in
   Ayu Light or Nord), the app darkens or lightens just that text until it passes.
 - **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
@@ -196,7 +198,7 @@ editing are not supported.
 | Alt+S or Ctrl/⌘+Shift+E | Search note contents |
 | Ctrl/⌘+S | Save immediately |
 | Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Preview → Split |
-| Alt+T or Ctrl/⌘+Shift+T | Choose a theme |
+| Alt+T or Ctrl/⌘+Shift+T | Settings: theme and writing |
 | Ctrl/⌘+Shift+F | Toggle focus mode |
 | Alt+O | Show or hide the outline |
 | Ctrl/⌘+Shift+R | Rename or move |

@@ -37,7 +37,6 @@ function applyTheme(id: string) {
     root.style.setProperty("--" + role, color);
   for (const [role, value] of Object.entries(readableRoles(theme.colors)))
     root.style.setProperty("--" + role, value);
-  $("theme-name").textContent = theme.name;
 }
 async function chooseTheme(id: string) {
   await api("/api/settings", "POST", { theme: id });
@@ -331,9 +330,13 @@ function emptyTrashDialog(count: number) {
     { submit: `Delete ${notes}`, className: "danger" },
   );
 }
-function themeDialog() {
+// themeChooser is the settings window's theme section: hovering or ↑/↓
+// previews a theme, Enter or a click keeps it, and closing the window
+// returns to the kept theme.
+function themeChooser() {
   themeOriginal = state.theme;
   const container = document.createElement("div");
+  container.className = "theme-chooser";
   const search = document.createElement("input");
   search.placeholder = "Find a theme…";
   search.setAttribute("aria-label", "Find a theme");
@@ -404,8 +407,8 @@ function themeDialog() {
       button.onclick = async () => {
         try {
           await chooseTheme(theme.id);
-          themeOriginal = null;
-          closeModal();
+          themeOriginal = theme.id;
+          $("modal-error").textContent = "";
         } catch (error) {
           $("modal-error").textContent = error instanceof Error ? error.message : String(error);
         }
@@ -437,13 +440,10 @@ function themeDialog() {
   searchRow.prepend(search);
   const hints = document.createElement("p");
   hints.className = "theme-key-hints";
-  hints.textContent = "↑↓ preview · Enter select · Esc cancel";
+  hints.textContent = "↑↓ preview · Enter choose";
   container.append(searchRow, list, empty, hints);
-  openModal("Choose a theme", container, null, {
-    className: "theme-picker",
-    hideFooter: true,
-  });
   render();
+  return container;
 }
 function linkDialog(wiki = false) {
   if (!state.current) return;
@@ -594,7 +594,7 @@ export {
   newNoteDialog,
   openModal,
   renameDialog,
-  themeDialog,
+  themeChooser,
   trashDialog,
   undoTrash,
 };

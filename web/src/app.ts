@@ -48,7 +48,6 @@ import {
   newNoteDialog,
   openModal,
   renameDialog,
-  themeDialog,
   trashDialog,
   undoTrash,
 } from "./dialogs.js";
@@ -60,6 +59,7 @@ import { historyDialog } from "./history.js";
 import { setupMenus } from "./menus.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
+import { settingsDialog } from "./settings.js";
 
 function isMode(value: unknown): value is AppState["mode"] {
   return typeof value === "string" && ["write", "source", "preview", "split"].includes(value);
@@ -157,7 +157,7 @@ $("sidebar-toggle").onclick = () => {
 $("sidebar-scrim").onclick = () => {
   $("app").classList.remove("sidebar-open");
 };
-$("theme-button").onclick = themeDialog;
+$("settings-button").onclick = settingsDialog;
 $("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();

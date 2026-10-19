@@ -30,7 +30,6 @@ import {
   newNoteDialog,
   openModal,
   renameDialog,
-  themeDialog,
   trashDialog,
 } from "./dialogs.js";
 import { headings, jumpToHeading, toggleOutline } from "./outline.js";
@@ -116,8 +115,8 @@ const commandDefinitions: Command[] = [
   ["Split view", "", () => setMode("split").catch(showError), true],
   ["Toggle focus mode", "Ctrl Shift F", toggleFocus],
   ["Show or hide outline", "Alt O", () => toggleOutline(), true],
-  ["Choose a theme", "Ctrl Shift T", themeDialog],
-  ["Writing settings", "", settingsDialog],
+  ["Settings", "Ctrl Shift T", settingsDialog],
+  ["Change the theme", "", settingsDialog],
   ["Open the trash", "", () => trashDialog().catch(showError)],
   ["Review unsaved drafts", "", draftsDialog, false, () => state.orphans?.length],
   ["Keyboard shortcuts", "F1", helpDialog],

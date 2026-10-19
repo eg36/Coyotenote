@@ -562,18 +562,6 @@ input[type="search"]::-webkit-search-cancel-button {
   height: 18px;
   color: var(--muted);
 }
-.theme-button [data-icon="chevronDown"] svg {
-  width: 14px;
-  height: 14px;
-}
-.theme-orb {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--text) 25%, transparent);
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--pink), var(--cyan));
-}
 .workspace {
   display: flex;
   flex-direction: column;
@@ -1881,9 +1869,6 @@ dialog select {
   margin-top: 8px;
   margin-bottom: 0;
 }
-dialog.writing-settings {
-  width: min(440px, calc(100% - 32px));
-}
 .settings-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1936,28 +1921,50 @@ dialog footer {
   gap: 8px;
   margin-top: 24px;
 }
-dialog.theme-picker {
-  width: min(360px, calc(100% - 32px));
+/* Settings: theme and writing side by side, stacked on phones. The page
+   stays undimmed so theme previews show behind the window. */
+dialog.settings {
+  width: min(720px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
-  border-radius: 10px;
 }
-dialog.theme-picker::backdrop {
+dialog.settings::backdrop {
   background: transparent;
   backdrop-filter: none;
 }
-.theme-picker form {
-  padding: 12px;
-}
-.theme-picker header {
+.settings .modal-error:empty {
   display: none;
 }
-.theme-picker .modal-error:empty {
-  display: none;
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px 32px;
+  align-items: start;
+}
+.settings-section h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.settings-section .setting-toggle {
+  margin-top: 20px;
+}
+.settings-section .dialog-description {
+  margin: 16px 0 0;
+}
+.settings-done {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+@media (max-width: 640px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .theme-search {
   position: relative;
 }
-.theme-picker .theme-search input {
+.theme-search input {
   padding: 0 34px 0 12px;
   font-size: 14px;
   border-radius: 7px;
@@ -1975,7 +1982,7 @@ dialog.theme-picker::backdrop {
 .theme-list {
   display: flex;
   flex-direction: column;
-  max-height: min(448px, calc(100dvh - 152px));
+  max-height: min(360px, calc(100dvh - 240px));
   overflow-y: auto;
   margin-top: 9px;
 }

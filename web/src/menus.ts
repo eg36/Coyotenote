@@ -10,7 +10,6 @@ import {
   linkDialog,
   newNoteDialog,
   renameDialog,
-  themeDialog,
   trashDialog,
 } from "./dialogs.js";
 import { findNotes, toggleFocus } from "./shortcuts.js";
@@ -58,8 +57,7 @@ const menus: Record<string, MenuEntry[]> = {
     ["Outline", "Alt O", () => toggleOutline(), note],
     ["Focus mode", "Ctrl Shift F", toggleFocus],
     "-",
-    ["Theme…", "Ctrl Shift T", themeDialog],
-    ["Writing settings…", "", settingsDialog],
+    ["Settings…", "Ctrl Shift T", settingsDialog],
     ["Keyboard shortcuts", "F1", helpDialog],
   ],
   insert: [

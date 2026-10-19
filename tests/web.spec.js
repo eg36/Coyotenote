@@ -155,7 +155,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
   page,
 }) => {
   await openSeed(page, "# Theme test\n\nHello.");
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   await expect(page.locator(".theme-option")).toHaveCount(14);
   await page.locator('[data-theme-id="catppuccin-mocha"]').click();
   await expect(page.locator("html")).toHaveAttribute(
@@ -167,7 +167,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "data-theme",
     "catppuccin-mocha",
   );
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   await page.locator('[data-theme-id="light"]').hover();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.keyboard.press("Escape");
@@ -175,7 +175,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "data-theme",
     "catppuccin-mocha",
   );
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   await page.locator('[data-theme-id="light"]').click();
   await expect(page.locator("#rich-pane")).toHaveCSS(
     "background-color",
@@ -185,7 +185,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
 
 test("every theme draws text, accents, pills and focus rings at AA contrast", async ({ page }) => {
   await openSeed(page, "Contrast.");
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   const ids = await page.locator(".theme-option").evaluateAll((options) => options.map((o) => o.dataset.themeId));
   expect(ids).toHaveLength(14);
   for (const id of ids) {
@@ -221,12 +221,14 @@ test("every theme draws text, accents, pills and focus rings at AA contrast", as
   await page.keyboard.press("Escape");
 });
 
-test("theme picker is a compact palette list with an unobscured backdrop", async ({ page }) => {
+test("settings hold the themes and writing preferences over an unobscured page", async ({ page }) => {
   await openSeed(page, "# Themes");
-  await page.locator("#theme-button").click();
-  const picker = page.getByRole("dialog", { name: "Choose a theme" });
+  await page.locator("#settings-button").click();
+  const picker = page.getByRole("dialog", { name: "Settings" });
   await expect(picker).toBeVisible();
-  expect((await picker.boundingBox()).width).toBeLessThanOrEqual(360);
+  await expect(picker.getByRole("heading", { name: "Appearance" })).toBeVisible();
+  await expect(picker.getByLabel("Text size", { exact: true })).toBeVisible();
+  expect((await picker.boundingBox()).width).toBeLessThanOrEqual(720);
   expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backdropFilter)).toBe("none");
   expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
   await expect(picker.locator(".theme-option")).toHaveCount(14);
@@ -238,21 +240,24 @@ test("theme picker is a compact palette list with an unobscured backdrop", async
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 375, height: 667 });
   await page.locator("#sidebar-toggle").click();
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   const box = await picker.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(375);
   expect(box.height).toBeLessThanOrEqual(635);
+  await expect(picker.getByRole("button", { name: "Done" })).toBeVisible();
 });
 
 test("theme keyboard preview wraps, cancels and commits a filtered selection", async ({ page }) => {
   await openSeed(page, "# Keyboard themes");
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   const search = page.getByRole("combobox", { name: "Find a theme" });
   await search.fill("Labradorite Dark");
   await search.press("Enter");
+  await expect(page.locator("#modal")).toBeVisible();
+  await search.press("Escape");
   await expect(page.locator("#modal")).not.toBeVisible();
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   await expect(search).toBeFocused();
   await search.press("ArrowUp");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "gruvbox-light");
@@ -266,13 +271,18 @@ test("theme keyboard preview wraps, cancels and commits a filtered selection", a
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await search.press("Escape");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   await search.fill("catppuccin");
   await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(4);
   await search.press("ArrowDown");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "catppuccin-macchiato");
   await search.press("Enter");
+  // Choosing keeps the theme and leaves the window open for other settings.
+  await expect(page.locator("#modal")).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get("/api/state")).json()).theme).toBe("catppuccin-macchiato");
+  await page.getByRole("button", { name: "Done" }).click();
   await expect(page.locator("#modal")).not.toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "catppuccin-macchiato");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "catppuccin-macchiato");
 });
@@ -280,7 +290,7 @@ test("theme keyboard preview wraps, cancels and commits a filtered selection", a
 test("empty theme search and failed selection preserve the previous theme", async ({ page }) => {
   await openSeed(page, "# Theme recovery");
   const original = await page.locator("html").getAttribute("data-theme");
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   const search = page.getByRole("combobox", { name: "Find a theme" });
   await search.fill("no such palette");
   await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(0);
@@ -1058,7 +1068,7 @@ test("preview headings named like app controls leave the app working", async ({
     "Word count",
   );
   await expect(page.locator("#word-count")).toHaveText(/^\d+ words$/);
-  await page.locator("#theme-button").click();
+  await page.locator("#settings-button").click();
   await expect(page.locator("dialog#modal")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator("dialog#modal")).toBeHidden();
@@ -1353,7 +1363,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await page.keyboard.press("Control+Shift+F");
   await expect(page.locator("#app")).not.toHaveClass(/focus-mode/);
   await page.keyboard.press("Alt+t");
-  await expect(page.locator("#modal-title")).toHaveText("Choose a theme");
+  await expect(page.locator("#modal-title")).toHaveText("Settings");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Control+k");
   await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toBeFocused();
@@ -2035,12 +2045,14 @@ test("find and replace keeps Split open and fits a narrow screen", async ({ page
 test("writing settings persist across modes, reloads and rich editor recreation", async ({ page }) => {
   const id = await openSeed(page, "Text made comfortable.");
   await page.locator('[data-menu="view"]').click();
-  await page.getByRole("menuitem", {name:"Writing settings…"}).click();
-  const dialog = page.getByRole("dialog", {name:"Writing settings"});
+  await page.getByRole("menuitem", {name:"Settings…"}).click();
+  const dialog = page.getByRole("dialog", {name:"Settings"});
   await dialog.getByLabel("Text size", {exact:true}).selectOption("22");
   await dialog.getByLabel("Line width", {exact:true}).selectOption("960");
   await dialog.getByRole("checkbox", {name:/Check spelling/}).uncheck();
-  await dialog.getByRole("button", {name:"Save settings"}).click();
+  // Changes apply at once; Done only closes the window.
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "22px");
+  await dialog.getByRole("button", {name:"Done"}).click();
   await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "22px");
   await expect(page.locator("#rich-editor")).toHaveCSS("max-width", "960px");
   await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "false");
@@ -2056,11 +2068,11 @@ test("writing settings persist across modes, reloads and rich editor recreation"
   await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "false");
   expect(await diskBody(page, id)).toBe("Text made comfortable.");
   await page.keyboard.press("Control+k");
-  await page.getByLabel("Search notes, headings and commands").fill(">writing settings");
+  await page.getByLabel("Search notes, headings and commands").fill(">settings");
   await page.keyboard.press("Enter");
   await dialog.getByLabel("Text size", {exact:true}).selectOption("14");
-  await dialog.getByRole("button", {name:"Cancel", exact:true}).click();
-  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "22px");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "14px");
 });
 
 test("invalid saved preferences fall back safely and unavailable storage is explained", async ({ page }) => {
@@ -2071,9 +2083,8 @@ test("invalid saved preferences fall back safely and unavailable storage is expl
   await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "true");
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException("Full", "QuotaExceededError"); }; });
   await page.locator('[data-menu="view"]').click();
-  await page.getByRole("menuitem", {name:"Writing settings…"}).click();
+  await page.getByRole("menuitem", {name:"Settings…"}).click();
   await page.getByLabel("Text size", {exact:true}).selectOption("20");
-  await page.getByRole("button", {name:"Save settings"}).click();
   await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "20px");
   await expect(page.locator("#toast")).toContainText("could not remember them");
 });
@@ -2092,11 +2103,12 @@ test("phone menus keep journal commands and settings reachable without a keyboar
   for (const width of [320, 390, 530]) {
     await page.setViewportSize({width,height:720});
     await page.locator('[data-menu="view"]').click();
-    const item = page.getByRole("menuitem", {name:"Writing settings…"});
+    const item = page.getByRole("menuitem", {name:"Settings…"});
     await expect(item).toBeInViewport();
     await item.click();
+    await page.getByLabel("Text size", {exact:true}).scrollIntoViewIfNeeded();
     await expect(page.getByLabel("Text size", {exact:true})).toBeInViewport();
-    await page.getByRole("button", {name:"Cancel",exact:true}).click();
+    await page.getByRole("button", {name:"Done",exact:true}).click();
     await page.locator('[data-menu="file"]').click();
     await expect(page.getByRole("menuitem", {name:"Today's note"})).toBeInViewport();
     await page.keyboard.press("Escape");
@@ -2106,6 +2118,6 @@ test("phone menus keep journal commands and settings reachable without a keyboar
   await page.locator('[data-menu="view"]').click();
   const popup = page.locator("#menu-popup");
   expect(await popup.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy();
-  await page.getByRole("menuitem", {name:"Writing settings…"}).click();
-  await expect(page.getByRole("dialog", {name:"Writing settings"})).toBeVisible();
+  await page.getByRole("menuitem", {name:"Settings…"}).click();
+  await expect(page.getByRole("dialog", {name:"Settings"})).toBeVisible();
 });
