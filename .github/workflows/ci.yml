@@ -40,8 +40,6 @@ jobs:
       - run: go vet ./...
       - run: go test -race -count=1 ./...
       - run: go build -o bin/coyotenote ./cmd/coyotenote
-      - run: python3 scripts/smoke_terminal.py
-      - run: go build -o bin/coyotenote-web ./cmd/coyotenote-web
       - run: python3 scripts/smoke_web.py
       - name: Package a release archive (dry run)
         run: scripts/package.sh v0.0.0-ci
@@ -61,7 +59,7 @@ jobs:
       - run: npm run build
       - name: Verify committed browser assets are current
         run: git diff --exit-code -- web/assets
-      - run: go build -o bin/coyotenote-web ./cmd/coyotenote-web
+      - run: go build -o bin/coyotenote ./cmd/coyotenote
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - uses: actions/upload-artifact@v4

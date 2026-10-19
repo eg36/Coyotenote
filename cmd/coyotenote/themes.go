@@ -1,16 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/alecthomas/chroma/v2"
-	chromastyles "github.com/alecthomas/chroma/v2/styles"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/eg36/coyotenote/internal/vault"
-)
+type palette struct{ surface, chrome, text, muted, accent, cyan, good, warn, danger, line, pink, blue, onPill string }
 
 type themeSpec struct {
 	id, name string
@@ -20,9 +10,10 @@ type themeSpec struct {
 
 // Palettes are mapped to application roles; sources are linked in README.md.
 // Preserve dark/light IDs so existing settings keep working.
+// Coyote palettes use neutral web surfaces and blue accents; named upstream palettes are unchanged.
 var themes = []themeSpec{
-	{"dark", "Coyote Dark", false, palette{"#22252D", "#2D313D", "#DDE2EF", "#A3ADC2", "#C4A7FF", "#89DCEB", "#A6DA95", "#EED49F", "#F29BAA", "#475069", "#FF8CC6", "#8AADF4", "#1B1D24"}},
-	{"light", "Coyote Light", true, palette{"#FAF8F5", "#ECE8F0", "#343044", "#6C657A", "#7953B3", "#257A87", "#33744B", "#94610B", "#B43B55", "#C9C1D3", "#B8327A", "#3B63C4", "#FFFFFF"}},
+	{"dark", "Coyote Dark", false, palette{"#212121", "#181818", "#ECECEC", "#ABABAB", "#76B9ED", "#8BC8F3", "#8EC49A", "#D4B778", "#F28B82", "#424242", "#8EBDE8", "#76B9ED", "#15202B"}},
+	{"light", "Coyote Light", true, palette{"#FFFFFF", "#F7F5F4", "#202123", "#63666B", "#2374AB", "#176D9C", "#397C58", "#916419", "#B54040", "#D9DDE3", "#347BA9", "#236EA0", "#FFFFFF"}},
 	{"ayu-dark", "Ayu Dark", false, palette{"#10141C", "#0D1017", "#BFBDB6", "#92959C", "#E6B450", "#95E6CB", "#AAD94C", "#FFB454", "#F07178", "#273747", "#D2A6FF", "#59C2FF", "#0B0E14"}},
 	{"ayu-mirage", "Ayu Mirage", false, palette{"#242936", "#1F2430", "#CCCAC2", "#959CA9", "#FFCC66", "#95E6CB", "#D5FF80", "#FFD173", "#F28779", "#3D4A66", "#DFBFFF", "#73D0FF", "#1F2430"}},
 	{"ayu-light", "Ayu Light", true, palette{"#FCFCFC", "#F3F4F5", "#5C6166", "#707A85", "#A66700", "#167D7F", "#527A00", "#976000", "#C43D37", "#CFD8E3", "#8959A8", "#1674A5", "#FFFFFF"}},
@@ -48,151 +39,3 @@ func themeByID(id string) themeSpec {
 func validTheme(id string) bool    { return themeByID(id).id == id }
 func themeIsLight(id string) bool  { return themeByID(id).light }
 func paletteFor(id string) palette { return themeByID(id).colors }
-
-// Register once before any background render starts. Each theme has its own
-// Chroma style, avoiding Glamour's shared first-theme-wins "charm" registry entry.
-func init() {
-	for _, theme := range themes {
-		p := theme.colors
-		chromastyles.Register(chroma.MustNewStyle("coyotenote-"+theme.id, chroma.StyleEntries{
-			chroma.Background:      "bg:" + p.surface,
-			chroma.Text:            p.text,
-			chroma.Comment:         "italic " + p.muted,
-			chroma.Keyword:         p.accent,
-			chroma.KeywordType:     p.blue,
-			chroma.Operator:        p.cyan,
-			chroma.Punctuation:     p.text,
-			chroma.Name:            p.text,
-			chroma.NameBuiltin:     p.blue,
-			chroma.NameFunction:    p.cyan,
-			chroma.NameClass:       p.warn,
-			chroma.LiteralString:   p.good,
-			chroma.LiteralNumber:   p.pink,
-			chroma.Error:           p.danger,
-			chroma.GenericDeleted:  p.danger,
-			chroma.GenericInserted: p.good,
-		}))
-	}
-}
-
-type themeChooser struct {
-	input    textinput.Model
-	original string
-	matches  []int
-	selected int
-}
-
-func (m *model) openThemePicker() tea.Cmd {
-	m.editor.ClearSelection()
-	m.complete = nil
-	m.editor.Blur()
-	input := textinput.New()
-	input.Prompt = "Find "
-	input.Placeholder = "Ayu, Catppuccin, Nord…"
-	input.CharLimit = 80
-	chooser := &themeChooser{input: input, original: m.theme}
-	for i, t := range themes {
-		chooser.matches = append(chooser.matches, i)
-		if t.id == m.theme {
-			chooser.selected = i
-		}
-	}
-	m.themePicker = chooser
-	return chooser.input.Focus()
-}
-func (m *model) closeThemePicker() {
-	m.themePicker = nil
-	if m.mode != 1 {
-		m.editor.Focus()
-	}
-}
-func (m *model) updateThemePicker(k tea.KeyMsg) tea.Cmd {
-	chooser := m.themePicker
-	switch k.String() {
-	case "esc":
-		m.theme = chooser.original
-		m.applyTheme()
-		m.closeThemePicker()
-		return m.requestRender()
-	case "enter":
-		if len(chooser.matches) == 0 {
-			return nil
-		}
-		id := themes[chooser.matches[chooser.selected]].id
-		if err := vault.AtomicWrite(m.store.Config, "theme", []byte(id)); err != nil {
-			m.status = "Theme not saved: " + err.Error()
-			return nil
-		}
-		m.theme = id
-		m.applyTheme()
-		m.closeThemePicker()
-		m.status = "Theme: " + themeByID(id).name
-		return m.requestRender()
-	case "up", "down":
-		if len(chooser.matches) == 0 {
-			return nil
-		}
-		delta := 1
-		if k.String() == "up" {
-			delta = -1
-		}
-		chooser.selected = (chooser.selected + delta + len(chooser.matches)) % len(chooser.matches)
-	default:
-		var cmd tea.Cmd
-		before := chooser.input.Value()
-		chooser.input, cmd = chooser.input.Update(k)
-		if before == chooser.input.Value() {
-			return cmd
-		}
-		chooser.matches = nil
-		chooser.selected = 0
-		query := strings.ToLower(chooser.input.Value())
-		for i, t := range themes {
-			if strings.Contains(strings.ToLower(t.name+" "+t.id), query) {
-				chooser.matches = append(chooser.matches, i)
-			}
-		}
-	}
-	if len(chooser.matches) > 0 {
-		m.theme = themes[chooser.matches[chooser.selected]].id
-		m.applyTheme()
-	}
-	return m.requestRender()
-}
-func (m *model) themePickerView(p palette) string {
-	chooser := m.themePicker
-	input := chooser.input
-	base := ink(p.text).Background(lipgloss.Color(p.surface))
-	input.TextStyle = base
-	input.PromptStyle = base.Foreground(lipgloss.Color(p.accent))
-	input.PlaceholderStyle = base.Foreground(lipgloss.Color(p.muted))
-	input.Cursor.Style = base.Foreground(lipgloss.Color(p.accent))
-	input.Width = max(1, m.width-12)
-	rows := max(1, m.height-11)
-	start := max(0, chooser.selected-rows+1)
-	var lines []string
-	lines = append(lines, input.View())
-	for i := start; i < min(start+rows, len(chooser.matches)); i++ {
-		t := themes[chooser.matches[i]]
-		label := "  " + t.name
-		if i == chooser.selected {
-			label = "> " + t.name
-		}
-		mode := "dark"
-		if t.light {
-			mode = "light"
-		}
-		line := fmt.Sprintf("%-24s %s", label, mode)
-		if i == chooser.selected {
-			line = base.Background(lipgloss.Color(p.line)).Bold(true).Render(line)
-		} else {
-			line = base.Render(line)
-		}
-		lines = append(lines, line)
-	}
-	if len(chooser.matches) == 0 {
-		lines = append(lines, base.Render("No matching themes"))
-	}
-	lines = append(lines, ink(p.muted).Render("↑↓ preview · Enter keep · Esc cancel"))
-	return strings.Join(lines, "\n")
-}

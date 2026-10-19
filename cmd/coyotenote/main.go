@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
+	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eg36/coyotenote/internal/vault"
 	"github.com/eg36/coyotenote/internal/version"
 )
@@ -18,13 +21,13 @@ func main() {
 		os.Exit(1)
 	}
 }
+
 func run() error {
-	dir := flag.String("data-dir", "", "data directory holding the notes and settings such as the theme")
-	showVersion := flag.Bool("version", false, "print the version and exit")
-	migrateNames := flag.Bool("migrate", false, "rename notes with timestamp names after their titles, then exit")
+	listen := flag.String("listen", "127.0.0.1:4280", "loopback address for the local web app")
+	dir := flag.String("data-dir", "", "isolated notes/settings directory (default: coyotenote-web in application data)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Usage = func() {
-		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote [flags] [vault]")
-		fmt.Fprintln(flag.CommandLine.Output(), "\nThe vault is a folder of Markdown notes; it defaults to the application data directory.")
+		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote [flags] [vault]\n\nOpens a folder of Markdown notes in your browser, served only to this computer.")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -32,69 +35,79 @@ func run() error {
 		fmt.Println("coyotenote", version.String())
 		return nil
 	}
-	switch {
-	case flag.NArg() > 1:
-		return fmt.Errorf("unexpected arguments; use -help")
-	case flag.NArg() == 1 && *dir != "":
-		return fmt.Errorf("give the vault either as an argument or with -data-dir, not both")
+	if flag.NArg() > 1 || flag.NArg() == 1 && *dir != "" {
+		return errors.New("give one vault path or -data-dir, not both")
 	}
+	config, err := vault.DataDir()
+	if err != nil {
+		return err
+	}
+	// The default vault keeps the name it had beside the terminal app.
+	config += "-web"
 	vaultDir := flag.Arg(0)
-	if vaultDir != "" {
-		*dir = vaultDir
+	if vaultDir == "" {
+		vaultDir = *dir
 	}
-	config, configErr := vault.DataDir()
-	if *dir == "" {
-		if configErr != nil {
-			return configErr
-		}
-		*dir = config
+	if vaultDir == "" {
+		vaultDir = config
 	}
-	s, err := vault.Open(*dir)
+	host, _, err := net.SplitHostPort(*listen)
+	if err != nil {
+		return err
+	}
+	ip := net.ParseIP(host)
+	if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+		return errors.New("coyotenote must listen on a loopback address, such as 127.0.0.1:4280")
+	}
+	s, err := vault.Open(vaultDir)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
-	// A vault argument keeps the theme in the data directory, not among the notes.
-	if vaultDir != "" && configErr == nil && !sameDir(config, *dir) && os.MkdirAll(config, 0700) == nil {
-		s.Config = config
+	if *dir != "" {
+		config = *dir
 	}
-	if *migrateNames {
-		return migrate(s, os.Stdin, os.Stdout)
+	if err = os.MkdirAll(config, 0700); err != nil {
+		return err
 	}
-	m, err := newModel(s)
+	s.Config = config
+	app, err := newWebApp(s)
 	if err != nil {
 		return err
 	}
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithoutSignalHandler())
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	defer signal.Stop(signals)
+	listener, err := net.Listen("tcp", *listen)
+	if err != nil {
+		return err
+	}
+	app.port = listener.Addr().(*net.TCPAddr).Port
+	server := &http.Server{Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	registerTermination(stop)
 	done := make(chan struct{})
-	defer close(done)
+	shutdownDone := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case <-signals:
-				p.Send(exitMsg{})
-			case <-done:
-				return
+		defer close(shutdownDone)
+		select {
+		case <-ctx.Done():
+			shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := server.Shutdown(shutdown); err != nil {
+				_ = server.Close()
 			}
+		case <-done:
 		}
 	}()
-	final, err := p.Run()
-	if m, ok := final.(*model); ok {
-		if e := m.flush(); e != nil {
-			if m.recovery != "" {
-				return fmt.Errorf("%w; unsaved edits were copied to %s", e, m.recovery)
-			}
-			return e
-		}
+	fmt.Printf("coyotenote %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", version.String(), listener.Addr(), s.Dir)
+	err = server.Serve(listener)
+	close(done)
+	<-shutdownDone
+	// Wait for any handler finishing after a forced connection close before
+	// releasing the vault lock.
+	app.mu.Lock()
+	app.mu.Unlock()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
 	}
 	return err
-}
-
-func sameDir(a, b string) bool {
-	x, err1 := os.Stat(a)
-	y, err2 := os.Stat(b)
-	return err1 == nil && err2 == nil && os.SameFile(x, y)
 }

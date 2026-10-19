@@ -9,13 +9,13 @@ import tempfile
 import urllib.error
 import urllib.request
 
-BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'coyotenote-web')
+BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'coyotenote')
 
 def start(vault):
     process = subprocess.Popen([BINARY, '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     first = process.stdout.readline()
     address = process.stdout.readline()
-    assert first.startswith('coyotenote-web '), first
+    assert first.startswith('coyotenote '), first
     assert address.startswith('Open http://'), address
     base = address.strip().removeprefix('Open ')
     return process, base
@@ -36,7 +36,7 @@ def stop(process):
     assert process.returncode == 0, (process.returncode, out, error)
 
 version=subprocess.run([BINARY,'-version'],capture_output=True,text=True,check=True).stdout
-assert version.startswith('coyotenote-web '), version
+assert version.startswith('coyotenote '), version
 
 with tempfile.TemporaryDirectory(prefix='coyotenote-http-smoke-') as directory:
     process, base = start(directory)

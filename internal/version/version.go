@@ -1,6 +1,5 @@
-// Package version reports the version both coyotenote apps print. A release
-// stamps the same version into both, so they always say which release they
-// came from.
+// Package version reports the version coyotenote prints. A release stamps it
+// into the binary, so the app always says which release it came from.
 package version
 
 import "runtime/debug"

@@ -1,7 +1,6 @@
-// Package vault reads and writes a folder of Markdown notes, the format both
-// coyotenote apps share: atomic saves that refuse to overwrite outside edits,
-// a trash that keeps every deletion, a lock against a second process, and
-// Obsidian-style [[wiki link]] resolution.
+// Package vault reads and writes a folder of Markdown notes: atomic saves that
+// refuse to overwrite outside edits, a trash that keeps every deletion, a lock
+// against a second process, and Obsidian-style [[wiki link]] resolution.
 package vault
 
 import (
@@ -19,12 +18,8 @@ import (
 	"unicode/utf8"
 )
 
-// The editor holds at most MaxLines lines (a Bubbles textarea limit). Pastes are
-// also capped at MaxPasteBytes so a stray clipboard dump cannot stall the UI.
-const (
-	MaxLines      = 10000
-	MaxPasteBytes = 1 << 20
-)
+// MaxLines is the most lines a note may hold, so the editors stay responsive.
+const MaxLines = 10000
 
 type Note struct {
 	ID, Body string
