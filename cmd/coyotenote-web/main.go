@@ -11,6 +11,8 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"time"
+
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 var version = "web-alpha"
@@ -38,17 +40,17 @@ func run() error {
 	if flag.NArg() > 1 || flag.NArg() == 1 && *dir != "" {
 		return errors.New("give one vault path or -data-dir, not both")
 	}
-	config, err := dataDir()
+	config, err := vault.DataDir()
 	if err != nil {
 		return err
 	}
 	config += "-web"
-	vault := flag.Arg(0)
-	if vault == "" {
-		vault = *dir
+	vaultDir := flag.Arg(0)
+	if vaultDir == "" {
+		vaultDir = *dir
 	}
-	if vault == "" {
-		vault = config
+	if vaultDir == "" {
+		vaultDir = config
 	}
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil {
@@ -58,18 +60,18 @@ func run() error {
 	if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
 		return errors.New("the web alpha must bind to a loopback address, such as 127.0.0.1:4280")
 	}
-	s, err := openStore(vault)
+	s, err := vault.Open(vaultDir)
 	if err != nil {
 		return err
 	}
-	defer s.close()
+	defer s.Close()
 	if *dir != "" {
 		config = *dir
 	}
 	if err = os.MkdirAll(config, 0700); err != nil {
 		return err
 	}
-	s.config = config
+	s.Config = config
 	app, err := newWebApp(s)
 	if err != nil {
 		return err
@@ -97,7 +99,7 @@ func run() error {
 		case <-done:
 		}
 	}()
-	fmt.Printf("coyotenote %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", versionString(), listener.Addr(), s.dir)
+	fmt.Printf("coyotenote %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", versionString(), listener.Addr(), s.Dir)
 	err = server.Serve(listener)
 	close(done)
 	<-shutdownDone

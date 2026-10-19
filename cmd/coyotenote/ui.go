@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/glamour/styles"
 	"github.com/charmbracelet/lipgloss"
 	textarea "github.com/eg36/coyotenote/internal/editor"
+	"github.com/eg36/coyotenote/internal/vault"
 	"github.com/muesli/termenv"
 )
 
@@ -46,6 +47,11 @@ var keys = struct {
 }{binding("ctrl+n"), binding("ctrl+d"), binding("alt+up", "ctrl+pgup"), binding("alt+down", "ctrl+pgdown"), binding("ctrl+p"), binding("ctrl+t"), binding("ctrl+s"), binding("f1"), binding("ctrl+q"), binding("ctrl+z"), binding("ctrl+o"),
 	binding("ctrl+r"), binding("ctrl+g"), binding("ctrl+y"), binding("ctrl+l")}
 
+// trashedNote is a deletion Ctrl+Z can undo: the note's name in the trash,
+// which gains a " N" suffix when the trash already holds that name, and the
+// ID it is restored to.
+type trashedNote struct{ trashID, id string }
+
 type model struct {
 	helpOffset    int
 	clipboard     clipboardBackend
@@ -53,9 +59,10 @@ type model struct {
 	inputEpoch    uint64
 	themePicker   *themeChooser
 
-	store           *store
-	notes           []note
-	trashed         []string
+	store *vault.Store
+	notes []vault.Note
+	// trashed lists this session's deletions for undo, the latest last.
+	trashed         []trashedNote
 	picker          *list.Model
 	pickerBacklinks bool
 	// pickerFolder is the folder Ctrl+O browses; pickerSearch holds every
@@ -85,8 +92,8 @@ type model struct {
 	recovery  string
 }
 
-func newModel(s *store) (*model, error) {
-	notes, report, err := s.load()
+func newModel(s *vault.Store) (*model, error) {
+	notes, report, err := s.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -101,23 +108,23 @@ func newModel(s *store) (*model, error) {
 	e.KeyMap.WordForward.SetKeys("alt+right", "alt+f", "ctrl+right")
 	e.KeyMap.WordBackward.SetKeys("alt+left", "alt+b", "ctrl+left")
 	m := &model{clipboard: desktopClipboard{}, store: s, notes: notes, editor: e, preview: viewport.New(40, 10), width: 80, height: 24, theme: "dark", status: "Saved", dismissed: [2]int{-1, -1}}
-	if b, err := os.ReadFile(filepath.Join(s.config, "theme")); err == nil {
+	if b, err := os.ReadFile(filepath.Join(s.Config, "theme")); err == nil {
 		if name := strings.TrimSpace(string(b)); validTheme(name) {
 			m.theme = name
 		}
 	}
 	var warnings []string
-	if len(report.skipped) > 0 {
-		warnings = append(warnings, fmt.Sprintf("skipped %d unsafe files: %s", len(report.skipped), strings.Join(report.skipped, ", ")))
+	if len(report.Skipped) > 0 {
+		warnings = append(warnings, fmt.Sprintf("skipped %d unsafe files: %s", len(report.Skipped), strings.Join(report.Skipped, ", ")))
 	}
-	if report.orphans > 0 {
-		warnings = append(warnings, fmt.Sprintf("%d interrupted-write files retained", report.orphans))
+	if report.Orphans > 0 {
+		warnings = append(warnings, fmt.Sprintf("%d interrupted-write files retained", report.Orphans))
 	}
-	if report.recoveries > 0 {
-		warnings = append(warnings, fmt.Sprintf("%d recovery copies retained", report.recoveries))
+	if report.Recoveries > 0 {
+		warnings = append(warnings, fmt.Sprintf("%d recovery copies retained", report.Recoveries))
 	}
 	if len(warnings) > 0 {
-		m.status = strings.Join(warnings, " · ") + " in " + s.dir
+		m.status = strings.Join(warnings, " · ") + " in " + s.Dir
 	}
 	m.applyTheme()
 	m.loadNote()
@@ -132,7 +139,7 @@ func (m *model) loadNote() {
 	if len(m.notes) > 0 {
 		// The editor works in LF; saves restore the file's CRLF endings.
 		var text string
-		text, m.crlf = editorText(m.notes[m.index].Body)
+		text, m.crlf = vault.EditorText(m.notes[m.index].Body)
 		m.editor.SetValue(text)
 	}
 	// Source offsets avoid walking every soft-wrapped row in a long note.
@@ -151,7 +158,7 @@ func (m *model) flush() error {
 		return nil
 	}
 	body := m.diskBody()
-	if err := m.store.save(m.notes[m.index], body); err != nil {
+	if err := m.store.Save(m.notes[m.index], body); err != nil {
 		m.status = "SAVE FAILED: " + err.Error()
 		return err
 	}
@@ -164,7 +171,7 @@ func (m *model) flush() error {
 }
 
 // diskBody is the editor text with the note's own line endings.
-func (m *model) diskBody() string { return diskText(m.editor.Value(), m.crlf) }
+func (m *model) diskBody() string { return vault.DiskText(m.editor.Value(), m.crlf) }
 
 // quit saves and quits. If saving fails, it copies the edits to a recovery file
 // and asks for a second quit, so a broken disk never traps the user.
@@ -174,7 +181,7 @@ func (m *model) quit() tea.Cmd {
 		return tea.Quit
 	}
 	m.quitArmed = true
-	path, rerr := m.store.writeRecovery(m.notes[m.index], m.diskBody())
+	path, rerr := m.store.WriteRecovery(m.notes[m.index], m.diskBody())
 	if rerr != nil {
 		m.status = fmt.Sprintf("SAVE FAILED: %v; recovery copy FAILED: %v. Ctrl+Q again quits WITHOUT your edits", err, rerr)
 		return nil
@@ -275,7 +282,7 @@ func (m *model) requestRender() tea.Cmd {
 		return nil
 	}
 	m.pending = k
-	body := markLinks(m.editor.Value(), newResolver(m.notes), m.notes[m.index].ID)
+	body := markLinks(m.editor.Value(), vault.NewResolver(m.notes), m.notes[m.index].ID)
 	return func() tea.Msg {
 		out, err := renderMarkdown(body, k.theme, k.width)
 		return renderedMsg{k, out, err}
@@ -294,7 +301,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Signals (often SIGHUP: the terminal is gone) cannot wait for a second
 		// quit. Preserve what we can, then exit; main reports any failure.
 		if m.flush() != nil {
-			if path, err := m.store.writeRecovery(m.notes[m.index], m.diskBody()); err == nil {
+			if path, err := m.store.WriteRecovery(m.notes[m.index], m.diskBody()); err == nil {
 				m.recovery = path
 			}
 		}
@@ -341,12 +348,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.confirm {
 			if v.String() == "y" {
-				err := m.store.trash(m.notes[m.index])
-				var moved movedSyncError
+				trashID, err := m.store.Trash(m.notes[m.index])
+				var moved vault.MovedSyncError
 				if err != nil && !errors.As(err, &moved) {
 					m.status = err.Error()
 				} else {
-					m.trashed = append(m.trashed, m.notes[m.index].ID)
+					m.trashed = append(m.trashed, trashedNote{trashID: trashID, id: m.notes[m.index].ID})
 					m.notes = append(m.notes[:m.index], m.notes[m.index+1:]...)
 					m.index = max(0, min(m.index, len(m.notes)-1))
 					m.loadNote()
@@ -402,16 +409,16 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.flush() != nil {
 				return m, nil
 			}
-			id := m.trashed[len(m.trashed)-1]
-			n, err := m.store.restore(id)
+			t := m.trashed[len(m.trashed)-1]
+			n, err := m.store.Restore(t.trashID, t.id)
 			if err != nil && n.ID == "" {
 				m.status = err.Error()
 				return m, nil
 			}
 			m.trashed = m.trashed[:len(m.trashed)-1]
 			m.notes = append(m.notes, n)
-			sortNotes(m.notes)
-			m.selectID(id)
+			vault.SortNotes(m.notes)
+			m.selectID(t.id)
 			m.loadNote()
 			m.reindex()
 			m.status = "Restored from trash"
@@ -422,7 +429,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(v, keys.new):
 			folder := ""
 			if len(m.notes) > 0 {
-				folder = folderOf(m.notes[m.index].ID)
+				folder = vault.FolderOf(m.notes[m.index].ID)
 			}
 			if folder != "" {
 				folder += "/"
@@ -434,8 +441,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			n := m.notes[m.index]
 			name := n.ID
-			if legacyID.MatchString(n.ID) {
-				name = safeName(title(m.editor.Value()))
+			if vault.LegacyID.MatchString(n.ID) {
+				name = safeName(vault.Title(m.editor.Value()))
 			}
 			return m, m.openPrompt(promptRename, name)
 		case key.Matches(v, keys.follow):
@@ -494,7 +501,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if before != m.editor.Value() {
 		return m, tea.Batch(cmd, m.edited())
 	}
-	if m.editor.LineCount() >= maxLines {
+	if m.editor.LineCount() >= vault.MaxLines {
 		m.status = "Note reached the 10,000-line limit; extra lines were not added"
 	}
 	return m, cmd
@@ -505,7 +512,7 @@ func (m *model) edited() tea.Cmd {
 	m.dirty = true
 	m.quitArmed = false
 	m.status = "Unsaved…"
-	if m.editor.LineCount() >= maxLines {
+	if m.editor.LineCount() >= vault.MaxLines {
 		m.status = "Note reached the 10,000-line limit; extra lines were not added"
 	}
 	m.revision++

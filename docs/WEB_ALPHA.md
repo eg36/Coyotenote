@@ -219,8 +219,9 @@ terminal app; **the web alpha has no release, tag or deployment.**
 
 The functional reference is `main` at
 [`dcb6a51`](https://github.com/eg36/Coyotenote/commit/dcb6a51c5dbf79efd6859cb506dd736bdc061996).
-`store.go`, path validation, locking, atomic writes, trash and link-resolution
-logic were copied from the terminal app into `cmd/coyotenote-web`.
+The vault store, path validation, locking, atomic writes, trash and link
+resolution live in `internal/vault`, shared with the terminal app, so both apps
+read and write the same files by the same rules.
 Theme IDs and names are preserved. The 12 named upstream palettes retain their
 original color values; Coyote Light/Dark have neutral web surfaces with blue accents.
 

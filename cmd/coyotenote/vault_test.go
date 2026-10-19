@@ -10,11 +10,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
-func writeNote(t *testing.T, s *store, id, body string) {
+func writeNote(t *testing.T, s *vault.Store, id, body string) {
 	t.Helper()
-	p := s.path(id)
+	p := s.Path(id)
 	if err := os.MkdirAll(filepath.Dir(p), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +24,7 @@ func writeNote(t *testing.T, s *store, id, body string) {
 	}
 }
 func typeText(m *model, text string) { m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(text)}) }
-func ids(notes []note) string {
+func ids(notes []vault.Note) string {
 	var out []string
 	for _, n := range notes {
 		out = append(out, n.ID)
@@ -31,47 +32,7 @@ func ids(notes []note) string {
 	return strings.Join(out, ",")
 }
 
-func TestLoadWalksFoldersAndSkipsHidden(t *testing.T) {
-	s := testStore(t)
-	writeNote(t, s, "Work/Plan", "plan")
-	// Folder names differ by more than case: Windows folders ignore case.
-	writeNote(t, s, "workshop/deep/Inner", "inner")
-	writeNote(t, s, "Zebra", "z")
-	writeNote(t, s, "apple", "a")
-	for _, hidden := range []string{".obsidian/config.md", ".trash/old.md", ".git/x.md"} {
-		p := filepath.Join(s.dir, filepath.FromSlash(hidden))
-		os.MkdirAll(filepath.Dir(p), 0700)
-		os.WriteFile(p, []byte("hidden"), 0600)
-	}
-	os.WriteFile(filepath.Join(s.dir, "Work", ".pending-1"), nil, 0600)
-	if runtime.GOOS != "windows" {
-		if err := os.Symlink(t.TempDir(), filepath.Join(s.dir, "linked")); err != nil {
-			t.Fatal(err)
-		}
-	}
-	notes, report, err := s.load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := ids(notes); got != "apple,Work/Plan,workshop/deep/Inner,Zebra" {
-		t.Fatal(got)
-	}
-	if report.orphans != 1 {
-		t.Fatal("pending file in a folder not reported")
-	}
-}
-
-func TestNameValidation(t *testing.T) {
-	for _, good := range []string{"Note", "Work/Project X", "Zażółć gęślą", "a.b"} {
-		if err := checkName(good); err != nil {
-			t.Errorf("%q: %v", good, err)
-		}
-	}
-	for _, bad := range []string{"", "/x", "x/", "a//b", "../x", "Work/../x", ".hidden", "a/.b", "a\\b", "CON", "nul.txt", "a:b", "x?", "[[x]]", "a#b", "a|b", "a^b", " x", "x ", "end."} {
-		if checkName(bad) == nil {
-			t.Errorf("accepted %q", bad)
-		}
-	}
+func TestSafeName(t *testing.T) {
 	if safeName(`a/b: "c"?`) != "a-b- -c--" || safeName("  ...  ") != "Untitled" || safeName("CON") != "Untitled" {
 		t.Fatal(safeName(`a/b: "c"?`), safeName("  ...  "))
 	}
@@ -86,7 +47,7 @@ func TestCreateInFolderAndCollisions(t *testing.T) {
 	if m.prompt != nil || len(m.notes) != 1 || m.notes[0].ID != "Work/Plan" {
 		t.Fatalf("create in folder: %v %q", ids(m.notes), m.status)
 	}
-	assertFileBody(t, filepath.Join(s.dir, "Work", "Plan.md"), "")
+	assertFileBody(t, filepath.Join(s.Dir, "Work", "Plan.md"), "")
 	// The prompt starts in the current note's folder.
 	press(m, tea.KeyCtrlN)
 	if m.prompt.input.Value() != "Work/" {
@@ -130,7 +91,7 @@ func TestRenameMovesNoteAndRewritesLinks(t *testing.T) {
 		t.Fatal(m.backlinks)
 	}
 	// C changes on disk after loading, so its links must be left alone.
-	os.WriteFile(s.path("C"), []byte("external [[A]]"), 0600)
+	os.WriteFile(s.Path("C"), []byte("external [[A]]"), 0600)
 	press(m, tea.KeyCtrlR)
 	if m.prompt.input.Value() != "Work/A" {
 		t.Fatal(m.prompt.input.Value())
@@ -140,12 +101,12 @@ func TestRenameMovesNoteAndRewritesLinks(t *testing.T) {
 	if m.prompt != nil || m.notes[m.index].ID != "Archive/A2" {
 		t.Fatalf("rename: %q", m.status)
 	}
-	if _, err := os.Lstat(filepath.Join(s.dir, "Work", "A.md")); !os.IsNotExist(err) {
+	if _, err := os.Lstat(filepath.Join(s.Dir, "Work", "A.md")); !os.IsNotExist(err) {
 		t.Fatal("old file remains")
 	}
-	assertFileBody(t, s.path("Archive/A2"), "# A\nlinks to [[Archive/A2]] itself")
-	assertFileBody(t, s.path("B"), "see [[A2]], [[Archive/A2#Plan|the plan]] and `[[A]]`")
-	assertFileBody(t, s.path("C"), "external [[A]]")
+	assertFileBody(t, s.Path("Archive/A2"), "# A\nlinks to [[Archive/A2]] itself")
+	assertFileBody(t, s.Path("B"), "see [[A2]], [[Archive/A2#Plan|the plan]] and `[[A]]`")
+	assertFileBody(t, s.Path("C"), "external [[A]]")
 	if !strings.Contains(m.status, "links updated in 2 notes") || !strings.Contains(m.status, "could not update links in C") {
 		t.Fatal(m.status)
 	}
@@ -161,22 +122,6 @@ func TestRenameMovesNoteAndRewritesLinks(t *testing.T) {
 	}
 }
 
-func TestTrashKeepsFolders(t *testing.T) {
-	s := testStore(t)
-	writeNote(t, s, "Work/Deep/N", "body")
-	n := note{ID: "Work/Deep/N", Body: "body"}
-	if err := s.trash(n); err != nil {
-		t.Fatal(err)
-	}
-	assertFileBody(t, filepath.Join(s.dir, ".trash", "Work", "Deep", "N.md"), "body")
-	os.RemoveAll(filepath.Join(s.dir, "Work"))
-	got, err := s.restore(n.ID)
-	if err != nil || got != n {
-		t.Fatal(got, err)
-	}
-	assertFileBody(t, s.path(n.ID), "body")
-}
-
 func TestMigrateLegacyNames(t *testing.T) {
 	s := testStore(t)
 	writeNote(t, s, "20261001T101010.000000001-0123456789abcdef", "# Shopping: list\nmilk")
@@ -190,7 +135,7 @@ func TestMigrateLegacyNames(t *testing.T) {
 	if err := migrate(s, strings.NewReader("y\n"), &out); err != nil {
 		t.Fatal(err)
 	}
-	notes, _, _ := s.load()
+	notes, _, _ := s.Load()
 	if got := ids(notes); got != "Shopping- list,Shopping- list 2,Untitled,Untitled 2" {
 		t.Fatal(got)
 	}
@@ -199,20 +144,20 @@ func TestMigrateLegacyNames(t *testing.T) {
 		t.Fatal("body changed")
 	}
 	// Legacy notes still show their title until they are migrated.
-	if displayName("20261001T101010.000000003-0123456789abcdef", "# Hi") != "Hi" || displayName("Work/Hi", "x") != "Work/Hi" {
+	if vault.DisplayName("20261001T101010.000000003-0123456789abcdef", "# Hi") != "Hi" || vault.DisplayName("Work/Hi", "x") != "Work/Hi" {
 		t.Fatal("display name")
 	}
 }
 
 func TestThemeLivesInConfigDirectory(t *testing.T) {
 	s := testStore(t)
-	s.config = t.TempDir()
+	s.Config = t.TempDir()
 	m, _ := newModel(s)
 	press(m, tea.KeyCtrlT)
 	press(m, tea.KeyDown)
 	press(m, tea.KeyEnter)
-	assertFileBody(t, filepath.Join(s.config, "theme"), "light")
-	if _, err := os.Stat(filepath.Join(s.dir, "theme")); !os.IsNotExist(err) {
+	assertFileBody(t, filepath.Join(s.Config, "theme"), "light")
+	if _, err := os.Stat(filepath.Join(s.Dir, "theme")); !os.IsNotExist(err) {
 		t.Fatal("theme written into the vault")
 	}
 }

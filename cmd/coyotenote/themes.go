@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 type themeSpec struct {
@@ -118,7 +119,7 @@ func (m *model) updateThemePicker(k tea.KeyMsg) tea.Cmd {
 			return nil
 		}
 		id := themes[chooser.matches[chooser.selected]].id
-		if err := atomicWrite(m.store.config, "theme", []byte(id)); err != nil {
+		if err := vault.AtomicWrite(m.store.Config, "theme", []byte(id)); err != nil {
 			m.status = "Theme not saved: " + err.Error()
 			return nil
 		}

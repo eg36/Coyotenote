@@ -1,4 +1,4 @@
-package main
+package vault
 
 import (
 	"errors"
@@ -19,10 +19,10 @@ var windowsReserved = map[string]bool{"CON": true, "PRN": true, "AUX": true, "NU
 	"COM1": true, "COM2": true, "COM3": true, "COM4": true, "COM5": true, "COM6": true, "COM7": true, "COM8": true, "COM9": true,
 	"LPT1": true, "LPT2": true, "LPT3": true, "LPT4": true, "LPT5": true, "LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true}
 
-// validID accepts IDs that stay inside the vault and outside its hidden
+// ValidID accepts IDs that stay inside the vault and outside its hidden
 // directories. Windows also gets its file-name rules, so loading never
 // produces a path the platform cannot open.
-func validID(id string) bool {
+func ValidID(id string) bool {
 	if id == "" || strings.ContainsAny(id, "\\\x00") {
 		return false
 	}
@@ -45,10 +45,10 @@ func portableSegment(segment string) bool {
 	return !windowsReserved[strings.ToUpper(strings.TrimSpace(stem))]
 }
 
-// checkName validates a name the user typed for a new or renamed note. Names
+// CheckName validates a name the user typed for a new or renamed note. Names
 // are portable to every platform and free of characters that break [[links]].
-func checkName(id string) error {
-	if !validID(id) {
+func CheckName(id string) error {
+	if !ValidID(id) {
 		return errors.New("invalid name: use folder/name without leading dots or empty parts")
 	}
 	for _, segment := range strings.Split(id, "/") {
@@ -62,18 +62,31 @@ func checkName(id string) error {
 	return nil
 }
 
-// folderOf is the folder part of an ID, "" for notes in the vault root.
-func folderOf(id string) string {
+// FolderOf is the folder part of an ID, "" for notes in the vault root.
+func FolderOf(id string) string {
 	if dir := path.Dir(id); dir != "." {
 		return dir
 	}
 	return ""
 }
-func joinID(folder, name string) string {
+func JoinID(folder, name string) string {
 	if folder == "" {
 		return name
 	}
 	return folder + "/" + name
+}
+
+// pruneEmpty removes dir and then its parents while they are empty, stopping
+// at root. Notes create folders as needed, so a folder a move or trash left
+// empty would otherwise linger invisibly. Removing a non-empty folder fails,
+// which ends the walk.
+func pruneEmpty(root, dir string) {
+	root = filepath.Clean(root)
+	for dir = filepath.Clean(dir); dir != root && strings.HasPrefix(dir, root+string(filepath.Separator)); dir = filepath.Dir(dir) {
+		if os.Remove(dir) != nil {
+			return
+		}
+	}
 }
 
 // noteDir returns the directory holding id below root. Every existing parent
@@ -81,7 +94,7 @@ func joinID(folder, name string) string {
 // With create, missing parents are made.
 func noteDir(root, id string, create bool) (string, error) {
 	dir := root
-	folder := folderOf(id)
+	folder := FolderOf(id)
 	if folder == "" {
 		return dir, nil
 	}

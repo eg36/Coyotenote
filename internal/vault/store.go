@@ -1,4 +1,8 @@
-package main
+// Package vault reads and writes a folder of Markdown notes, the format both
+// coyotenote apps share: atomic saves that refuse to overwrite outside edits,
+// a trash that keeps every deletion, a lock against a second process, and
+// Obsidian-style [[wiki link]] resolution.
+package vault
 
 import (
 	"errors"
@@ -15,58 +19,58 @@ import (
 	"unicode/utf8"
 )
 
-// The editor holds at most maxLines lines (a Bubbles textarea limit). Pastes are
-// also capped at maxPasteBytes so a stray clipboard dump cannot stall the UI.
+// The editor holds at most MaxLines lines (a Bubbles textarea limit). Pastes are
+// also capped at MaxPasteBytes so a stray clipboard dump cannot stall the UI.
 const (
-	maxLines      = 10000
-	maxPasteBytes = 1 << 20
+	MaxLines      = 10000
+	MaxPasteBytes = 1 << 20
 )
 
-type note struct {
+type Note struct {
 	ID, Body string
 	// Modified is the file's modification time when load read it.
 	Modified time.Time
 }
 
-// editorText gives the editor LF line endings and reports whether the file used
+// EditorText gives the editor LF line endings and reports whether the file used
 // CRLF, so saves can restore it. Lone CRs (classic Mac) become LF.
-func editorText(body string) (string, bool) {
+func EditorText(body string) (string, bool) {
 	crlf := strings.Contains(body, "\r\n")
 	return strings.ReplaceAll(strings.ReplaceAll(body, "\r\n", "\n"), "\r", "\n"), crlf
 }
 
-// diskText is the file form of editor text.
-func diskText(text string, crlf bool) string {
+// DiskText is the file form of editor text.
+func DiskText(text string, crlf bool) string {
 	if crlf {
 		return strings.ReplaceAll(text, "\n", "\r\n")
 	}
 	return text
 }
 
-// hasControl reports control characters other than line endings and tabs. The
+// HasControl reports control characters other than line endings and tabs. The
 // editor drops them, so notes holding them are left alone instead of rewritten.
-func hasControl(body string) bool {
+func HasControl(body string) bool {
 	return strings.ContainsFunc(body, func(r rune) bool {
 		return unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t'
 	})
 }
 
-// lineCount counts lines as the editor will hold them.
-func lineCount(body string) int {
-	text, _ := editorText(body)
+// LineCount counts lines as the editor will hold them.
+func LineCount(body string) int {
+	text, _ := EditorText(body)
 	return strings.Count(text, "\n") + 1
 }
 
-// loadReport describes files that load() left alone for the user to inspect.
-type loadReport struct {
-	orphans, recoveries int
-	skipped             []string
+// LoadReport describes files that load() left alone for the user to inspect.
+type LoadReport struct {
+	Orphans, Recoveries int
+	Skipped             []string
 }
-type store struct {
-	dir string
-	// config holds user settings such as the theme. It is the vault itself for
+type Store struct {
+	Dir string
+	// Config holds user settings such as the theme. It is the vault itself for
 	// the default data directory, and the data directory for other vaults.
-	config string
+	Config string
 	lock   *os.File
 	// cache holds what load last read for each note ID, so unchanged files
 	// are not read and checked again. Every write through the store forgets
@@ -82,13 +86,13 @@ type cachedNote struct {
 	skip     string // why load skipped the file; empty for a usable note
 }
 
-func (s *store) forget(ids ...string) {
+func (s *Store) forget(ids ...string) {
 	for _, id := range ids {
 		delete(s.cache, id)
 	}
 }
 
-func dataDir() (string, error) {
+func DataDir() (string, error) {
 	if runtime.GOOS == "windows" {
 		base, err := os.UserConfigDir()
 		if err != nil {
@@ -109,7 +113,7 @@ func dataDir() (string, error) {
 	}
 	return filepath.Join(base, "coyotenote"), nil
 }
-func openStore(dir string) (*store, error) {
+func Open(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
@@ -121,28 +125,28 @@ func openStore(dir string) (*store, error) {
 		f.Close()
 		return nil, fmt.Errorf("notes are open in another coyotenote instance: %w", err)
 	}
-	return &store{dir: dir, config: dir, lock: f}, nil
+	return &Store{Dir: dir, Config: dir, lock: f}, nil
 }
-func (s *store) close() { _ = unlockFile(s.lock); _ = s.lock.Close() }
+func (s *Store) Close() { _ = unlockFile(s.lock); _ = s.lock.Close() }
 
-// load reads every note below the vault root, skipping hidden directories
+// Load reads every note below the vault root, skipping hidden directories
 // such as .trash, .git and .obsidian. Files that are unsafe to edit (symlinks,
 // invalid UTF-8, too many lines, unreadable) are skipped and reported, never changed.
-func (s *store) load() ([]note, loadReport, error) {
-	var r loadReport
-	var notes []note
+func (s *Store) Load() ([]Note, LoadReport, error) {
+	var r LoadReport
+	var notes []Note
 	seen := make(map[string]cachedNote, len(s.cache))
-	err := filepath.WalkDir(s.dir, func(p string, e fs.DirEntry, err error) error {
+	err := filepath.WalkDir(s.Dir, func(p string, e fs.DirEntry, err error) error {
 		if err != nil {
-			if p == s.dir {
+			if p == s.Dir {
 				return err
 			}
-			rel, _ := filepath.Rel(s.dir, p)
-			r.skipped = append(r.skipped, filepath.ToSlash(rel)+" (unreadable)")
+			rel, _ := filepath.Rel(s.Dir, p)
+			r.Skipped = append(r.Skipped, filepath.ToSlash(rel)+" (unreadable)")
 			return nil
 		}
 		name := e.Name()
-		if p == s.dir {
+		if p == s.Dir {
 			return nil
 		}
 		if e.IsDir() {
@@ -152,32 +156,32 @@ func (s *store) load() ([]note, loadReport, error) {
 			}
 			return nil
 		}
-		rel, err := filepath.Rel(s.dir, p)
+		rel, err := filepath.Rel(s.Dir, p)
 		if err != nil {
 			return err
 		}
 		rel = filepath.ToSlash(rel)
 		switch {
 		case strings.HasPrefix(name, ".pending-"):
-			r.orphans++
+			r.Orphans++
 			return nil
 		case strings.HasPrefix(name, ".recovery-"):
-			r.recoveries++
+			r.Recoveries++
 			return nil
 		case strings.HasPrefix(name, ".") || !strings.HasSuffix(name, ".md"):
 			return nil
 		case e.Type()&os.ModeSymlink != 0 || !e.Type().IsRegular():
-			r.skipped = append(r.skipped, rel+" (not a regular file)")
+			r.Skipped = append(r.Skipped, rel+" (not a regular file)")
 			return nil
 		}
 		id := strings.TrimSuffix(rel, ".md")
-		if !validID(id) {
-			r.skipped = append(r.skipped, rel+" (unsupported name)")
+		if !ValidID(id) {
+			r.Skipped = append(r.Skipped, rel+" (unsupported name)")
 			return nil
 		}
 		info, err := e.Info()
 		if err != nil {
-			r.skipped = append(r.skipped, rel+" (unreadable)")
+			r.Skipped = append(r.Skipped, rel+" (unreadable)")
 			return nil
 		}
 		c, ok := s.cache[id]
@@ -189,24 +193,24 @@ func (s *store) load() ([]note, loadReport, error) {
 				c.skip = rel + " (unreadable)"
 			case !utf8.Valid(b):
 				c.skip = rel + " (not UTF-8)"
-			case lineCount(string(b)) > maxLines:
-				c.skip = fmt.Sprintf("%s (%d+ lines)", rel, maxLines)
-			case hasControl(string(b)):
+			case LineCount(string(b)) > MaxLines:
+				c.skip = fmt.Sprintf("%s (%d+ lines)", rel, MaxLines)
+			case HasControl(string(b)):
 				c.skip = rel + " (control characters)"
 			default:
 				c.body = string(b)
 			}
 			if err != nil {
 				// Read the file again next time rather than remembering a transient failure.
-				r.skipped = append(r.skipped, c.skip)
+				r.Skipped = append(r.Skipped, c.skip)
 				return nil
 			}
 		}
 		seen[id] = c
 		if c.skip != "" {
-			r.skipped = append(r.skipped, c.skip)
+			r.Skipped = append(r.Skipped, c.skip)
 		} else {
-			notes = append(notes, note{ID: id, Body: c.body, Modified: c.modified})
+			notes = append(notes, Note{ID: id, Body: c.body, Modified: c.modified})
 		}
 		return nil
 	})
@@ -214,12 +218,12 @@ func (s *store) load() ([]note, loadReport, error) {
 		return nil, r, err
 	}
 	s.cache = seen
-	sortNotes(notes)
+	SortNotes(notes)
 	return notes, r, nil
 }
 
-// sortNotes orders notes by path, ignoring case, so folders stay together.
-func sortNotes(notes []note) {
+// SortNotes orders notes by path, ignoring case, so folders stay together.
+func SortNotes(notes []Note) {
 	sort.Slice(notes, func(i, j int) bool {
 		a, b := strings.ToLower(notes[i].ID), strings.ToLower(notes[j].ID)
 		if a != b {
@@ -229,10 +233,10 @@ func sortNotes(notes []note) {
 	})
 }
 
-// path is the file holding note id.
-func (s *store) path(id string) string { return filepath.Join(s.dir, filepath.FromSlash(id)+".md") }
+// Path is the file holding note id.
+func (s *Store) Path(id string) string { return filepath.Join(s.Dir, filepath.FromSlash(id)+".md") }
 
-func atomicWrite(dir, name string, b []byte) error {
+func AtomicWrite(dir, name string, b []byte) error {
 	f, err := os.CreateTemp(dir, ".pending-")
 	if err != nil {
 		return err
@@ -256,23 +260,23 @@ func atomicWrite(dir, name string, b []byte) error {
 	return syncDir(dir)
 }
 
-// create makes a note named id holding body. It never replaces an existing
+// Create makes a note named id holding body. It never replaces an existing
 // file, and removes the new file again if writing it fails.
-func (s *store) create(id, body string) (note, error) {
-	if err := checkName(id); err != nil {
-		return note{}, err
+func (s *Store) Create(id, body string) (Note, error) {
+	if err := CheckName(id); err != nil {
+		return Note{}, err
 	}
-	dir, err := noteDir(s.dir, id, true)
+	dir, err := noteDir(s.Dir, id, true)
 	if err != nil {
-		return note{}, err
+		return Note{}, err
 	}
 	s.forget(id)
-	f, err := os.OpenFile(s.path(id), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(s.Path(id), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if os.IsExist(err) {
-		return note{}, fmt.Errorf("%q already exists", id)
+		return Note{}, fmt.Errorf("%q already exists", id)
 	}
 	if err != nil {
-		return note{}, err
+		return Note{}, err
 	}
 	_, err = f.WriteString(body)
 	if err == nil {
@@ -282,30 +286,30 @@ func (s *store) create(id, body string) (note, error) {
 		err = e
 	}
 	if err != nil {
-		_ = os.Remove(s.path(id))
-		return note{}, err
+		_ = os.Remove(s.Path(id))
+		return Note{}, err
 	}
-	return note{ID: id, Body: body}, syncDir(dir)
+	return Note{ID: id, Body: body}, syncDir(dir)
 }
 
-// freeName returns base, or base with the lowest free " N" suffix, in folder.
-func freeName(notes []note, folder, base string) string {
+// FreeName returns base, or base with the lowest free " N" suffix, in folder.
+func FreeName(notes []Note, folder, base string) string {
 	taken := make(map[string]bool, len(notes))
 	for _, n := range notes {
 		taken[strings.ToLower(n.ID)] = true
 	}
-	id := joinID(folder, base)
+	id := JoinID(folder, base)
 	for i := 2; taken[strings.ToLower(id)]; i++ {
-		id = joinID(folder, fmt.Sprintf("%s %d", base, i))
+		id = JoinID(folder, fmt.Sprintf("%s %d", base, i))
 	}
 	return id
 }
-func (s *store) save(n note, body string) error {
-	dir, err := noteDir(s.dir, n.ID, false)
+func (s *Store) Save(n Note, body string) error {
+	dir, err := noteDir(s.Dir, n.ID, false)
 	if err != nil {
 		return err
 	}
-	p := s.path(n.ID)
+	p := s.Path(n.ID)
 	info, err := os.Lstat(p)
 	if err != nil {
 		return err
@@ -321,17 +325,17 @@ func (s *store) save(n note, body string) error {
 		return errors.New("note changed outside coyotenote; copy your edits before restarting")
 	}
 	s.forget(n.ID)
-	return atomicWrite(dir, filepath.Base(p), []byte(body))
+	return AtomicWrite(dir, filepath.Base(p), []byte(body))
 }
 
-// writeRecovery preserves unsaved edits beside the notes, or in the system
+// WriteRecovery preserves unsaved edits beside the notes, or in the system
 // temporary directory when the data directory itself cannot be written.
-func (s *store) writeRecovery(n note, body string) (string, error) {
+func (s *Store) WriteRecovery(n Note, body string) (string, error) {
 	flat := strings.ReplaceAll(n.ID, "/", "_")
 	name := fmt.Sprintf(".recovery-%s-%s.md", flat, time.Now().UTC().Format("20060102T150405.000000000"))
-	err := atomicWrite(s.dir, name, []byte(body))
+	err := AtomicWrite(s.Dir, name, []byte(body))
 	if err == nil {
-		return filepath.Join(s.dir, name), nil
+		return filepath.Join(s.Dir, name), nil
 	}
 	// CreateTemp opens exclusively (0600), so a planted symlink cannot redirect it.
 	f, e := os.CreateTemp("", "coyotenote-recovery-"+flat+"-*.md")
@@ -349,17 +353,17 @@ func (s *store) writeRecovery(n note, body string) (string, error) {
 	return f.Name(), nil
 }
 
-// legacyID matches the timestamp names of notes created before v0.2.
-var legacyID = regexp.MustCompile(`^\d{8}T\d{6}\.\d{9}-[0-9a-f]{16}$`)
+// LegacyID matches the timestamp names of notes created before v0.2.
+var LegacyID = regexp.MustCompile(`^\d{8}T\d{6}\.\d{9}-[0-9a-f]{16}$`)
 
-// displayName is the note's path, or its first line for legacy timestamp names.
-func displayName(id, body string) string {
-	if legacyID.MatchString(id) {
-		return title(body)
+// DisplayName is the note's path, or its first line for legacy timestamp names.
+func DisplayName(id, body string) string {
+	if LegacyID.MatchString(id) {
+		return Title(body)
 	}
 	return id
 }
-func title(body string) string {
+func Title(body string) string {
 	for _, line := range strings.Split(body, "\n") {
 		if t := strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "#")); t != "" {
 			return t
@@ -368,17 +372,17 @@ func title(body string) string {
 	return "Untitled"
 }
 
-// rename moves note n to newID, creating folders as needed. It refuses to
+// Rename moves note n to newID, creating folders as needed. It refuses to
 // replace another file; a change of letter case alone is allowed.
-func (s *store) rename(n note, newID string) error {
-	if err := checkName(newID); err != nil {
+func (s *Store) Rename(n Note, newID string) error {
+	if err := CheckName(newID); err != nil {
 		return err
 	}
-	sourceDir, err := noteDir(s.dir, n.ID, false)
+	sourceDir, err := noteDir(s.Dir, n.ID, false)
 	if err != nil {
 		return err
 	}
-	source := s.path(n.ID)
+	source := s.Path(n.ID)
 	body, err := readRegularNote(source)
 	if err != nil {
 		return err
@@ -386,7 +390,7 @@ func (s *store) rename(n note, newID string) error {
 	if string(body) != n.Body {
 		return errors.New("note changed outside coyotenote; restart before renaming")
 	}
-	destination := s.path(newID)
+	destination := s.Path(newID)
 	if err = requireAbsent(destination); err != nil {
 		// Case-insensitive file systems report the note itself for a case-only change.
 		a, e1 := os.Lstat(source)
@@ -395,7 +399,7 @@ func (s *store) rename(n note, newID string) error {
 			return fmt.Errorf("%q already exists", newID)
 		}
 	}
-	dir, err := noteDir(s.dir, newID, true)
+	dir, err := noteDir(s.Dir, newID, true)
 	if err != nil {
 		return err
 	}
@@ -404,8 +408,8 @@ func (s *store) rename(n note, newID string) error {
 		return err
 	}
 	if err = errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
-		return movedSyncError{err}
+		return MovedSyncError{err}
 	}
-	pruneEmpty(s.dir, sourceDir)
+	pruneEmpty(s.Dir, sourceDir)
 	return nil
 }

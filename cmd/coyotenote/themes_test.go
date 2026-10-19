@@ -21,13 +21,13 @@ func TestThemeChooserPreviewCancelAndPersist(t *testing.T) {
 	if m.theme != "dark" || m.themePicker != nil {
 		t.Fatal("cancel didn't restore")
 	}
-	if _, err := os.Stat(filepath.Join(s.config, "theme")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(s.Config, "theme")); !os.IsNotExist(err) {
 		t.Fatal("preview persisted")
 	}
 	press(m, tea.KeyCtrlT)
 	typeText(m, "ayu mirage")
 	press(m, tea.KeyEnter)
-	assertFileBody(t, filepath.Join(s.config, "theme"), "ayu-mirage")
+	assertFileBody(t, filepath.Join(s.Config, "theme"), "ayu-mirage")
 	reopened, err := newModel(s)
 	if err != nil || reopened.theme != "ayu-mirage" {
 		t.Fatal("theme didn't reload", err)
@@ -43,7 +43,7 @@ func TestThemeChooserPreviewCancelAndPersist(t *testing.T) {
 func TestThemePersistenceFailureKeepsChooserOpen(t *testing.T) {
 	s := testStore(t)
 	m, _ := newModel(s)
-	s.config = filepath.Join(t.TempDir(), "missing")
+	s.Config = filepath.Join(t.TempDir(), "missing")
 	press(m, tea.KeyCtrlT)
 	typeText(m, "nord")
 	press(m, tea.KeyEnter)
@@ -64,7 +64,7 @@ func TestAllThemesRenderPreviewAndReload(t *testing.T) {
 			t.Fatal("duplicate theme", theme.id)
 		}
 		seen[theme.id] = true
-		if err := os.WriteFile(filepath.Join(s.config, "theme"), []byte(theme.id+"\n"), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(s.Config, "theme"), []byte(theme.id+"\n"), 0600); err != nil {
 			t.Fatal(err)
 		}
 		m, err := newModel(s)
@@ -76,7 +76,7 @@ func TestAllThemesRenderPreviewAndReload(t *testing.T) {
 			t.Fatal(theme.id, err)
 		}
 	}
-	os.WriteFile(filepath.Join(s.config, "theme"), []byte("unknown"), 0600)
+	os.WriteFile(filepath.Join(s.Config, "theme"), []byte("unknown"), 0600)
 	m, _ := newModel(s)
 	if m.theme != "dark" {
 		t.Fatal("unknown theme didn't fall back")

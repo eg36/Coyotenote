@@ -11,6 +11,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/eg36/coyotenote/internal/vault"
 	"golang.org/x/sys/windows"
 )
 
@@ -77,7 +78,7 @@ func (desktopClipboard) Read(ctx context.Context) (string, error) {
 	if size == 0 {
 		return "", clipboardWindowsError("clipboard size", err)
 	}
-	if size > 2*(maxPasteBytes+1) {
+	if size > 2*(vault.MaxPasteBytes+1) {
 		return "", errors.New("clipboard exceeds 1 MiB")
 	}
 	ptr, _, err := clipboardLock.Call(handle)
@@ -92,7 +93,7 @@ func (desktopClipboard) Read(ctx context.Context) (string, error) {
 	clipboardMove.Call(uintptr(unsafe.Pointer(&data[0])), ptr, uintptr(len(data)*2))
 	runtime.KeepAlive(data)
 	text := windows.UTF16ToString(data)
-	if len(text) > maxPasteBytes {
+	if len(text) > vault.MaxPasteBytes {
 		return "", errors.New("clipboard exceeds 1 MiB")
 	}
 	return text, nil

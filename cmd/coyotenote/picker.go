@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	textarea "github.com/eg36/coyotenote/internal/editor"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 // pickerItem is a note, or with folder set, a folder whose path is id ("" is
@@ -52,7 +53,7 @@ func (m *model) openPickerFor(ids []string, backlinks bool) tea.Cmd {
 	if len(m.notes) > 0 {
 		current = m.notes[m.index].ID
 	}
-	r := newResolver(m.notes)
+	r := vault.NewResolver(m.notes)
 	items := make([]list.Item, 0, len(ids))
 	bodies := make([]string, 0, len(ids))
 	byID := make(map[string]string, len(m.notes))
@@ -71,8 +72,8 @@ func (m *model) openPickerFor(ids []string, backlinks bool) tea.Cmd {
 			line = strings.TrimSpace(line)
 			if backlinks {
 				linked := false
-				for _, l := range parseLinks(line) {
-					if got, ok := r.resolve(l.target, id); ok && got == current {
+				for _, l := range vault.ParseLinks(line) {
+					if got, ok := r.Resolve(l.Target, id); ok && got == current {
 						linked = true
 					}
 				}
@@ -85,7 +86,7 @@ func (m *model) openPickerFor(ids []string, backlinks bool) tea.Cmd {
 			desc = ansi.Truncate(line, 80, "…")
 			break
 		}
-		items = append(items, pickerItem{id: id, title: displayName(id, body), description: fmt.Sprintf("%s · %d words", desc, len(strings.Fields(body)))})
+		items = append(items, pickerItem{id: id, title: vault.DisplayName(id, body), description: fmt.Sprintf("%s · %d words", desc, len(strings.Fields(body)))})
 		bodies = append(bodies, strings.ToLower(body))
 	}
 	base := ink(p.text).Background(lipgloss.Color(p.surface))
@@ -122,7 +123,7 @@ func (m *model) openPickerFor(ids []string, backlinks bool) tea.Cmd {
 	m.picker = &l
 	m.pickerBacklinks = backlinks
 	m.pickerSearch = items
-	m.pickerFolder = folderOf(current)
+	m.pickerFolder = vault.FolderOf(current)
 	m.setPickerFilter("")
 	if backlinks {
 		m.picker.Select(startAt)
@@ -171,7 +172,7 @@ func (m *model) browseItems(folder string) []list.Item {
 		notes = append(notes, n)
 	}
 	if folder != "" {
-		parent := folderOf(folder)
+		parent := vault.FolderOf(folder)
 		where := parent + "/"
 		if parent == "" {
 			where = "the vault root"
@@ -256,7 +257,7 @@ func (m *model) updatePicker(msg tea.Msg) tea.Cmd {
 			return nil
 		case "backspace":
 			if m.picker.FilterValue() == "" && !m.pickerBacklinks && m.pickerFolder != "" {
-				m.openFolder(folderOf(m.pickerFolder), m.pickerFolder)
+				m.openFolder(vault.FolderOf(m.pickerFolder), m.pickerFolder)
 				return nil
 			}
 		case "up":

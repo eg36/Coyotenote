@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 func fakeClipboardHelpers(t *testing.T) (string, string) {
@@ -44,7 +46,7 @@ func TestLinuxClipboardHelpersPreserveTextAndBoundReads(t *testing.T) {
 	if err != nil || result != text {
 		t.Fatalf("%q %v", result, err)
 	}
-	if err := os.WriteFile(data, []byte(strings.Repeat("x", maxPasteBytes+1)), 0600); err != nil {
+	if err := os.WriteFile(data, []byte(strings.Repeat("x", vault.MaxPasteBytes+1)), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := clipboard.Read(ctx); err == nil {

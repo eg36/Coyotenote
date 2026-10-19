@@ -9,16 +9,24 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
-func testStore(t *testing.T) *store {
+func testStore(t *testing.T) *vault.Store {
 	t.Helper()
-	s, err := openStore(t.TempDir())
+	s, err := vault.Open(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(s.close)
+	t.Cleanup(s.Close)
 	return s
+}
+func assertFileBody(t *testing.T, path, want string) {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil || string(b) != want {
+		t.Fatalf("%s: got %q, want %q: %v", path, b, want, err)
+	}
 }
 func press(m *model, k tea.KeyType) { m.Update(tea.KeyMsg{Type: k}) }
 
@@ -76,28 +84,28 @@ func TestCreateEditNavigateDelete(t *testing.T) {
 	if len(m.notes) != 1 {
 		t.Fatal("delete")
 	}
-	loaded, _, err := s.load()
+	loaded, _, err := s.Load()
 	if err != nil || len(loaded) != 1 || !strings.Contains(loaded[0].Body, "hello 世界") {
 		t.Fatalf("persistence: %v %v", loaded, err)
 	}
 }
 func TestInterruptedWriteRecovery(t *testing.T) {
 	s := testStore(t)
-	n, err := s.create("x")
+	n, err := s.Create("x", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = s.save(n, "committed"); err != nil {
+	if err = s.Save(n, "committed"); err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(filepath.Join(s.dir, ".pending-interrupted"), []byte("partial"), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(s.Dir, ".pending-interrupted"), []byte("partial"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	notes, report, err := s.load()
-	if err != nil || report.orphans != 1 || len(notes) != 1 || notes[0].Body != "committed" {
+	notes, report, err := s.Load()
+	if err != nil || report.Orphans != 1 || len(notes) != 1 || notes[0].Body != "committed" {
 		t.Fatalf("recovery %v %v %v", notes, report, err)
 	}
-	if _, err = os.Stat(filepath.Join(s.dir, ".pending-interrupted")); err != nil {
+	if _, err = os.Stat(filepath.Join(s.Dir, ".pending-interrupted")); err != nil {
 		t.Fatal("recovery evidence removed")
 	}
 	m, err := newModel(s)
@@ -111,7 +119,7 @@ func TestConflictAndFailedSaveBlockNavigation(t *testing.T) {
 	newNote(m)
 	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("local")})
-	if err := os.WriteFile(filepath.Join(s.dir, m.notes[m.index].ID+".md"), []byte("external"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir, m.notes[m.index].ID+".md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	m.navigate(-1)
@@ -162,8 +170,8 @@ func TestMarkdownRenderingAndSizes(t *testing.T) {
 }
 func TestLockThemeExitAndAtomicSave(t *testing.T) {
 	s := testStore(t)
-	if other, err := openStore(s.dir); err == nil {
-		other.close()
+	if other, err := vault.Open(s.Dir); err == nil {
+		other.Close()
 		t.Fatal("second writer allowed")
 	}
 	m, _ := newModel(s)
@@ -180,13 +188,13 @@ func TestLockThemeExitAndAtomicSave(t *testing.T) {
 	if err != nil || reopened.theme != "light" {
 		t.Fatal("theme not persisted")
 	}
-	entries, _ := os.ReadDir(s.dir)
+	entries, _ := os.ReadDir(s.Dir)
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), ".pending-") {
 			t.Fatal("temp leak")
 		}
 	}
-	b, _ := os.ReadFile(filepath.Join(s.dir, m.notes[0].ID+".md"))
+	b, _ := os.ReadFile(filepath.Join(s.Dir, m.notes[0].ID+".md"))
 	if string(b) != "final edit" {
 		t.Fatal("exit lost content")
 	}
@@ -198,14 +206,14 @@ func TestDataDirectory(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		dir, err := dataDir()
+		dir, err := vault.DataDir()
 		if err != nil || dir != filepath.Join(base, "coyotenote") {
 			t.Fatal(dir, err)
 		}
 		return
 	}
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
-	dir, err := dataDir()
+	dir, err := vault.DataDir()
 	if err != nil || filepath.Base(dir) != "coyotenote" {
 		t.Fatal(dir, err)
 	}
@@ -225,17 +233,17 @@ func TestDeleteLastNoteAndRestart(t *testing.T) {
 }
 func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
 	s := testStore(t)
-	if err := os.WriteFile(filepath.Join(s.dir, "good.md"), []byte("# Good"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir, "good.md"), []byte("# Good"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	bad := map[string]string{"long.md": strings.Repeat("line\n", maxLines), "long-cr.md": strings.Repeat("line\r", maxLines), "control.md": "page\fbreak", "binary.md": string([]byte{0xff})}
+	bad := map[string]string{"long.md": strings.Repeat("line\n", vault.MaxLines), "long-cr.md": strings.Repeat("line\r", vault.MaxLines), "control.md": "page\fbreak", "binary.md": string([]byte{0xff})}
 	for name, body := range bad {
-		if err := os.WriteFile(filepath.Join(s.dir, name), []byte(body), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(s.Dir, name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
 	unsafeNames := []string{"long.md", "long-cr.md", "control.md", "binary.md"}
-	if err := os.Symlink(filepath.Join(s.dir, "good.md"), filepath.Join(s.dir, "link.md")); err != nil {
+	if err := os.Symlink(filepath.Join(s.Dir, "good.md"), filepath.Join(s.Dir, "link.md")); err != nil {
 		if runtime.GOOS != "windows" {
 			t.Fatal(err)
 		}
@@ -256,7 +264,7 @@ func TestSkipUnsafeFilesWithoutChangingThem(t *testing.T) {
 		}
 	}
 	for name, body := range bad {
-		if b, err := os.ReadFile(filepath.Join(s.dir, name)); err != nil || string(b) != body {
+		if b, err := os.ReadFile(filepath.Join(s.Dir, name)); err != nil || string(b) != body {
 			t.Fatal("input changed", name)
 		}
 	}
@@ -266,7 +274,7 @@ func TestFailedSaveWritesRecoveryAndSecondQuitExits(t *testing.T) {
 	m, _ := newModel(s)
 	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("precious")})
-	if err := os.WriteFile(filepath.Join(s.dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ}); cmd != nil {
@@ -279,7 +287,7 @@ func TestFailedSaveWritesRecoveryAndSecondQuitExits(t *testing.T) {
 	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ}); cmd == nil {
 		t.Fatal("second quit did not exit")
 	}
-	if _, report, _ := s.load(); report.recoveries != 1 {
+	if _, report, _ := s.Load(); report.Recoveries != 1 {
 		t.Fatal("recovery copy not reported on load")
 	}
 }
@@ -288,7 +296,7 @@ func TestSignalExitAfterFailedSaveKeepsRecovery(t *testing.T) {
 	m, _ := newModel(s)
 	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("unsaved")})
-	if err := os.WriteFile(filepath.Join(s.dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir, m.notes[0].ID+".md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, cmd := m.Update(exitMsg{}); cmd == nil {
@@ -307,11 +315,11 @@ func TestRecoveryFallsBackToTempDir(t *testing.T) {
 	}
 	s := testStore(t)
 	t.Setenv("TMPDIR", t.TempDir())
-	if err := os.Chmod(s.dir, 0500); err != nil {
+	if err := os.Chmod(s.Dir, 0500); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.Chmod(s.dir, 0700) })
-	path, err := s.writeRecovery(note{ID: "x"}, "body")
+	t.Cleanup(func() { os.Chmod(s.Dir, 0700) })
+	path, err := s.WriteRecovery(vault.Note{ID: "x"}, "body")
 	if err != nil || !strings.HasPrefix(path, os.Getenv("TMPDIR")) {
 		t.Fatal(path, err)
 	}
@@ -323,7 +331,7 @@ func TestOversizedPasteRejected(t *testing.T) {
 	m, _ := newModel(testStore(t))
 	newNote(m)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("keep")})
-	for _, paste := range []string{strings.Repeat("x\n", maxLines), strings.Repeat("x", maxPasteBytes+1)} {
+	for _, paste := range []string{strings.Repeat("x\n", vault.MaxLines), strings.Repeat("x", vault.MaxPasteBytes+1)} {
 		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(paste), Paste: true})
 		if m.editor.Value() != "keep" || !strings.Contains(m.status, "Paste rejected") {
 			t.Fatalf("oversized paste accepted: %d bytes", len(m.editor.Value()))
@@ -336,10 +344,10 @@ func TestOversizedPasteRejected(t *testing.T) {
 }
 func TestCursorStartsAtTopAndThemeWhitespace(t *testing.T) {
 	s := testStore(t)
-	if err := os.WriteFile(filepath.Join(s.dir, "a.md"), []byte("one\ntwo\nthree"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir, "a.md"), []byte("one\ntwo\nthree"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(s.dir, "theme"), []byte("light\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Dir, "theme"), []byte("light\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	m, _ := newModel(s)

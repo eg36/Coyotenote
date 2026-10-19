@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 // version is set at build time with -ldflags "-X main.version=v1.2.3".
@@ -49,25 +50,25 @@ func run() error {
 	case flag.NArg() == 1 && *dir != "":
 		return fmt.Errorf("give the vault either as an argument or with -data-dir, not both")
 	}
-	vault := flag.Arg(0)
-	if vault != "" {
-		*dir = vault
+	vaultDir := flag.Arg(0)
+	if vaultDir != "" {
+		*dir = vaultDir
 	}
-	config, configErr := dataDir()
+	config, configErr := vault.DataDir()
 	if *dir == "" {
 		if configErr != nil {
 			return configErr
 		}
 		*dir = config
 	}
-	s, err := openStore(*dir)
+	s, err := vault.Open(*dir)
 	if err != nil {
 		return err
 	}
-	defer s.close()
+	defer s.Close()
 	// A vault argument keeps the theme in the data directory, not among the notes.
-	if vault != "" && configErr == nil && !sameDir(config, *dir) && os.MkdirAll(config, 0700) == nil {
-		s.config = config
+	if vaultDir != "" && configErr == nil && !sameDir(config, *dir) && os.MkdirAll(config, 0700) == nil {
+		s.Config = config
 	}
 	if *migrateNames {
 		return migrate(s, os.Stdin, os.Stdout)

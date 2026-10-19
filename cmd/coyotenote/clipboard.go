@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 type clipboardBackend interface {
@@ -81,7 +82,7 @@ func normalizedInput(text string) (string, error) {
 		return "", errors.New("text is not valid UTF-8")
 	}
 	text = strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
-	if hasControl(text) {
+	if vault.HasControl(text) {
 		return "", errors.New("text contains unsupported control characters")
 	}
 	return text, nil
@@ -91,7 +92,7 @@ func (m *model) insertText(text string, paste bool) tea.Cmd {
 		m.status = "Clipboard is empty"
 		return nil
 	}
-	if paste && len(text) > maxPasteBytes {
+	if paste && len(text) > vault.MaxPasteBytes {
 		m.status = "Paste rejected: clipboard exceeds 1 MiB"
 		return nil
 	}
@@ -103,8 +104,8 @@ func (m *model) insertText(text string, paste bool) tea.Cmd {
 	lo, hi := m.editor.SelectionBounds()
 	value := []rune(m.editor.Value())
 	candidate := string(value[:lo]) + text + string(value[hi:])
-	if strings.Count(candidate, "\n") >= maxLines {
-		m.status = fmt.Sprintf("Paste rejected: notes are limited to %d lines", maxLines)
+	if strings.Count(candidate, "\n") >= vault.MaxLines {
+		m.status = fmt.Sprintf("Paste rejected: notes are limited to %d lines", vault.MaxLines)
 		return nil
 	}
 	if text == "" && !m.editor.HasSelection() {

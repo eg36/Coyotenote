@@ -9,15 +9,17 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 func testApp(t *testing.T) *webApp {
 	t.Helper()
-	s, err := openStore(t.TempDir())
+	s, err := vault.Open(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(s.close)
+	t.Cleanup(s.Close)
 	app, err := newWebApp(s)
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +60,7 @@ func TestNoteLifecycleAndPersistence(t *testing.T) {
 		t.Fatalf("unexpected note: %v", n)
 	}
 	n = request(t, a, "PUT", "/api/note", mutation{ID: "Work/First", Body: "Edited\t世界\n", Revision: n["revision"].(string)}, 200)
-	disk, err := os.ReadFile(a.store.path("Work/First"))
+	disk, err := os.ReadFile(a.store.Path("Work/First"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +72,7 @@ func TestNoteLifecycleAndPersistence(t *testing.T) {
 		t.Fatal("revision did not persist")
 	}
 	request(t, a, "DELETE", "/api/note", mutation{ID: "Work/First", Revision: n["revision"].(string)}, 200)
-	if _, err = os.Stat(a.store.path("Work/First")); !os.IsNotExist(err) {
+	if _, err = os.Stat(a.store.Path("Work/First")); !os.IsNotExist(err) {
 		t.Fatalf("note was not removed: %v", err)
 	}
 	restored := request(t, a, "POST", "/api/restore", mutation{ID: "Work/First"}, 200)
@@ -87,7 +89,7 @@ func TestNoteLifecycleAndPersistence(t *testing.T) {
 func TestConflictDoesNotOverwriteAndRecovery(t *testing.T) {
 	a := testApp(t)
 	n := request(t, a, "POST", "/api/note", mutation{ID: "Thought", Body: "original"}, 201)
-	if err := os.WriteFile(a.store.path("Thought"), []byte("changed outside"), 0600); err != nil {
+	if err := os.WriteFile(a.store.Path("Thought"), []byte("changed outside"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	error := request(t, a, "PUT", "/api/note", mutation{ID: "Thought", Body: "unsaved local edit", Revision: n["revision"].(string)}, 409)
@@ -102,7 +104,7 @@ func TestConflictDoesNotOverwriteAndRecovery(t *testing.T) {
 	if string(copy) != "unsaved local edit" {
 		t.Fatal("recovery content lost")
 	}
-	disk, err := os.ReadFile(a.store.path("Thought"))
+	disk, err := os.ReadFile(a.store.Path("Thought"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +116,7 @@ func TestConflictDoesNotOverwriteAndRecovery(t *testing.T) {
 
 func TestLineEndingsPreserved(t *testing.T) {
 	a := testApp(t)
-	if err := os.WriteFile(a.store.path("Windows"), []byte("hello\r\nworld\r\n"), 0600); err != nil {
+	if err := os.WriteFile(a.store.Path("Windows"), []byte("hello\r\nworld\r\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	n := request(t, a, "GET", "/api/note?id=Windows", nil, 200)
@@ -122,7 +124,7 @@ func TestLineEndingsPreserved(t *testing.T) {
 		t.Fatal("line endings not normalized for browser")
 	}
 	request(t, a, "PUT", "/api/note", mutation{ID: "Windows", Body: "hello\nchanged\n", Revision: n["revision"].(string)}, 200)
-	b, err := os.ReadFile(a.store.path("Windows"))
+	b, err := os.ReadFile(a.store.Path("Windows"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,11 +197,11 @@ func TestInvalidInputAndFiles(t *testing.T) {
 	request(t, a, "POST", "/api/note", mutation{ID: "Good", Body: "kept"}, 201)
 	request(t, a, "POST", "/api/note", mutation{ID: "Too big", Body: strings.Repeat("line\n", 10000)}, 422)
 	for name, body := range map[string]string{"Invalid": "\xff", "Control": "hello\x1b[31m"} {
-		if err := os.WriteFile(a.store.path(name), []byte(body), 0600); err != nil {
+		if err := os.WriteFile(a.store.Path(name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.Symlink(a.store.path("Good"), a.store.path("Linked")); err != nil {
+	if err := os.Symlink(a.store.Path("Good"), a.store.Path("Linked")); err != nil {
 		t.Fatal(err)
 	}
 	state := request(t, a, "GET", "/api/state", nil, 200)
@@ -234,22 +236,22 @@ func TestLocalRequestProtection(t *testing.T) {
 
 func TestAtomicWriteAndWriterLock(t *testing.T) {
 	a := testApp(t)
-	if second, err := openStore(a.store.dir); err == nil {
-		second.close()
+	if second, err := vault.Open(a.store.Dir); err == nil {
+		second.Close()
 		t.Fatal("second vault writer allowed")
 	}
-	n, err := a.store.create("Safe", "")
+	n, err := a.store.Create("Safe", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4; i++ {
 		body := fmt.Sprintf("revision %d", i)
-		if err = a.store.save(n, body); err != nil {
+		if err = a.store.Save(n, body); err != nil {
 			t.Fatal(err)
 		}
 		n.Body = body
 	}
-	entries, err := os.ReadDir(a.store.dir)
+	entries, err := os.ReadDir(a.store.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,11 +260,11 @@ func TestAtomicWriteAndWriterLock(t *testing.T) {
 			t.Fatal("temporary write leaked")
 		}
 	}
-	if err = os.WriteFile(filepath.Join(a.store.dir, ".pending-interrupted"), []byte("partial"), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(a.store.Dir, ".pending-interrupted"), []byte("partial"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	notes, report, err := a.store.load()
-	if err != nil || report.orphans != 1 || notes[0].Body != "revision 3" {
+	notes, report, err := a.store.Load()
+	if err != nil || report.Orphans != 1 || notes[0].Body != "revision 3" {
 		t.Fatalf("recovery: %v %+v %v", notes, report, err)
 	}
 }
@@ -279,7 +281,7 @@ func TestTrashKeepsNotesWithRepeatedNames(t *testing.T) {
 		t.Fatalf("trash names %v", trashIDs)
 	}
 	for i, body := range []string{"first", "second", "third"} {
-		b, err := os.ReadFile(filepath.Join(a.store.dir, ".trash", filepath.FromSlash(trashIDs[i])+".md"))
+		b, err := os.ReadFile(filepath.Join(a.store.Dir, ".trash", filepath.FromSlash(trashIDs[i])+".md"))
 		if err != nil || string(b) != body {
 			t.Fatalf("trashed %s = %q, %v", trashIDs[i], b, err)
 		}
@@ -342,7 +344,7 @@ func TestSessionRenewsTokenForTheSameVaultOnly(t *testing.T) {
 func TestLoadCacheNeverServesStaleText(t *testing.T) {
 	a := testApp(t)
 	n := request(t, a, "POST", "/api/note", mutation{ID: "Cached", Body: "aaa"}, 201)
-	p := a.store.path("Cached")
+	p := a.store.Path("Cached")
 	info, err := os.Stat(p)
 	if err != nil {
 		t.Fatal(err)
@@ -373,7 +375,7 @@ func TestLoadCacheNeverServesStaleText(t *testing.T) {
 func TestMovesRemoveFoldersTheyLeaveEmpty(t *testing.T) {
 	a := testApp(t)
 	exists := func(rel string) bool {
-		_, err := os.Stat(filepath.Join(a.store.dir, filepath.FromSlash(rel)))
+		_, err := os.Stat(filepath.Join(a.store.Dir, filepath.FromSlash(rel)))
 		return err == nil
 	}
 	n := request(t, a, "POST", "/api/note", mutation{ID: "A/B/Moved"}, 201)
@@ -403,7 +405,7 @@ func TestTrashListsNotesForRestore(t *testing.T) {
 		n := request(t, a, "POST", "/api/note", mutation{ID: id, Body: "Body of " + id}, 201)
 		request(t, a, "DELETE", "/api/note", mutation{ID: id, Revision: n["revision"].(string)}, 200)
 	}
-	if err := os.Symlink(a.store.path("Elsewhere"), filepath.Join(a.store.dir, ".trash", "Link.md")); err != nil {
+	if err := os.Symlink(a.store.Path("Elsewhere"), filepath.Join(a.store.Dir, ".trash", "Link.md")); err != nil {
 		t.Fatal(err)
 	}
 	list := request(t, a, "GET", "/api/trash", nil, 200)["notes"].([]any)

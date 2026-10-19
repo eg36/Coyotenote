@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package vault
 
 import (
 	"golang.org/x/sys/windows"

@@ -1,21 +1,21 @@
-package main
+package vault
 
 import (
 	"path"
 	"strings"
 )
 
-// link is one [[target#heading|alias]] in a note body. Offsets are bytes:
-// start is at "[[", end just after "]]", and the target as written, without
-// heading or alias, spans targetStart to targetEnd.
-type link struct {
-	start, end, targetStart, targetEnd int
-	target, heading, alias             string
+// Link is one [[target#heading|alias]] in a note body. Offsets are bytes:
+// Start is at "[[", End just after "]]", and the target as written, without
+// heading or alias, spans TargetStart to TargetEnd.
+type Link struct {
+	Start, End, TargetStart, TargetEnd int
+	Target, Heading, Alias             string
 }
 
-// parseLinks finds wiki links outside fenced code blocks and inline code spans.
-func parseLinks(body string) []link {
-	var links []link
+// ParseLinks finds wiki links outside fenced code blocks and inline code spans.
+func ParseLinks(body string) []Link {
+	var links []Link
 	fence := byte(0)
 	fenceLen := 0
 	offset := 0
@@ -44,8 +44,8 @@ func parseLinks(body string) []link {
 	return links
 }
 
-func lineLinks(line string, offset int) []link {
-	var links []link
+func lineLinks(line string, offset int) []Link {
+	var links []Link
 	for i := 0; i < len(line); {
 		if line[i] == '`' {
 			run := len(line[i:]) - len(strings.TrimLeft(line[i:], "`"))
@@ -73,22 +73,22 @@ func lineLinks(line string, offset int) []link {
 		rawTarget, heading, _ := strings.Cut(raw, "#")
 		if target := strings.TrimSpace(rawTarget); target != "" {
 			start := offset + i
-			links = append(links, link{start, start + end + 4, start + 2, start + 2 + len(rawTarget), target, strings.TrimSpace(heading), strings.TrimSpace(alias)})
+			links = append(links, Link{start, start + end + 4, start + 2, start + 2 + len(rawTarget), target, strings.TrimSpace(heading), strings.TrimSpace(alias)})
 		}
 		i += end + 4
 	}
 	return links
 }
 
-// resolver maps link targets to note IDs the way Obsidian does: an exact path
+// Resolver maps link targets to note IDs the way Obsidian does: an exact path
 // first, then a unique file name, preferring the linking note's own folder.
-type resolver struct {
+type Resolver struct {
 	byPath map[string]string
 	byBase map[string][]string
 }
 
-func newResolver(notes []note) resolver {
-	r := resolver{make(map[string]string, len(notes)), make(map[string][]string, len(notes))}
+func NewResolver(notes []Note) Resolver {
+	r := Resolver{make(map[string]string, len(notes)), make(map[string][]string, len(notes))}
 	for _, n := range notes {
 		lower := strings.ToLower(n.ID)
 		r.byPath[lower] = n.ID
@@ -101,7 +101,7 @@ func normalizeTarget(target string) string {
 	t := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(target, `\`, "/")))
 	return strings.TrimSuffix(strings.TrimPrefix(t, "/"), ".md")
 }
-func (r resolver) resolve(target, from string) (string, bool) {
+func (r Resolver) Resolve(target, from string) (string, bool) {
 	t := normalizeTarget(target)
 	if id, ok := r.byPath[t]; ok {
 		return id, true
@@ -121,9 +121,9 @@ func (r resolver) resolve(target, from string) (string, bool) {
 
 // closer reports whether a is a better match than b for a link in note from.
 func closer(a, b, from string) bool {
-	here := folderOf(from)
-	if (folderOf(a) == here) != (folderOf(b) == here) {
-		return folderOf(a) == here
+	here := FolderOf(from)
+	if (FolderOf(a) == here) != (FolderOf(b) == here) {
+		return FolderOf(a) == here
 	}
 	if da, db := strings.Count(a, "/"), strings.Count(b, "/"); da != db {
 		return da < db
@@ -131,9 +131,9 @@ func closer(a, b, from string) bool {
 	return a < b
 }
 
-// shortTarget is the shortest link text that resolves to id from note from.
-func (r resolver) shortTarget(id, from string) string {
-	if got, ok := r.resolve(path.Base(id), from); ok && got == id {
+// ShortTarget is the shortest link text that resolves to id from note from.
+func (r Resolver) ShortTarget(id, from string) string {
+	if got, ok := r.Resolve(path.Base(id), from); ok && got == id {
 		return path.Base(id)
 	}
 	return id

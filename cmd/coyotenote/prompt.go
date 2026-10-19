@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	textarea "github.com/eg36/coyotenote/internal/editor"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 type promptKind int
@@ -56,7 +57,7 @@ func (m *model) promptValue() string {
 	value := strings.TrimSpace(strings.ReplaceAll(m.prompt.input.Value(), `\`, "/"))
 	value = strings.TrimSuffix(strings.TrimPrefix(value, "/"), ".md")
 	if value == "" || strings.HasSuffix(value, "/") {
-		return freeName(m.notes, strings.TrimSuffix(value, "/"), "Untitled")
+		return vault.FreeName(m.notes, strings.TrimSuffix(value, "/"), "Untitled")
 	}
 	return value
 }
@@ -90,7 +91,7 @@ func (m *model) createNote(id string, fromLink bool) error {
 	if err := m.flush(); err != nil {
 		return err
 	}
-	n, err := m.store.create(id)
+	n, err := m.store.Create(id, "")
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (m *model) createNote(id string, fromLink bool) error {
 		m.history = append(m.history, m.notes[m.index].ID)
 	}
 	m.notes = append(m.notes, n)
-	sortNotes(m.notes)
+	vault.SortNotes(m.notes)
 	m.selectID(n.ID)
 	m.mode = 0
 	m.loadNote()
@@ -120,8 +121,8 @@ func (m *model) renameNote(id string) error {
 	if id == old.ID {
 		return nil
 	}
-	err := m.store.rename(old, id)
-	var moved movedSyncError
+	err := m.store.Rename(old, id)
+	var moved vault.MovedSyncError
 	if err != nil && !errors.As(err, &moved) {
 		return err
 	}
@@ -136,7 +137,7 @@ func (m *model) renameNote(id string) error {
 		m.status += "; directory sync failed: " + err.Error()
 	}
 	m.status += m.rewriteLinks(old.ID, id)
-	sortNotes(m.notes)
+	vault.SortNotes(m.notes)
 	m.selectID(id)
 	m.reindex()
 	return nil

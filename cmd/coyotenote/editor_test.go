@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 type memoryClipboard struct {
@@ -68,7 +69,7 @@ func TestSelectionCopyCutPasteAndPersistence(t *testing.T) {
 	if err := m.flush(); err != nil {
 		t.Fatal(err)
 	}
-	assertFileBody(t, m.store.path("Note"), "one\ntwo\nthree")
+	assertFileBody(t, m.store.Path("Note"), "one\ntwo\nthree")
 }
 func TestShiftSelectionUnicodeAndDirection(t *testing.T) {
 	m, _ := editorModel(t, "a e\u0301👩‍💻界\nz")
@@ -130,7 +131,7 @@ func TestSelectionReplacementAndPasteValidation(t *testing.T) {
 	}
 	m, clipboard := editorModel(t, "unchanged")
 	selectRange(m, 0, 9)
-	for _, invalid := range []string{strings.Repeat("x", maxPasteBytes+1), "a\x00b", string([]byte{0xff})} {
+	for _, invalid := range []string{strings.Repeat("x", vault.MaxPasteBytes+1), "a\x00b", string([]byte{0xff})} {
 		clipboard.text = invalid
 		runKeyCommand(t, m, tea.KeyCtrlV)
 		if m.editor.Value() != "unchanged" || !m.editor.HasSelection() || m.dirty {
@@ -139,7 +140,7 @@ func TestSelectionReplacementAndPasteValidation(t *testing.T) {
 	}
 }
 func TestPasteLimitAccountsForReplacedSelection(t *testing.T) {
-	body := strings.Repeat("x\n", maxLines-1)
+	body := strings.Repeat("x\n", vault.MaxLines-1)
 	m, _ := editorModel(t, body)
 	selectRange(m, 0, len([]rune(body)))
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a\nb\n"), Paste: true})
@@ -147,7 +148,7 @@ func TestPasteLimitAccountsForReplacedSelection(t *testing.T) {
 		t.Fatal("replacement incorrectly rejected", m.status)
 	}
 	selectRange(m, 0, 1)
-	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(strings.Repeat("\n", maxLines)), Paste: true})
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(strings.Repeat("\n", vault.MaxLines)), Paste: true})
 	if m.editor.Value() != "a\nb\n" || !m.editor.HasSelection() {
 		t.Fatal("oversized replacement mutated source")
 	}

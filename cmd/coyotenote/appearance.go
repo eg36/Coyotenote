@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/eg36/coyotenote/internal/vault"
 	colorful "github.com/lucasb-eyer/go-colorful"
 )
 
@@ -131,7 +132,7 @@ func (m *model) header(p palette) string {
 	name := ""
 	if len(m.notes) > 0 {
 		position = fmt.Sprintf("%d/%d", m.index+1, len(m.notes))
-		name = displayName(m.notes[m.index].ID, m.editor.Value())
+		name = vault.DisplayName(m.notes[m.index].ID, m.editor.Value())
 	}
 	left := mark + "  " + ink(p.blue).Bold(true).Render(position)
 	mode, color := "EDIT", p.good

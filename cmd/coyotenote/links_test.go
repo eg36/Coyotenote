@@ -1,50 +1,13 @@
 package main
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/eg36/coyotenote/internal/vault"
 )
-
-func TestParseLinks(t *testing.T) {
-	body := "a [[One]] b [[Two#Head|alias]] [[ Zażółć ]]\n`[[code]]` ``[[x]]``\n```\n[[fenced]]\n```\n[[#self]] [[]] [[bro[ken]] [[Three|x]]"
-	var got []string
-	for _, l := range parseLinks(body) {
-		got = append(got, l.target+"#"+l.heading+"|"+l.alias)
-		if !strings.HasPrefix(body[l.start:], "[[") || !strings.HasSuffix(body[:l.end], "]]") {
-			t.Fatalf("bad offsets for %+v", l)
-		}
-	}
-	want := []string{"One#|", "Two#Head|alias", "Zażółć#|", "Three#|x"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %q", got)
-	}
-}
-
-func TestResolver(t *testing.T) {
-	r := newResolver([]note{{ID: "Plan"}, {ID: "Work/Plan"}, {ID: "Work/Deep/Note"}, {ID: "Home/Deep/Note"}, {ID: "Other/Note"}})
-	for _, tc := range []struct{ target, from, want string }{
-		{"plan", "x", "Plan"},
-		{"Work/Plan", "x", "Work/Plan"},
-		{"work/plan.md", "x", "Work/Plan"},
-		{"Note", "Home/Deep/a", "Home/Deep/Note"},
-		{"Note", "x", "Other/Note"},
-		{"Deep/Note", "x", "Home/Deep/Note"},
-	} {
-		if got, ok := r.resolve(tc.target, tc.from); !ok || got != tc.want {
-			t.Errorf("%s from %s: got %q", tc.target, tc.from, got)
-		}
-	}
-	if _, ok := r.resolve("Missing", "x"); ok {
-		t.Fatal("resolved missing")
-	}
-	if r.shortTarget("Work/Plan", "x") != "Work/Plan" || r.shortTarget("Other/Note", "x") != "Note" {
-		t.Fatal("short target")
-	}
-}
 
 func linkModel(t *testing.T) *model {
 	t.Helper()
@@ -198,7 +161,7 @@ func TestRenamePreservesOtherLinkDestinations(t *testing.T) {
 			if source == tc.from {
 				source = tc.to
 			}
-			assertFileBody(t, s.path(source), tc.want)
+			assertFileBody(t, s.Path(source), tc.want)
 		})
 	}
 }
@@ -209,8 +172,8 @@ func TestParseLinksRespectsFenceClosingRules(t *testing.T) {
 		"```\n```not a close\n[[Hidden]]\n```\n[[Visible]]",
 		"```\n    ```\n[[Hidden]]\n```\n[[Visible]]",
 	} {
-		links := parseLinks(body)
-		if len(links) != 1 || links[0].target != "Visible" {
+		links := vault.ParseLinks(body)
+		if len(links) != 1 || links[0].Target != "Visible" {
 			t.Fatalf("%q: %+v", body, links)
 		}
 	}

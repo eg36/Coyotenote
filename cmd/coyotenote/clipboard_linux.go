@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 type desktopClipboard struct{}
@@ -52,7 +54,7 @@ func clipboardHelper(read bool) (string, []string, error) {
 type clipboardBuffer struct{ data bytes.Buffer }
 
 func (b *clipboardBuffer) Write(p []byte) (int, error) {
-	if b.data.Len()+len(p) > maxPasteBytes {
+	if b.data.Len()+len(p) > vault.MaxPasteBytes {
 		return 0, errors.New("clipboard exceeds 1 MiB")
 	}
 	return b.data.Write(p)

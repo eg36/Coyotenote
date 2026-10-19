@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 // safeName turns a note title into a portable file name: characters that are
@@ -21,7 +23,7 @@ func safeName(t string) string {
 		name = string(runes[:100])
 	}
 	name = strings.TrimLeft(strings.TrimRight(strings.TrimSpace(name), ". "), ".")
-	if checkName(name) != nil {
+	if vault.CheckName(name) != nil {
 		return "Untitled"
 	}
 	return name
@@ -31,20 +33,20 @@ type migration struct{ from, to string }
 
 // planMigration names each legacy timestamp note after its title, adding
 // " 2", " 3"… on collisions with other notes or earlier renames.
-func planMigration(notes []note) []migration {
+func planMigration(notes []vault.Note) []migration {
 	var plan []migration
-	taken := make([]note, 0, len(notes))
+	taken := make([]vault.Note, 0, len(notes))
 	for _, n := range notes {
-		if !legacyID.MatchString(n.ID) {
+		if !vault.LegacyID.MatchString(n.ID) {
 			taken = append(taken, n)
 		}
 	}
 	for _, n := range notes {
-		if !legacyID.MatchString(n.ID) {
+		if !vault.LegacyID.MatchString(n.ID) {
 			continue
 		}
-		to := freeName(taken, "", safeName(title(n.Body)))
-		taken = append(taken, note{ID: to})
+		to := vault.FreeName(taken, "", safeName(vault.Title(n.Body)))
+		taken = append(taken, vault.Note{ID: to})
 		plan = append(plan, migration{n.ID, to})
 	}
 	return plan
@@ -52,20 +54,20 @@ func planMigration(notes []note) []migration {
 
 // migrate renames legacy notes after asking on in/out. It stops at the first
 // failure; notes renamed until then keep their new names.
-func migrate(s *store, in io.Reader, out io.Writer) error {
-	notes, _, err := s.load()
+func migrate(s *vault.Store, in io.Reader, out io.Writer) error {
+	notes, _, err := s.Load()
 	if err != nil {
 		return err
 	}
 	plan := planMigration(notes)
 	if len(plan) == 0 {
-		fmt.Fprintln(out, "No notes with timestamp names in", s.dir)
+		fmt.Fprintln(out, "No notes with timestamp names in", s.Dir)
 		return nil
 	}
 	for _, step := range plan {
 		fmt.Fprintf(out, "  %s.md → %s.md\n", step.from, step.to)
 	}
-	fmt.Fprintf(out, "Rename %d notes in %s? [y/N] ", len(plan), s.dir)
+	fmt.Fprintf(out, "Rename %d notes in %s? [y/N] ", len(plan), s.Dir)
 	answer, _ := bufio.NewReader(in).ReadString('\n')
 	if strings.ToLower(strings.TrimSpace(answer)) != "y" {
 		fmt.Fprintln(out, "Nothing was renamed.")
@@ -76,8 +78,8 @@ func migrate(s *store, in io.Reader, out io.Writer) error {
 		bodies[n.ID] = n.Body
 	}
 	for i, step := range plan {
-		err := s.rename(note{ID: step.from, Body: bodies[step.from]}, step.to)
-		var moved movedSyncError
+		err := s.Rename(vault.Note{ID: step.from, Body: bodies[step.from]}, step.to)
+		var moved vault.MovedSyncError
 		if err != nil && !errors.As(err, &moved) {
 			return fmt.Errorf("renamed %d of %d notes; %s: %w", i, len(plan), step.from, err)
 		}

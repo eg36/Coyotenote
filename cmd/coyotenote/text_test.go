@@ -21,7 +21,7 @@ func editAndSave(t *testing.T, body string) string {
 	if err := m.flush(); err != nil {
 		t.Fatal(err)
 	}
-	b, err := os.ReadFile(filepath.Join(m.store.dir, "Note.md"))
+	b, err := os.ReadFile(filepath.Join(m.store.Dir, "Note.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

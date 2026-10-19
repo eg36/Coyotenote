@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 // jump saves the current note and opens id, remembering where it came from
@@ -70,17 +71,17 @@ func (m *model) followLink() tea.Cmd {
 	value := m.editor.Value()
 	_, _, pos := m.cursorOffset(value)
 	from := m.notes[m.index].ID
-	for _, l := range parseLinks(value) {
-		if pos < l.start || pos > l.end {
+	for _, l := range vault.ParseLinks(value) {
+		if pos < l.Start || pos > l.End {
 			continue
 		}
-		if id, ok := newResolver(m.notes).resolve(l.target, from); ok {
+		if id, ok := vault.NewResolver(m.notes).Resolve(l.Target, from); ok {
 			m.jump(id)
 			return m.requestRender()
 		}
-		target := strings.TrimSuffix(strings.ReplaceAll(l.target, `\`, "/"), ".md")
+		target := strings.TrimSuffix(strings.ReplaceAll(l.Target, `\`, "/"), ".md")
 		if !strings.Contains(target, "/") {
-			target = joinID(folderOf(from), target)
+			target = vault.JoinID(vault.FolderOf(from), target)
 		}
 		cmd := m.openPrompt(promptNew, target)
 		m.prompt.fromLink = true
@@ -120,11 +121,11 @@ func (m *model) updateCompletion() {
 	}
 	query := before[match[2]:match[3]]
 	from := m.notes[m.index].ID
-	r := newResolver(m.notes)
+	r := vault.NewResolver(m.notes)
 	var targets []string
 	for _, n := range m.notes {
-		if n.ID != from && !legacyID.MatchString(n.ID) {
-			targets = append(targets, r.shortTarget(n.ID, from))
+		if n.ID != from && !vault.LegacyID.MatchString(n.ID) {
+			targets = append(targets, r.ShortTarget(n.ID, from))
 		}
 	}
 	var items []string

@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eg36/coyotenote/internal/vault"
 )
 
 func pickerModel(t *testing.T) *model {
 	t.Helper()
 	s := testStore(t)
 	for id, body := range map[string]string{"a": "# Alpha\nfirst body", "b": "# Beta\nsecret elephant", "c": "# Gamma\nlast body"} {
-		if err := os.WriteFile(filepath.Join(s.dir, id+".md"), []byte(body), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(s.Dir, id+".md"), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -62,7 +63,7 @@ func TestPickerSearchAndNavigation(t *testing.T) {
 func TestPickerSaveFailureAndDirtySearch(t *testing.T) {
 	m := pickerModel(t)
 	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("local")})
-	if err := os.WriteFile(filepath.Join(m.store.dir, "a.md"), []byte("external"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(m.store.Dir, "a.md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	press(m, tea.KeyCtrlO)
@@ -71,6 +72,26 @@ func TestPickerSaveFailureAndDirtySearch(t *testing.T) {
 	if m.picker == nil || m.index != 0 || !m.dirty || !strings.Contains(m.status, "SAVE FAILED") {
 		t.Fatal("failed save lost editor")
 	}
+}
+func TestUndoRestoresNoteWhoseNameWasAlreadyTrashed(t *testing.T) {
+	s := testStore(t)
+	writeNote(t, s, ".trash/Dup", "earlier deletion")
+	writeNote(t, s, "Dup", "current")
+	m, err := newModel(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	press(m, tea.KeyCtrlD)
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	if len(m.notes) != 0 || !strings.Contains(m.status, "Moved to trash") {
+		t.Fatal(m.status)
+	}
+	assertFileBody(t, filepath.Join(s.Dir, ".trash", "Dup 2.md"), "current")
+	press(m, tea.KeyCtrlZ)
+	if len(m.notes) != 1 || m.notes[0].ID != "Dup" || m.editor.Value() != "current" {
+		t.Fatal("undo restored the wrong note", m.status)
+	}
+	assertFileBody(t, filepath.Join(s.Dir, ".trash", "Dup.md"), "earlier deletion")
 }
 func TestUndoOrderAndFailedRestore(t *testing.T) {
 	m := pickerModel(t)
@@ -85,14 +106,14 @@ func TestUndoOrderAndFailedRestore(t *testing.T) {
 	if m.notes[m.index].ID != "b" || !strings.Contains(m.editor.Value(), "elephant") {
 		t.Fatal("restore order")
 	}
-	if err := os.WriteFile(filepath.Join(m.store.dir, "a.md"), []byte("external"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(m.store.Dir, "a.md"), []byte("external"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	press(m, tea.KeyCtrlZ)
 	if len(m.trashed) != 1 {
 		t.Fatal("failed undo popped stack")
 	}
-	if err := os.Remove(filepath.Join(m.store.dir, "a.md")); err != nil {
+	if err := os.Remove(filepath.Join(m.store.Dir, "a.md")); err != nil {
 		t.Fatal(err)
 	}
 	press(m, tea.KeyCtrlZ)
@@ -120,7 +141,7 @@ func TestSplitFollowsCursor(t *testing.T) {
 }
 func TestUnbracketedLineLimitStatus(t *testing.T) {
 	m := pickerModel(t)
-	m.editor.SetValue(strings.Repeat("x\n", maxLines-1))
+	m.editor.SetValue(strings.Repeat("x\n", vault.MaxLines-1))
 	press(m, tea.KeyEnter)
 	if !strings.Contains(m.status, "10,000-line limit") {
 		t.Fatal(m.status)
