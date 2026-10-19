@@ -820,3 +820,22 @@ test("a conflict compares both versions and keeps whichever is chosen", async ({
   expect(await diskBody(page, id)).toContain("Second tab ending.");
   await second.close();
 });
+
+test("search results show the matching passage with the match marked", async ({
+  page,
+}) => {
+  const word = `marigold${Date.now()}`;
+  const id = await openSeed(
+    page,
+    `# Garden\n\n${"Opening words. ".repeat(12)}Plant the ${word} <b>beds</b> early.`,
+  );
+  await page.locator("#search").fill(word.toUpperCase());
+  const row = page.locator(`#note-list .note-row[data-note="${id}"]`);
+  await expect(row.locator("mark")).toHaveText(word);
+  await expect(row.locator(".note-excerpt")).toContainText(
+    `Plant the ${word} <b>beds</b> early.`,
+  );
+  await expect(row.locator(".note-excerpt b")).toHaveCount(0);
+  await page.locator("#search").fill("");
+  await expect(row.locator("mark")).toHaveCount(0);
+});

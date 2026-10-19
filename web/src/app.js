@@ -265,6 +265,8 @@ async function refresh({ query = state.search } = {}) {
   state.themes = data.themes;
   state.notes = data.notes;
   state.filteredIds = query ? new Set(data.matches) : null;
+  state.snippets = query ? data.snippets : {};
+  state.searched = query;
   $("vault-name").textContent = data.vault;
   $("vault-name").title = data.vault;
   if (!state.ready) {
@@ -316,6 +318,25 @@ function visibleNotes() {
     );
   });
 }
+// highlight fills element with text, marking each case-insensitive match of
+// query. It builds text nodes, so note content never becomes markup.
+function highlight(element, text, query) {
+  const needle = query.trim().replace(/\s+/g, " ").toLowerCase();
+  const lower = text.toLowerCase();
+  if (!needle || lower.length !== text.length) {
+    element.textContent = text;
+    return;
+  }
+  let from = 0;
+  for (let at = lower.indexOf(needle); at >= 0; at = lower.indexOf(needle, from)) {
+    element.append(text.slice(from, at));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(at, at + needle.length);
+    element.append(mark);
+    from = at + needle.length;
+  }
+  element.append(text.slice(from));
+}
 function renderList() {
   const notes = visibleNotes();
   const list = $("note-list");
@@ -363,7 +384,9 @@ function renderList() {
     button.append(head);
     const text = document.createElement("span");
     text.className = "note-excerpt";
-    text.textContent = excerpt(note.excerpt) || "An empty page, for now.";
+    const found = state.filteredIds && state.snippets?.[note.id];
+    if (found) highlight(text, found, state.searched);
+    else text.textContent = excerpt(note.excerpt) || "An empty page, for now.";
     button.append(text);
     const meta = document.createElement("span");
     meta.className = "note-meta";

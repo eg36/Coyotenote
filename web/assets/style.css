@@ -361,6 +361,11 @@ input[type="search"]::-webkit-search-cancel-button {
   overflow: hidden;
   opacity: 0.85;
 }
+.note-excerpt mark {
+  background: color-mix(in srgb, var(--warn) 30%, transparent);
+  color: var(--text);
+  border-radius: 3px;
+}
 .note-meta {
   font-size: var(--font-small);
   color: var(--muted);

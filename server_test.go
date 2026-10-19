@@ -419,3 +419,23 @@ func TestTrashListsNotesForRestore(t *testing.T) {
 		t.Fatalf("restored note still listed: %v", list)
 	}
 }
+
+func TestSearchSnippetsShowTheMatchingPassage(t *testing.T) {
+	a := testApp(t)
+	long := strings.Repeat("filler ", 30) + "the \n  QUARTZ clock ticks " + strings.Repeat("after ", 30)
+	request(t, a, "POST", "/api/note", mutation{ID: "Long", Body: long}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Quartz path only", Body: "Nothing relevant"}, 201)
+	state := request(t, a, "GET", "/api/state?q=quartz+clock", nil, 200)
+	snippets := state["snippets"].(map[string]any)
+	got, _ := snippets["Long"].(string)
+	if !strings.HasPrefix(got, "…") || !strings.HasSuffix(got, "…") || !strings.Contains(got, "the QUARTZ clock ticks") || len([]rune(got)) > 140 {
+		t.Fatalf("snippet %q", got)
+	}
+	state = request(t, a, "GET", "/api/state?q=quartz", nil, 200)
+	if _, ok := state["snippets"].(map[string]any)["Quartz path only"]; ok {
+		t.Fatal("a path-only match should keep its excerpt")
+	}
+	if got := snippet("Straße İstanbul", "i̇stanbul"); got != "" && !strings.Contains(got, "İstanbul") {
+		t.Fatalf("unicode snippet %q", got)
+	}
+}

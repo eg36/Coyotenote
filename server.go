@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/yuin/goldmark"
@@ -286,11 +287,15 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		// Notes always lists the whole vault; matches names the search hits,
 		// so a filtered sidebar never leaves stale notes behind.
 		var matches []string
+		snippets := map[string]string{}
 		if q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q"))); q != "" {
 			matches = []string{}
 			for _, n := range notes {
 				if strings.Contains(strings.ToLower(n.ID+"\n"+n.Body), q) {
 					matches = append(matches, n.ID)
+					if s := snippet(n.Body, q); s != "" {
+						snippets[n.ID] = s
+					}
 				}
 			}
 		}
@@ -307,7 +312,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": versionString(), "warnings": warnings, "limits": map[string]int{"lines": maxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": versionString(), "warnings": warnings, "limits": map[string]int{"lines": maxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/note" || route == "GET /api/export" {
@@ -550,6 +555,35 @@ func (a *webApp) render(body, from string, notes []note) (string, error) {
 	// No remote images in a local notebook: replace generated image tags with
 	// their alt text so opening a note cannot make a tracking request.
 	return suppressImages(output.String()), nil
+}
+
+// snippet is the passage of body around the first match of the lower-case
+// query q, with whitespace collapsed, or "" when only the note's path matches.
+func snippet(body, q string) string {
+	text := []rune(strings.Join(strings.Fields(body), " "))
+	query := []rune(strings.Join(strings.Fields(q), " "))
+	lower := make([]rune, len(text))
+	for i, r := range text {
+		lower[i] = unicode.ToLower(r)
+	}
+	at := -1
+	for i := 0; i+len(query) <= len(lower) && at < 0; i++ {
+		if string(lower[i:i+len(query)]) == string(query) {
+			at = i
+		}
+	}
+	if at < 0 || len(query) == 0 {
+		return ""
+	}
+	start, end := max(0, at-40), min(len(text), at+len(query)+80)
+	result := strings.TrimSpace(string(text[start:end]))
+	if start > 0 {
+		result = "…" + result
+	}
+	if end < len(text) {
+		result += "…"
+	}
+	return result
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
