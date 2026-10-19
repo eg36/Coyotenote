@@ -12,33 +12,38 @@ concurrency:
   cancel-in-progress: false
 
 # Linux amd64 is the only supported platform. Each archive holds both apps,
-# stamped with the tag as their version.
+# stamped with the tag as their version. A tag is released only from a commit
+# on main that passes the same checks as CI, and only with its notes file.
 jobs:
-  release:
+  gate:
     runs-on: ubuntu-latest
-    env:
-      CGO_ENABLED: '0'
-      GOOS: linux
-      GOARCH: amd64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a commit on main and release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main ||
+            { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+          test -f ".github/release-notes/$GITHUB_REF_NAME.md" ||
+            { echo "::error::Missing .github/release-notes/$GITHUB_REF_NAME.md"; exit 1; }
+
+  checks:
+    needs: gate
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: checks
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: Build and package
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p package dist
-          ldflags="-s -w -X github.com/eg36/coyotenote/internal/version.Version=$GITHUB_REF_NAME"
-          go build -trimpath -ldflags "$ldflags" -o package/coyotenote ./cmd/coyotenote
-          go build -trimpath -ldflags "$ldflags" -o package/coyotenote-web ./cmd/coyotenote-web
-          test "$(package/coyotenote -version)" = "coyotenote $GITHUB_REF_NAME"
-          test "$(package/coyotenote-web -version)" = "coyotenote-web $GITHUB_REF_NAME"
-          mkdir -p package/docs
-          cp README.md LICENSE THIRD_PARTY_NOTICES.md package/
-          cp -r docs/WEB.md docs/licenses package/docs/
-          tar -czf "dist/coyotenote_${GITHUB_REF_NAME}_${GOOS}_${GOARCH}.tar.gz" -C package .
+        run: scripts/package.sh "$GITHUB_REF_NAME"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,8 +56,6 @@ jobs:
           sha256sum coyotenote_* > SHA256SUMS
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" coyotenote_* SHA256SUMS --clobber
-          elif [ -f "$notes" ]; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$notes" coyotenote_* SHA256SUMS
           else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes coyotenote_* SHA256SUMS
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$notes" coyotenote_* SHA256SUMS
           fi

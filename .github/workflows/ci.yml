@@ -1,8 +1,7 @@
 name: CI
 
-# Tags are already tested on main and are built by the Release workflow.
-# Changes touching only docs, the logos, the license or the release workflow
-# (which CI never runs) skip CI.
+# The Release workflow calls this workflow for each tag before packaging.
+# Changes touching only docs, the logos or the license skip CI.
 on:
   push:
     branches: [main]
@@ -11,15 +10,14 @@ on:
       - 'LICENSE'
       - 'logo.png'
       - 'web/logo.png'
-      - '.github/workflows/release.yml'
   pull_request:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - 'logo.png'
       - 'web/logo.png'
-      - '.github/workflows/release.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -45,6 +43,8 @@ jobs:
       - run: python3 scripts/smoke_terminal.py
       - run: go build -o bin/coyotenote-web ./cmd/coyotenote-web
       - run: python3 scripts/smoke_web.py
+      - name: Package a release archive (dry run)
+        run: scripts/package.sh v0.0.0-ci
 
   browser:
     runs-on: ubuntu-latest

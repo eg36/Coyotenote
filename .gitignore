@@ -5,3 +5,5 @@
 /playwright-report/
 *.log
 /CODEX_HANDOFF.local.md
+/package/
+/dist/
