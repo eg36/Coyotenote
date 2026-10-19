@@ -133,6 +133,9 @@ input[type="search"]::-webkit-search-cancel-button {
 /* The top bar spans the page; the notes sidebar and the writing area sit
    below it, like a document editor. */
 .app {
+  /* The sidebar's width, so the header can center its tools over the
+     writing area; kept in step with the grid columns below. */
+  --sidebar-width: 256px;
   display: grid;
   grid-template-columns: 256px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
@@ -184,7 +187,7 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px;
+  padding: 0 7px;
   font-size: 14px;
   font-weight: 550;
   border-color: transparent;
@@ -423,7 +426,7 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 6px;
   width: 100%;
   margin-top: 8px;
-  padding: 6px 8px 4px 4px;
+  padding: 6px 8px 4px 8px;
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
@@ -785,8 +788,9 @@ input[type="search"]::-webkit-search-cancel-button {
   padding-left: 10px;
 }
 /* Wide headers group the tools in one rounded pill, as in Google Docs,
-   centered between the title and the note actions; from 1760 px it is
-   centered on the window itself. Narrower layouts ignore the group. */
+   centered between the title and the note actions; from 1840 px it is
+   centered over the writing area, wherever the sidebar leaves it.
+   Narrower layouts ignore the group. */
 .header-tools {
   display: flex;
   align-items: center;
@@ -813,10 +817,10 @@ input[type="search"]::-webkit-search-cancel-button {
   margin: 0 6px;
   background: color-mix(in srgb, var(--line) 70%, transparent);
 }
-@media (min-width: 1760px) {
+@media (min-width: 1840px) {
   .header-tools {
     position: absolute;
-    left: 50%;
+    left: calc((100% + var(--sidebar-width)) / 2);
     transform: translateX(-50%);
   }
   .save-state {
@@ -2400,6 +2404,11 @@ dialog.danger #modal-submit {
 .focus-mode {
   grid-template-columns: 0 minmax(0, 1fr);
 }
+/* Two classes outrank the width set per screen size. */
+.app.sidebar-hidden,
+.app.focus-mode {
+  --sidebar-width: 0px;
+}
 .sidebar-hidden .sidebar,
 .focus-mode .sidebar {
   display: none;
@@ -2409,6 +2418,7 @@ dialog.danger #modal-submit {
 }
 @media (min-width: 1550px) {
   .app {
+    --sidebar-width: 280px;
     grid-template-columns: 280px 1fr;
   }
   .sidebar-hidden,
@@ -2471,6 +2481,7 @@ dialog.danger #modal-submit {
 }
 @media (max-width: 980px) {
   .app {
+    --sidebar-width: 225px;
     grid-template-columns: 225px 1fr;
   }
   .sidebar {
