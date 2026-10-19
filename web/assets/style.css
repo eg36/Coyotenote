@@ -218,6 +218,25 @@ input[type="search"]::-webkit-search-cancel-button {
   outline: 2px solid var(--focus);
   outline-offset: -1px;
 }
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+/* Find and replace in the open note sits at the end of the notes search. */
+.search .find-replace {
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  border-left: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 0 6px 6px 0;
+}
+.search .find-replace:disabled {
+  display: none;
+}
 .search svg {
   width: 16px;
   height: 16px;

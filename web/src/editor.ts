@@ -169,6 +169,7 @@ async function openNote(
   $("note-folder").textContent = note.id.split("/").slice(0, -1).join(" / ");
   $("document-head").hidden = false;
   $("document-actions").hidden = false;
+  $("find-replace").disabled = false;
   $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
@@ -209,6 +210,7 @@ function emptyNotebook() {
   $("history-back").disabled = true;
   $("document-head").hidden = true;
   $("document-actions").hidden = true;
+  $("find-replace").disabled = true;
   $("editor-frame").hidden = true;
   $("editor-area").hidden = true;
   $("editor-toolbar").hidden = true;
@@ -232,10 +234,10 @@ async function createNote(name: string, body = "") {
   focusEditor();
   return note;
 }
-async function findInNote() {
+async function findInNote(query = "") {
   if (!state.current || state.pendingDraft || state.busy) return;
   if (!["source", "split"].includes(state.mode)) await setMode("source");
-  state.source?.find();
+  state.source?.find(query);
 }
 async function ensureRich() {
   if (!state.rich) {

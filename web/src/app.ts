@@ -35,6 +35,7 @@ import {
   closeViewMenu,
   editProperties,
   emptyNotebook,
+  findInNote,
   highlightBlock,
   highlightView,
   openBlockMenu,
@@ -151,6 +152,12 @@ $("note-sort").onchange = () => {
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 $("search").onfocus = showNotes;
 $("search-button").onclick = findNotes;
+// Keep the search open while its own button takes the click.
+$("find-replace").onmousedown = (e) => e.preventDefault();
+$("find-replace").onclick = () => {
+  const query = $("search").value.trim();
+  findInNote(query).catch(showError);
+};
 $("search").onblur = () => setTimeout(closeSearch);
 $("search").onkeydown = (event) => {
   if (event.key !== "Escape") return;

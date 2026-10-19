@@ -1295,6 +1295,20 @@ test("opening a note updates the list in place, and saves still refresh its row"
   expect(await row(second).evaluate((el) => el.kept)).toBe(true);
 });
 
+test("the search field offers find and replace in the open note, starting from its words", async ({ page }) => {
+  await openSeed(page, "Replace the old word, then the old word again.");
+  const box = await searchBox(page);
+  await box.fill("old word");
+  await page.getByRole("button", { name: "Find and replace in this note" }).click();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await expect(page.locator(".cm-search input[name=search]")).toHaveValue("old word");
+  await expect(page.locator(".cm-search input[name=replace]")).toBeVisible();
+  // Without an open note there is nothing to search in.
+  await page.goto("/");
+  await (await searchBox(page)).click();
+  await expect(page.getByRole("button", { name: "Find and replace in this note" })).toBeHidden();
+});
+
 test("controls show themed tooltips with their shortcut instead of the browser's", async ({ page }) => {
   await openSeed(page, "Tooltips.");
   const bold = page.locator('[data-format="bold"]');

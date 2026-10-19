@@ -59,7 +59,7 @@ export interface SourceEditor {
   view: EditorView;
   replace(body: string, options?: { reset?: boolean }): void;
   focus(): void;
-  find(): void;
+  find(query?: string): void;
   readOnly(value: boolean): void;
   insert(text: string): void;
   wrap(before: string, after?: string): void;

@@ -159,18 +159,29 @@
         >
           <span data-icon="search"></span>
         </button>
-        <label class="search"
-          ><span data-icon="search"></span
-          ><input
-            id="search"
-            type="search"
-            placeholder="Search notes"
-            autocomplete="off"
-            aria-label="Search notes"
-          /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
-            <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
-          </kbd></label
-        >
+        <div class="search">
+          <label class="search-field"
+            ><span data-icon="search"></span
+            ><input
+              id="search"
+              type="search"
+              placeholder="Search notes"
+              autocomplete="off"
+              aria-label="Search notes"
+            /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
+              <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
+            </kbd></label
+          ><button
+            id="find-replace"
+            class="icon-button find-replace"
+            type="button"
+            title="Find and replace in this note"
+            aria-label="Find and replace in this note"
+            disabled
+          >
+            <span data-icon="replace"></span>
+          </button>
+        </div>
         </div>
           <span class="save-state" id="save-state" role="status"
             ><span class="save-dot"></span

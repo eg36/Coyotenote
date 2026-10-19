@@ -6,6 +6,7 @@ interface AppElements {
   "document-title": HTMLButtonElement;
   "search": HTMLInputElement;
   "search-button": HTMLButtonElement;
+  "find-replace": HTMLButtonElement;
   "outline-button": HTMLButtonElement;
   "history-button": HTMLButtonElement;
   "export-note": HTMLButtonElement;

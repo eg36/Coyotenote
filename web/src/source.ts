@@ -33,7 +33,7 @@ import {
   bracketMatching,
 } from "@codemirror/language";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
-import { searchKeymap, highlightSelectionMatches, openSearchPanel } from "@codemirror/search";
+import { searchKeymap, highlightSelectionMatches, openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
 import { tags } from "@lezer/highlight";
 
 export function createSource(
@@ -199,8 +199,11 @@ export function createSource(
     focus() {
       view.focus();
     },
-    find() {
+    find(query) {
       openSearchPanel(view);
+      // Start from the words already typed in the notes search, if any.
+      // The panel exists only once opened, so the query follows it.
+      if (query) view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: query })) });
     },
     readOnly(value) {
       view.dispatch({
