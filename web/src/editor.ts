@@ -55,12 +55,15 @@ async function save(): Promise<void> {
   setSaveState("saving", "Saving…");
   state.savingBody = body;
   state.saving = (async () => {
-    const { warning, ...note } = await api<Note>("/api/note", "PUT", {
+    const { warning, stamps, ...note } = await api<Note>("/api/note", "PUT", {
       id,
       body,
       revision: base,
     });
     if (warning) showToast(warning, { persistent: true });
+    // Only this save changed the vault since the tab last looked, so the
+    // change watcher has nothing to fetch.
+    if (stamps && stamps[0] === state.stamp) state.stamp = stamps[1];
     if (state.current?.id !== id) return;
     state.current = { ...state.current, ...note };
     state.savedBody = body;
@@ -108,6 +111,7 @@ async function refresh({ query = state.search } = {}) {
   versionLink.setAttribute("aria-label", versionLink.title);
   versionLink.hidden = false;
   state.notes = data.notes;
+  state.stamp = data.stamp;
   state.filteredIds = query ? new Set(data.matches) : null;
   state.snippets = query ? data.snippets : {};
   state.searched = query;

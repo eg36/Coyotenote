@@ -1173,6 +1173,38 @@ test("a server restarted on another vault cannot take over an open tab", async (
   expect(await diskBody(page, id)).toContain("Same text in both vaults.");
 });
 
+test("an open tab picks up outside changes on its own, but not its own saves", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "Original text.");
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  let lists = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/state") lists++;
+  });
+  await editor.fill("Saved here.");
+  await expect.poll(() => diskBody(page, id)).toBe("Saved here.");
+  // Several polls pass without fetching the list for this tab's own save.
+  await page.waitForTimeout(3500);
+  await page.waitForResponse((r) => r.url().endsWith("/api/stamp"));
+  expect(lists).toBe(0);
+
+  const bootstrap = await (await page.request.get("/api/state")).json();
+  const note = await (
+    await page.request.get("/api/note?id=" + encodeURIComponent(id))
+  ).json();
+  await page.request.put("/api/note", {
+    headers: { "X-Labradorite-Token": bootstrap.token },
+    data: { id, body: "Edited elsewhere.", revision: note.revision },
+  });
+  const outside = `Outside live ${Date.now()}`;
+  await seed(page, outside, "Made by another program.");
+  // No focus event: the tab notices by itself.
+  await expect(editor).toContainText("Edited elsewhere.", { timeout: 8000 });
+  await expect(page.locator("#toast")).toContainText("Reloaded changes");
+  await expect(page.locator("#note-list")).toContainText(outside);
+});
+
 test("returning to the tab picks up notes changed outside the app", async ({
   page,
 }) => {

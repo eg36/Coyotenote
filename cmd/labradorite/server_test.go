@@ -466,6 +466,41 @@ func TestListCacheFollowsChangesOnDisk(t *testing.T) {
 	}
 }
 
+// Open tabs poll the stamp to notice changes made elsewhere; a save tells
+// its tab the stamps on either side of its own write.
+func TestStampChangesWithContentsAndNamesOnly(t *testing.T) {
+	a := testApp(t)
+	n := request(t, a, "POST", "/api/note", mutation{ID: "Watched", Body: "one"}, 201)
+	stamp := func() string { return request(t, a, "GET", "/api/stamp", nil, 200)["stamp"].(string) }
+	first := stamp()
+	if state := request(t, a, "GET", "/api/state", nil, 200); state["stamp"] != first {
+		t.Fatalf("state stamp %v, want %v", state["stamp"], first)
+	}
+	later := time.Now().Add(time.Hour)
+	if err := os.Chtimes(a.store.Path("Watched"), later, later); err != nil {
+		t.Fatal(err)
+	}
+	if stamp() != first {
+		t.Fatal("a new modification time alone changed the stamp")
+	}
+	saved := request(t, a, "PUT", "/api/note", mutation{ID: "Watched", Body: "two", Revision: n["revision"].(string)}, 200)
+	stamps := saved["stamps"].([]any)
+	if stamps[0] != first || stamps[1] != stamp() || stamps[1] == first {
+		t.Fatalf("save stamps %v around %s", stamps, first)
+	}
+	if err := os.WriteFile(a.store.Path("Watched"), []byte("three"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	outside := stamp()
+	if outside == stamps[1] {
+		t.Fatal("outside edit kept the stamp")
+	}
+	request(t, a, "POST", "/api/note", mutation{ID: "Another", Body: ""}, 201)
+	if stamp() == outside {
+		t.Fatal("new note kept the stamp")
+	}
+}
+
 func TestMovesRemoveFoldersTheyLeaveEmpty(t *testing.T) {
 	a := testApp(t)
 	exists := func(rel string) bool {

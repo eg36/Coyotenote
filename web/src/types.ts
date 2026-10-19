@@ -15,6 +15,7 @@ export interface Note {
   backlinks: string[];
   tags: string[];
   warning?: string;
+  stamps?: [string, string];
 }
 export interface Theme {
   id: string;
@@ -31,6 +32,7 @@ export interface StateResponse extends Session {
   theme: string;
   vault: string;
   formerVaultIds: string[];
+  stamp: string;
   version: string;
   warnings: string[];
   limits: { lines: number; bytes: number };
@@ -99,6 +101,7 @@ export interface AppState {
   restoring: boolean;
   busy: boolean;
   tag: string;
+  stamp?: string;
   version?: string;
   snippets?: Record<string, string>;
   searched?: string;

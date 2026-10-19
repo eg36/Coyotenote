@@ -84,6 +84,9 @@ type noteView struct {
 	Backlinks []string `json:"backlinks"`
 	Tags      []string `json:"tags"`
 	Warning   string   `json:"warning,omitempty"`
+	// Stamps holds the vault's stamp before and after a save, so the tab
+	// that saved can tell its own write from changes made elsewhere.
+	Stamps []string `json:"stamps,omitempty"`
 }
 
 type mutation struct {
@@ -284,6 +287,17 @@ func (a *webApp) forgetDerived(notes []vault.Note) {
 	a.derived = keep
 }
 
+// stamp identifies the vault's notes and their contents. Open tabs poll it
+// to notice changes made outside the app, or in another tab, while they
+// stay open.
+func (a *webApp) stamp(notes []vault.Note) string {
+	h := sha256.New()
+	for _, n := range notes {
+		_, _ = io.WriteString(h, n.ID+"\x00"+a.derive(n).view.Revision+"\x00")
+	}
+	return hex.EncodeToString(h.Sum(nil))[:16]
+}
+
 // eachBacklink calls visit for every note linking to another note, once
 // per pair.
 func (a *webApp) eachBacklink(notes []vault.Note, visit func(from, to string)) {
@@ -351,6 +365,10 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	route := r.Method + " " + r.URL.Path
+	if route == "GET /api/stamp" {
+		writeJSON(w, 200, map[string]string{"stamp": a.stamp(notes)})
+		return nil
+	}
 	if route == "GET /api/state" {
 		theme := "dark"
 		if b, e := os.ReadFile(filepath.Join(a.store.Config, "theme")); e == nil && validTheme(strings.TrimSpace(string(b))) {
@@ -386,7 +404,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.Recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.Recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/note" || route == "GET /api/export" {
@@ -477,6 +495,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			_, crlf := vault.EditorText(n.Body)
 			body := vault.DiskText(in.Body, crlf)
 			warning := a.keepVersion(n, false)
+			before := a.stamp(notes)
 			if err = a.store.Save(n, body); err != nil {
 				return &apiError{status: 409, message: err.Error()}
 			}
@@ -492,6 +511,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 			view.Warning = warning
+			view.Stamps = []string{before, a.stamp(notes)}
 			writeJSON(w, 200, view)
 		case "DELETE /api/note":
 			trashID, err := a.store.Trash(n)

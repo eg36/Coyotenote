@@ -257,9 +257,10 @@ alone.
 
 The app accepts notes up to **10,000 lines and 4 MiB**, with a **1 MiB** rich-editor
 paste limit. Invalid UTF-8, control characters, unsafe names and symlinks are
-rejected/skipped. Use a local filesystem and back up the vault. External filesystem
-edits are picked up when you return to the tab, search or open a note; a note with
-unsaved edits is never replaced. Files are not watched live.
+rejected/skipped. Use a local filesystem and back up the vault. Edits made by other
+programs or tabs appear within a few seconds while the tab is visible (it checks a
+small fingerprint of the vault every 3 seconds), and at once when you return to the
+tab, search or open a note; a note with unsaved edits is never replaced.
 
 ## How it works
 
@@ -341,8 +342,8 @@ deployment.
 4. Reload and confirm saved content; try changing the theme and reload again.
 5. Create a second note, insert a wiki link, follow it, inspect backlinks and go back.
 6. Search note contents, rename/move a note, trash it and use Undo.
-7. Open the same note in two tabs. Edit one, then return to the other: it reloads
-   the newer text. A tab that still holds unsaved edits keeps them instead, and
+7. Open the same note in two tabs side by side. Edit one: within a few seconds the
+   other reloads the newer text. A tab that still holds unsaved edits keeps them instead, and
    saving reports a conflict while keeping the first version on disk.
 8. Stop the server, type a draft, restart the server, and reload. Restore the draft,
    then save; no draft should silently replace a newer disk revision.

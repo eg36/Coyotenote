@@ -396,6 +396,17 @@ async function syncFromDisk() {
   }
 }
 window.addEventListener("focus", syncFromDisk);
+// While the tab stays open, a cheap stamp of the vault shows when notes
+// changed elsewhere; only then is the list fetched and synced as above.
+setInterval(async () => {
+  if (!state.ready || syncing || document.hidden || !state.stamp) return;
+  try {
+    const { stamp } = await api<{ stamp: string }>("/api/stamp");
+    if (stamp !== state.stamp) await syncFromDisk();
+  } catch {
+    // An unreachable server is reported by the next save instead.
+  }
+}, 3000);
 window.addEventListener("online", () => {
   if (state.dirty) save().catch(showError);
 });
