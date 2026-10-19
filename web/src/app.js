@@ -269,6 +269,12 @@ async function refresh({ query = state.search } = {}) {
     "/api/state" + (query ? "?q=" + encodeURIComponent(query) : ""),
   );
   if (generation !== state.searchGeneration) return;
+  // A server restarted on another vault must not lend this tab its token,
+  // or the open note and drafts would be saved into the wrong vault.
+  if (state.vaultId && data.vaultId !== state.vaultId)
+    throw new Error(
+      "The local app now serves a different vault, so this tab no longer saves. Download any unsaved edits, then reload the page to open that vault.",
+    );
   state.token = data.token;
   state.vaultId = data.vaultId;
   state.themes = data.themes;

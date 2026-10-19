@@ -741,6 +741,47 @@ test("autosave renews a stale token after a restart but never across vaults", as
   expect(await diskBody(page, id)).toContain("After restart.");
 });
 
+test("a server restarted on another vault cannot take over an open tab", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "Same text in both vaults.");
+  // Model a restart on another vault: the old token is refused, and the new
+  // server would accept only its own token for the same note name.
+  let switched = false,
+    leaked = false;
+  await page.route("**/api/state*", async (route) => {
+    if (!switched) return route.continue();
+    const json = await (await route.fetch()).json();
+    return route.fulfill({
+      json: { ...json, token: "new-vault-token", vaultId: "another-vault" },
+    });
+  });
+  await page.route("**/api/session", (route) =>
+    switched
+      ? route.fulfill({
+          json: { token: "new-vault-token", vaultId: "another-vault" },
+        })
+      : route.continue(),
+  );
+  await page.route("**/api/note", (route) => {
+    const request = route.request();
+    if (!switched || request.method() === "GET") return route.continue();
+    if (request.headers()["x-coyote-token"] === "new-vault-token") leaked = true;
+    return route.fulfill({ status: 403, json: { error: "Invalid token" } });
+  });
+  switched = true;
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.getByLabel("Search notes").fill("Same");
+  await expect(page.locator("#error-text")).toContainText("different vault");
+  await page.getByRole("textbox", { name: "WYSIWYG editor" }).fill("Edited here.");
+  await expect(page.locator("#retry-save")).toHaveText("Retry save");
+  await page.locator("#retry-save").click();
+  await expect(page.locator("#error-text")).toContainText("different vault");
+  await expect(page.locator("#download-draft")).toBeVisible();
+  expect(leaked).toBe(false);
+  expect(await diskBody(page, id)).toContain("Same text in both vaults.");
+});
+
 test("returning to the tab picks up notes changed outside the app", async ({
   page,
 }) => {
