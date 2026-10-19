@@ -1945,7 +1945,8 @@ dialog {
   padding: 0;
   width: min(520px, calc(100% - 32px));
   max-height: 85dvh;
-  box-shadow: 0 24px 64px #0005;
+  /* A close, soft shadow: a wide dark one showed as a halo on dark themes. */
+  box-shadow: 0 8px 24px #0003, 0 1px 3px #0002;
   overflow: auto;
 }
 dialog::backdrop {
