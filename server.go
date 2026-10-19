@@ -28,7 +28,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 )
 
-//go:embed web/index.html web/assets/*
+//go:embed web/index.html web/assets/* logo.png
 var assets embed.FS
 
 const maxBodyBytes = 4 << 20
@@ -127,6 +127,12 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
 		data, _ := assets.ReadFile("web/index.html")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(data)
+		return
+	}
+	if r.URL.Path == "/assets/logo.png" {
+		data, _ := assets.ReadFile("logo.png")
+		w.Header().Set("Content-Type", "image/png")
 		_, _ = w.Write(data)
 		return
 	}

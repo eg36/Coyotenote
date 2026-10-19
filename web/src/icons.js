@@ -1,6 +1,4 @@
 const paths = {
-  coyote:
-    '<path d="m3 3 7 4 4-4 7 2-3 12-6 4-7-4Z"/><path d="m3 3 4 9 5 3 6-3 3-7M7 12l1-4m10 4-2-4m-6 8h4m-2 0v3"/>',
   vault:
     '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M8 5V3h8v2m-4 5v5m-3-2h6"/>',
   notebook:
