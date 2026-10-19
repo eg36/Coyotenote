@@ -49,8 +49,9 @@ the SIL Open Font License.
 Each browser tab has its own draft key under a vault-specific prefix. A pending
 draft blocks editing until restored/discarded and survives additional reloads.
 Restoring a draft keeps its original base revision: an old draft cannot overwrite
-newer disk content. A server restart changes the request token; Retry save refreshes
-the local token before retrying.
+newer disk content. A server restart changes the request token; a rejected request
+renews it once from `/api/session` and retries, but only while the server still
+serves the same vault.
 
 The original Linux CI settings are retained, with a web_alpha push trigger and
 an added Chromium job. No release workflow is present. The Go/API checks and a

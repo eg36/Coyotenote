@@ -658,3 +658,31 @@ test("trashing the only search match opens another note without errors", async (
   await expect(page.locator("#note-list .note-row")).toHaveCount(1);
   await expect(page.locator("#note-list")).toContainText(keep);
 });
+
+test("autosave renews a stale token after a restart but never across vaults", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "Before restart.");
+  let stale = 1;
+  await page.route("**/api/note", (route) => {
+    const request = route.request();
+    if (request.method() !== "PUT" || stale-- <= 0) return route.continue();
+    return route.continue({
+      headers: { ...request.headers(), "x-coyote-token": "stale-token" },
+    });
+  });
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  await editor.fill("After restart.");
+  await expect.poll(() => diskBody(page, id)).toContain("After restart.");
+  await expect(page.locator("#error-banner")).toBeHidden();
+
+  stale = 1;
+  await page.route("**/api/session", (route) =>
+    route.fulfill({
+      json: { token: "another-vault-token", vaultId: "another-vault" },
+    }),
+  );
+  await editor.fill("Wrong vault.");
+  await expect(page.locator("#error-banner")).toBeVisible();
+  expect(await diskBody(page, id)).toContain("After restart.");
+});

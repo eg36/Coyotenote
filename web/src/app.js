@@ -70,7 +70,20 @@ try {
 const draftPrefix = () => `coyote-draft:${state.vaultId}:`;
 const draftKey = () => `${draftPrefix()}${tabId}:${state.current?.id}`;
 
-async function api(path, method = "GET", data) {
+// A restarted server issues a new token. Renew it once, but only when the
+// server still serves this tab's vault, so edits never reach another vault.
+async function renewToken() {
+  try {
+    const response = await fetch("/api/session", { cache: "no-store" });
+    const session = await response.json();
+    if (!response.ok || session.vaultId !== state.vaultId) return false;
+    state.token = session.token;
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function api(path, method = "GET", data, retried = false) {
   let response;
   try {
     response = await fetch(path, {
@@ -99,6 +112,13 @@ async function api(path, method = "GET", data) {
     );
   }
   if (!response.ok) {
+    if (
+      response.status === 403 &&
+      method !== "GET" &&
+      !retried &&
+      (await renewToken())
+    )
+      return api(path, method, data, true);
     const error = new Error(result.error || "Request failed");
     error.status = response.status;
     error.current = result.current;

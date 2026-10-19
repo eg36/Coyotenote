@@ -322,3 +322,19 @@ func TestSearchReportsMatchesAlongsideEveryNote(t *testing.T) {
 		t.Fatalf("unfiltered state reported matches %v", state["matches"])
 	}
 }
+
+func TestSessionRenewsTokenForTheSameVaultOnly(t *testing.T) {
+	a := testApp(t)
+	session := request(t, a, "GET", "/api/session", nil, 200)
+	state := request(t, a, "GET", "/api/state", nil, 200)
+	if session["token"] != a.token || session["vaultId"] != state["vaultId"] {
+		t.Fatalf("session %v does not match state", session)
+	}
+	r := httptest.NewRequest("GET", "http://127.0.0.1:4280/api/session", nil)
+	r.Header.Set("Origin", "https://attacker.example")
+	w := httptest.NewRecorder()
+	a.ServeHTTP(w, r)
+	if w.Code != http.StatusForbidden || strings.Contains(w.Body.String(), a.token) {
+		t.Fatalf("cross-origin session request: %d %s", w.Code, w.Body.String())
+	}
+}
