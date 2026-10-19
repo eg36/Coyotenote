@@ -35,6 +35,7 @@ const state = {
   restoring: false,
 };
 let modalAction = null,
+  modalBusy = 0,
   toastTimer = null,
   themeOriginal = null;
 const storage = {
@@ -730,6 +731,16 @@ function openModal(
     30,
   );
 }
+// A dialog stays open while its action runs, so nothing can be edited or
+// opened between the request and the screen catching up with it.
+function busyModal(busy) {
+  modalBusy += busy ? 1 : -1;
+  for (const id of ["modal-submit", "modal-cancel", "modal-close"])
+    $(id).disabled = modalBusy > 0;
+}
+function dismissModal() {
+  if (!modalBusy) closeModal();
+}
 function closeModal() {
   if (themeOriginal) {
     applyTheme(themeOriginal);
@@ -811,13 +822,15 @@ function deleteDialog() {
     content,
     async () => {
       await save();
-      const id = state.current.id;
+      const id = state.current.id,
+        key = draftKey();
       const { trashId, warning } = await api("/api/note", "DELETE", {
         id,
         revision: state.current.revision,
       });
       state.trash.push({ id, trashId });
-      storage.remove(draftKey());
+      // Edits that never reached the file stay recoverable as a draft.
+      if (state.current?.id !== id || !state.dirty) storage.remove(key);
       await refresh();
       const next = visibleNotes()[0] || state.notes[0];
       if (next) await openNote(next.id, { skipSave: true });
@@ -839,7 +852,8 @@ async function undoTrash() {
   });
   state.trash.pop();
   await refresh();
-  await openNote(note.id, { skipSave: true });
+  // The open note is still there, so edits typed meanwhile are saved first.
+  await openNote(note.id);
   showToast(["Note restored.", note.warning].filter(Boolean).join(" "));
 }
 async function trashDialog() {
@@ -874,17 +888,22 @@ async function trashDialog() {
     restore.setAttribute("aria-label", "Restore " + note.id);
     restore.onclick = async () => {
       restore.disabled = true;
+      busyModal(true);
       try {
         await save();
         const restored = await api("/api/restore", "POST", { id: note.id });
         state.trash = state.trash.filter((item) => item.trashId !== note.id);
         await refresh();
+        busyModal(false);
         closeModal();
-        await openNote(restored.id, { skipSave: true });
+        await openNote(restored.id);
         showToast(["Note restored.", restored.warning].filter(Boolean).join(" "));
       } catch (error) {
-        $("modal-error").textContent = error.message;
-        restore.disabled = false;
+        if (modalBusy) busyModal(false);
+        if ($("modal").open) {
+          $("modal-error").textContent = error.message;
+          restore.disabled = false;
+        } else showError(error);
       }
     };
     row.append(label, restore);
@@ -1329,25 +1348,29 @@ $("block-menu").addEventListener("focusout", () => closeBlockMenu());
 addEventListener("resize", () => closeBlockMenu());
 $("modal-form").onsubmit = async (event) => {
   event.preventDefault();
-  if (!modalAction) return;
-  $("modal-submit").disabled = true;
+  if (!modalAction || modalBusy) return;
+  busyModal(true);
   try {
     await modalAction();
+    busyModal(false);
     closeModal();
   } catch (error) {
+    busyModal(false);
     $("modal-error").textContent = error.message;
-  } finally {
-    $("modal-submit").disabled = false;
   }
 };
-$("modal-close").onclick = closeModal;
-$("modal-cancel").onclick = closeModal;
+$("modal-close").onclick = dismissModal;
+$("modal-cancel").onclick = dismissModal;
 $("modal").addEventListener("cancel", (event) => {
   event.preventDefault();
-  closeModal();
+  dismissModal();
+});
+// Browsers close a dialog on a repeated Escape even when cancel is refused.
+$("modal").addEventListener("close", () => {
+  if (modalBusy) $("modal").showModal();
 });
 $("modal").onclick = (event) => {
-  if (event.target === $("modal")) closeModal();
+  if (event.target === $("modal")) dismissModal();
 };
 $("toast-close").onclick = () => {
   $("toast").hidden = true;

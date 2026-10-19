@@ -790,6 +790,63 @@ test("trashing the only search match opens another note without errors", async (
   await expect(page.locator("#note-list")).toContainText(keep);
 });
 
+test("a trash in progress cannot be dismissed and undo keeps edits made meanwhile", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  const id = `Deleting ${stamp}`;
+  await seed(page, `Surviving ${stamp}`, "The surviving note.");
+  await openSeed(page, "Original before trash.", id);
+  await mode(page, "Markdown");
+  // Let each request finish on the server but hold its answer.
+  let release;
+  const holdAnswer = async (route) => {
+    const response = await route.fetch();
+    await new Promise((resolve) => (release = resolve));
+    await route.fulfill({ response });
+  };
+  await page.route("**/api/note", (route) =>
+    route.request().method() === "DELETE" ? holdAnswer(route) : route.fallback(),
+  );
+  await page
+    .getByRole("button", { name: "Move note to trash", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Move to trash", exact: true }).click();
+  await expect.poll(() => typeof release).toBe("function");
+  await expect(page.locator("#modal-cancel")).toBeDisabled();
+  await expect(page.locator("#modal-close")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await page.mouse.click(5, 5);
+  await expect(page.locator("#modal")).toBeVisible();
+  await page.keyboard.type("Typed while the trash was pending.");
+  release();
+  await expect(page.locator("#modal")).toBeHidden();
+  await expect(page.locator("#document-title")).not.toHaveText(id);
+  const trash = await (await page.request.get("/api/trash")).json();
+  expect(trash.notes.find((note) => note.id === id)?.excerpt).toContain(
+    "Original before trash.",
+  );
+  const drafts = await page.evaluate(() =>
+    Object.keys(localStorage).filter((key) => key.startsWith("coyote-draft:")),
+  );
+  expect(drafts).toEqual([]);
+
+  // Undo restores the note only after saving what was typed in the meantime.
+  const current = new URL(page.url()).searchParams.get("note");
+  release = undefined;
+  await page.route("**/api/restore", holdAnswer);
+  await page.locator("#undo-trash").click();
+  await expect.poll(() => typeof release).toBe("function");
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(" Typed during undo.");
+  release();
+  await expect(page.locator("#document-title")).toHaveText(id);
+  await expect.poll(() => diskBody(page, current)).toContain("Typed during undo.");
+  expect(await diskBody(page, id)).toBe("Original before trash.");
+});
+
 test("autosave renews a stale token after a restart but never across vaults", async ({
   page,
 }) => {
