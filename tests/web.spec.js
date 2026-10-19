@@ -320,22 +320,43 @@ test("conflicting tabs keep both versions and offer recovery", async ({
 });
 
 test("browser draft recovers after a reload while server writes fail", async ({
-  page,
+  page, context,
 }) => {
-  const id = await openSeed(page, "Before disconnect.");
+  const original = "Before disconnect.";
+  const draft = "Keep this unsaved draft.";
+  const id = await openSeed(page, original);
   await mode(page, "Markdown");
-  await page.route("**/api/note", (route) =>
-    route.request().method() === "PUT" ? route.abort() : route.continue(),
-  );
-  await page.locator(".cm-content").fill("Keep this unsaved draft.");
-  await expect(page.locator("#error-banner")).toBeVisible();
+  // Keep the simulated server outage in force across document teardown/reload,
+  // including saves attempted by the old document's visibilitychange handler.
+  const blockWrites = (route) => route.request().method() === "PUT"
+    ? route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Simulated save outage" }),
+      })
+    : route.continue();
+  await context.route("**/api/note", blockWrites);
+  await page.locator(".cm-content").fill(draft);
+  await expect(page.locator("#error-banner")).toContainText("Simulated save outage");
+  const storedDraft = () => page.evaluate((id) => {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith("coyote-draft:")) continue;
+      const value = JSON.parse(localStorage.getItem(key));
+      if (value.id === id) return value.body;
+    }
+    return null;
+  }, id);
+  await expect.poll(storedDraft).toBe(draft);
+  expect(await diskBody(page, id)).toBe(original);
   page.on("dialog", (dialog) => dialog.accept());
   await page.reload();
+  expect(await diskBody(page, id)).toBe(original);
+  await expect.poll(storedDraft).toBe(draft);
   await expect(page.locator("#draft-banner")).toBeVisible();
-  await page.unroute("**/api/note");
+  await context.unroute("**/api/note", blockWrites);
   await page.locator("#restore-draft").click();
   await page.keyboard.press("Control+s");
-  await expect.poll(() => diskBody(page, id)).toBe("Keep this unsaved draft.");
+  await expect.poll(() => diskBody(page, id)).toBe(draft);
 });
 
 test("unsupported Markdown is kept in source, without normalization", async ({
