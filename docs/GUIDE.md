@@ -71,6 +71,8 @@ as the visible controls and keyboard shortcuts; note-only commands are disabled
 on the start page. Use ↑/↓ within a menu, ←/→ to switch menus and Escape to close.
 The toolbar row below starts with the notes sidebar toggle and the back button,
 followed by the writing views and formatting controls.
+On phones the menus stay under the title; note actions are available in File
+and View, leaving more room for the note name.
 
 The interface and writing pane use locally bundled **Lexend**. The writing size
 defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints

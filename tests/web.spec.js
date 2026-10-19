@@ -1877,3 +1877,26 @@ test("invalid saved preferences fall back safely and unavailable storage is expl
   await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "20px");
   await expect(page.locator("#toast")).toContainText("could not remember them");
 });
+
+test("phone menus keep journal commands and settings reachable without a keyboard", async ({ page }) => {
+  await openSeed(page, "A phone-sized writing space.", `A long document title that must leave room for the menus ${Date.now()}`);
+  for (const width of [320, 390, 530]) {
+    await page.setViewportSize({width,height:720});
+    await page.locator('[data-menu="view"]').click();
+    const item = page.getByRole("menuitem", {name:"Writing settings…"});
+    await expect(item).toBeInViewport();
+    await item.click();
+    await expect(page.getByLabel("Text size", {exact:true})).toBeInViewport();
+    await page.getByRole("button", {name:"Cancel",exact:true}).click();
+    await page.locator('[data-menu="file"]').click();
+    await expect(page.getByRole("menuitem", {name:"Today's note"})).toBeInViewport();
+    await page.keyboard.press("Escape");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  }
+  await page.setViewportSize({width:390,height:320});
+  await page.locator('[data-menu="view"]').click();
+  const popup = page.locator("#menu-popup");
+  expect(await popup.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy();
+  await page.getByRole("menuitem", {name:"Writing settings…"}).click();
+  await expect(page.getByRole("dialog", {name:"Writing settings"})).toBeVisible();
+});
