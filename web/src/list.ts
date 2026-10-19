@@ -161,13 +161,44 @@ function filterTag(tag: string) {
     $("app").classList.add("sidebar-open");
   }
 }
+// Rows remember what they show. A render that keeps the same rows in the
+// same order (opening a note, an autosave) only touches the rows whose
+// text or selection changed: rebuilding thousands of rows each time is
+// slow in large vaults.
+let listShape = "";
+const rowContent = new WeakMap<HTMLElement, string>();
+function fillRow(button: HTMLButtonElement, note: Note) {
+  const selected = state.current?.id === note.id;
+  button.classList.toggle("selected", selected);
+  button.setAttribute("aria-current", selected ? "page" : "false");
+  const found = state.filteredIds && state.snippets?.[note.id];
+  const content = JSON.stringify([note.title, note.modified, note.excerpt, found, state.searched]);
+  if (rowContent.get(button) === content) return;
+  rowContent.set(button, content);
+  const head = document.createElement("span");
+  head.className = "note-row-head";
+  const label = document.createElement("span");
+  label.className = "note-title";
+  label.textContent = note.title.split("/").pop() || note.title;
+  const date = document.createElement("time");
+  date.className = "note-date";
+  date.textContent = shortDate(note.modified);
+  head.append(label, date);
+  const text = document.createElement("span");
+  text.className = "note-excerpt";
+  if (found) highlight(text, found, state.searched || "");
+  else
+    text.textContent =
+      excerpt(note.excerpt, label.textContent) || "Empty note";
+  button.replaceChildren(head, text);
+}
 function renderList() {
   renderTags();
   const notes = visibleNotes();
   const list = $("note-list");
-  list.replaceChildren();
   $("note-count").textContent = String(notes.length);
   if (!notes.length) {
+    listShape = "";
     const el = document.createElement("p");
     el.className = "list-empty";
     el.textContent = state.search
@@ -175,12 +206,25 @@ function renderList() {
       : state.tag
         ? "No notes with this tag."
         : "No notes yet.";
-    list.append(el);
+    list.replaceChildren(el);
     return;
   }
-  list.classList.toggle("searching", Boolean(state.filteredIds));
   const collapsed = state.filteredIds || state.tag ? new Set() : collapsedFolders();
+  const shape = JSON.stringify([notes.map((n) => n.id), [...collapsed], Boolean(state.filteredIds)]);
+  if (shape === listShape) {
+    const byId = new Map(notes.map((n) => [n.id, n]));
+    for (const button of list.querySelectorAll<HTMLButtonElement>(".note-row")) {
+      const note = byId.get(button.dataset.note || "");
+      if (note) fillRow(button, note);
+    }
+    return;
+  }
+  listShape = shape;
+  list.replaceChildren();
+  list.classList.toggle("searching", Boolean(state.filteredIds));
   const folderOf = (note: Note) => note.id.split("/").slice(0, -1).join("/");
+  const counts = new Map<string, number>();
+  for (const note of notes) counts.set(folderOf(note), (counts.get(folderOf(note)) || 0) + 1);
   let lastFolder = null;
   for (const note of notes) {
     const folder = folderOf(note);
@@ -194,7 +238,7 @@ function renderList() {
       const name = document.createElement("span");
       name.textContent = folder || "Notebook";
       const count = document.createElement("small");
-      count.textContent = String(notes.filter((n) => folderOf(n) === folder).length);
+      count.textContent = String(counts.get(folder));
       label.append(name, count);
       label.onclick = () => {
         setCollapsed(folder, !collapsed.has(folder));
@@ -205,32 +249,10 @@ function renderList() {
     }
     if (collapsed.has(folder)) continue;
     const button = document.createElement("button");
-    button.className =
-      "note-row" + (state.current?.id === note.id ? " selected" : "");
+    button.className = "note-row";
     button.dataset.note = note.id;
     button.title = note.id;
-    button.setAttribute(
-      "aria-current",
-      state.current?.id === note.id ? "page" : "false",
-    );
-    const head = document.createElement("span");
-    head.className = "note-row-head";
-    const label = document.createElement("span");
-    label.className = "note-title";
-    label.textContent = note.title.split("/").pop() || note.title;
-    const date = document.createElement("time");
-    date.className = "note-date";
-    date.textContent = shortDate(note.modified);
-    head.append(label, date);
-    button.append(head);
-    const text = document.createElement("span");
-    text.className = "note-excerpt";
-    const found = state.filteredIds && state.snippets?.[note.id];
-    if (found) highlight(text, found, state.searched || "");
-    else
-      text.textContent =
-        excerpt(note.excerpt, label.textContent) || "Empty note";
-    button.append(text);
+    fillRow(button, note);
     button.onclick = () => openNote(note.id).catch(showError);
     button.dataset.folder = folder;
     button.draggable = true;

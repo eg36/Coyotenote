@@ -1211,6 +1211,26 @@ test("a server restarted on another vault cannot take over an open tab", async (
   expect(await diskBody(page, id)).toContain("Same text in both vaults.");
 });
 
+test("opening a note updates the list in place, and saves still refresh its row", async ({ page }) => {
+  const stamp = Date.now();
+  const first = `Inplace A ${stamp}`, second = `Inplace B ${stamp}`;
+  await seed(page, second, "Second body.");
+  await openSeed(page, "First body.", first);
+  await page.locator("#note-sort").selectOption("title-asc");
+  const row = (id) => page.locator(`.note-row[data-note="${id}"]`);
+  await row(second).evaluate((el) => { el.kept = true; });
+  await row(second).click();
+  await expect(page.locator("#document-title")).toHaveText(second);
+  await expect(row(second)).toHaveClass(/selected/);
+  await expect(row(second)).toHaveAttribute("aria-current", "page");
+  await expect(row(first)).not.toHaveClass(/selected/);
+  expect(await row(second).evaluate((el) => el.kept)).toBe(true);
+  await mode(page, "Markdown");
+  await page.locator(".cm-content").fill("Edited in place.");
+  await expect(row(second).locator(".note-excerpt")).toHaveText("Edited in place.");
+  expect(await row(second).evaluate((el) => el.kept)).toBe(true);
+});
+
 test("an open tab picks up outside changes on its own, but not its own saves", async ({
   page,
 }) => {
