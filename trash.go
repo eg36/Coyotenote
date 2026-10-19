@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"unicode/utf8"
 )
@@ -51,46 +53,56 @@ func requireAbsent(path string) error {
 }
 
 // trash moves a note into .trash at the vault root, keeping its folder path.
-func (s *store) trash(n note) error {
+// A name already in the trash gets the lowest free " N" suffix, so trashing
+// a note never replaces an earlier one; the returned ID is its trash name.
+func (s *store) trash(n note) (string, error) {
 	if !validID(n.ID) {
-		return errors.New("invalid note ID")
+		return "", errors.New("invalid note ID")
 	}
 	sourceDir, err := noteDir(s.dir, n.ID, false)
 	if err != nil {
-		return err
+		return "", err
 	}
 	source := s.path(n.ID)
 	body, err := readRegularNote(source)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if string(body) != n.Body {
-		return errors.New("note changed outside coyotenote; restart before deleting")
+		return "", errors.New("note changed outside coyotenote; restart before deleting")
 	}
 	trash, err := s.trashDirectory(true)
 	if err != nil {
-		return err
+		return "", err
 	}
 	dir, err := noteDir(trash, n.ID, true)
 	if err != nil {
-		return err
+		return "", err
 	}
-	destination := filepath.Join(trash, filepath.FromSlash(n.ID)+".md")
-	if err = requireAbsent(destination); err != nil {
-		return err
+	id, destination := n.ID, ""
+	for i := 2; ; i++ {
+		destination = filepath.Join(trash, filepath.FromSlash(id)+".md")
+		if err = requireAbsent(destination); err == nil {
+			break
+		}
+		if _, statErr := os.Lstat(destination); statErr != nil {
+			return "", err
+		}
+		id = joinID(folderOf(n.ID), fmt.Sprintf("%s %d", path.Base(n.ID), i))
 	}
 	if err = renameReplace(source, destination); err != nil {
-		return err
+		return "", err
 	}
 	if err := errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
-		return movedSyncError{err}
+		return id, movedSyncError{err}
 	}
-	return nil
+	return id, nil
 }
 
-// restore moves a trashed note back, recreating its folders when needed.
-func (s *store) restore(id string) (note, error) {
-	if !validID(id) {
+// restore moves the trashed note named id back to the vault as to,
+// recreating its folders when needed.
+func (s *store) restore(id, to string) (note, error) {
+	if !validID(id) || !validID(to) {
 		return note{}, errors.New("invalid note ID")
 	}
 	trash, err := s.trashDirectory(false)
@@ -109,17 +121,17 @@ func (s *store) restore(id string) (note, error) {
 	if !utf8.Valid(body) || lineCount(string(body)) > maxLines || hasControl(string(body)) {
 		return note{}, errors.New("trashed note is not valid UTF-8, exceeds the line limit or holds control characters")
 	}
-	destination := s.path(id)
+	destination := s.path(to)
 	if err = requireAbsent(destination); err != nil {
 		return note{}, err
 	}
-	dir, err := noteDir(s.dir, id, true)
+	dir, err := noteDir(s.dir, to, true)
 	if err != nil {
 		return note{}, err
 	}
 	if err = renameReplace(source, destination); err != nil {
 		return note{}, err
 	}
-	n := note{ID: id, Body: string(body)}
+	n := note{ID: to, Body: string(body)}
 	return n, errors.Join(syncDir(dir), syncDir(sourceDir))
 }

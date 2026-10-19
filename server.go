@@ -356,10 +356,11 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			}
 			writeJSON(w, 200, view)
 		case "DELETE /api/note":
-			if err = a.store.trash(n); err != nil {
+			trashID, err := a.store.trash(n)
+			if err != nil {
 				return err
 			}
-			writeJSON(w, 200, map[string]string{"trashed": n.ID})
+			writeJSON(w, 200, map[string]string{"trashed": n.ID, "trashId": trashID})
 		case "POST /api/rename":
 			if in.Name == n.ID {
 				writeJSON(w, 200, map[string]any{"note": views(a.store, []note{n}, true)[0], "warnings": []string{}})
@@ -389,7 +390,12 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		}
 		return nil
 	case "POST /api/restore":
-		n, err := a.store.restore(in.ID)
+		// Name is the note's original path when its trash name has a suffix.
+		to := in.Name
+		if to == "" {
+			to = in.ID
+		}
+		n, err := a.store.restore(in.ID, to)
 		if err != nil {
 			return &apiError{status: 409, message: err.Error()}
 		}

@@ -271,6 +271,25 @@ test("create in folders, body search, rename, trash and undo", async ({
   );
 });
 
+test("trashing a repeated name keeps both copies and undo restores the original name", async ({
+  page,
+}) => {
+  const id = `Repeated ${Date.now()}`;
+  for (const body of ["older copy", "newer copy"]) {
+    await openSeed(page, body, id);
+    await page
+      .getByRole("button", { name: "Move note to trash", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Move to trash", exact: true })
+      .click();
+    await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+  }
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.locator("#document-title")).toHaveText(id);
+  expect(await diskBody(page, id)).toBe("newer copy");
+});
+
 test("wiki links, backlinks, rename rewriting and rich serialization", async ({
   page,
 }) => {

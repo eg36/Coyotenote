@@ -266,3 +266,27 @@ func TestAtomicWriteAndWriterLock(t *testing.T) {
 		t.Fatalf("recovery: %v %+v %v", notes, report, err)
 	}
 }
+
+func TestTrashKeepsNotesWithRepeatedNames(t *testing.T) {
+	a := testApp(t)
+	trashIDs := []string{}
+	for _, body := range []string{"first", "second", "third"} {
+		n := request(t, a, "POST", "/api/note", mutation{ID: "Folder/Dup", Body: body}, 201)
+		trashed := request(t, a, "DELETE", "/api/note", mutation{ID: "Folder/Dup", Revision: n["revision"].(string)}, 200)
+		trashIDs = append(trashIDs, trashed["trashId"].(string))
+	}
+	if strings.Join(trashIDs, ",") != "Folder/Dup,Folder/Dup 2,Folder/Dup 3" {
+		t.Fatalf("trash names %v", trashIDs)
+	}
+	for i, body := range []string{"first", "second", "third"} {
+		b, err := os.ReadFile(filepath.Join(a.store.dir, ".trash", filepath.FromSlash(trashIDs[i])+".md"))
+		if err != nil || string(b) != body {
+			t.Fatalf("trashed %s = %q, %v", trashIDs[i], b, err)
+		}
+	}
+	restored := request(t, a, "POST", "/api/restore", mutation{ID: "Folder/Dup 2", Name: "Folder/Dup"}, 200)
+	if restored["id"] != "Folder/Dup" || restored["body"] != "second" {
+		t.Fatalf("restored %v", restored)
+	}
+	request(t, a, "POST", "/api/restore", mutation{ID: "Folder/Dup 3", Name: "Folder/Dup"}, 409)
+}

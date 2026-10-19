@@ -676,11 +676,11 @@ function deleteDialog() {
     async () => {
       await save();
       const id = state.current.id;
-      await api("/api/note", "DELETE", {
+      const { trashId } = await api("/api/note", "DELETE", {
         id,
         revision: state.current.revision,
       });
-      state.trash.push(id);
+      state.trash.push({ id, trashId });
       storage.remove(draftKey());
       await refresh();
       if (state.notes.length)
@@ -692,10 +692,13 @@ function deleteDialog() {
   );
 }
 async function undoTrash() {
-  const id = state.trash.at(-1);
-  if (!id) return;
+  const trashed = state.trash.at(-1);
+  if (!trashed) return;
   await save();
-  const note = await api("/api/restore", "POST", { id });
+  const note = await api("/api/restore", "POST", {
+    id: trashed.trashId,
+    name: trashed.id,
+  });
   state.trash.pop();
   await refresh();
   await openNote(note.id, { skipSave: true });
