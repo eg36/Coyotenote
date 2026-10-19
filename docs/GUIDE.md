@@ -71,6 +71,11 @@ are at least 12 px.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
   Resolved wiki links in other notes are rewritten to keep pointing at it;
   externally changed files are left alone and reported.
+- **Quick open** (Ctrl/⌘+K, or the footer hint) jumps to a note by a few letters of
+  its path, such as `qp` for *Quarterly plan*; matched letters are highlighted.
+  Start with `#` to jump to a heading of the open note, or `>` to run a command
+  such as a view change, rename or theme. Anything typed can also become a
+  content search or a new note.
 - **Search notes** in the sidebar matches **paths and note contents**. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
@@ -107,7 +112,8 @@ editing are not supported.
 | Shortcut | Action |
 | --- | --- |
 | Alt+N or Ctrl/⌘+N | Create a note |
-| Alt+K or Ctrl/⌘+K | Find notes |
+| Alt+K or Ctrl/⌘+K | Quick open a note, heading or command |
+| Alt+S or Ctrl/⌘+Shift+E | Search note contents |
 | Ctrl/⌘+S | Save immediately |
 | Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Preview → Split |
 | Alt+T or Ctrl/⌘+Shift+T | Choose a theme |

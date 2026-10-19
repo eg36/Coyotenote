@@ -190,5 +190,15 @@ export function createSource(element, { onChange, getNotes, onWarning }) {
     refresh() {
       view.requestMeasure();
     },
+    goToLine(number) {
+      const line = view.state.doc.line(
+        Math.max(1, Math.min(number, view.state.doc.lines)),
+      );
+      view.dispatch({
+        selection: { anchor: line.from },
+        effects: EditorView.scrollIntoView(line.from, { y: "start", yMargin: 24 }),
+      });
+      view.focus();
+    },
   };
 }

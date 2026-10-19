@@ -39,6 +39,8 @@ const paths = {
   folder: '<path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10H3Z"/>',
   note: '<path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h6"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
+  hash: '<path d="M5 9h15M4 15h15M10 3 8 21m8-18-2 18"/>',
+  command: '<path d="m4 17 6-5-6-5m8 12h8"/>',
 };
 export function icon(name) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.note}</svg>`;

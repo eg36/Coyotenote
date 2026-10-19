@@ -50,6 +50,7 @@ import {
 } from "./dialogs.js";
 import { compareDialog } from "./compare.js";
 import { navigate, shortcutChords, toggleFocus } from "./shortcuts.js";
+import { paletteDialog } from "./palette.js";
 
 async function initialize() {
   await claimTab();
@@ -120,6 +121,7 @@ $("sidebar-scrim").onclick = () => {
 $("theme-button").onclick = themeDialog;
 $("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-help").onclick = helpDialog;
+$("hint-open").onclick = () => paletteDialog();
 $("focus-button").onclick = toggleFocus;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);

@@ -1150,7 +1150,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText(
     "Keyboard shortcuts",
   );
-  await expect(page.locator(".help-grid kbd")).toHaveCount(15);
+  await expect(page.locator(".help-grid kbd")).toHaveCount(16);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
   await page.keyboard.press("Escape");
   await page.locator("body").click({ position: { x: 5, y: 5 } });
@@ -1169,6 +1169,10 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText("Choose a theme");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Control+k");
+  await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+Shift+E");
   await expect(page.locator("#search")).toBeFocused();
 });
 
@@ -1296,4 +1300,44 @@ test("typing in search after closing a dialog never lands in the note", async ({
   await expect(page.locator("#search")).toBeFocused();
   await page.waitForTimeout(600);
   expect(await diskBody(page, opened)).not.toContain(String(stamp));
+});
+
+test("quick open finds notes by a few letters, jumps to headings and runs commands", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  const target = `Projects/Quarterly zebra plan ${stamp}`;
+  await seed(page, target, "# Goals\n\nText.\n\n## Risks\n\nMore text.\n\n## Budget\n\nNumbers.");
+  await openSeed(page, "Start here.", `Palette start ${stamp}`);
+  const input = page.getByRole("combobox", { name: "Search notes, headings and commands" });
+  await page.keyboard.press("Control+k");
+  await expect(input).toBeFocused();
+  // Letters from the start of each word are enough.
+  await input.fill(`qzp ${stamp}`);
+  await expect(page.locator(".palette-option").first()).toContainText(`Quarterly zebra plan ${stamp}`);
+  await expect(page.locator(".palette-option").first().locator("mark")).not.toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#document-title")).toHaveText(`Quarterly zebra plan ${stamp}`);
+
+  // # lists the open note's headings and brings one into view.
+  await mode(page, "Markdown");
+  await page.keyboard.press("Control+k");
+  await input.fill("#bud");
+  await expect(page.locator(".palette-option")).toHaveCount(1);
+  await expect(page.locator(".palette-option")).toContainText("Budget");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".cm-activeLineGutter")).toHaveText("9");
+
+  // > runs commands; what was typed can become a new note.
+  await page.keyboard.press("Control+k");
+  await input.fill(">split");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
+  await page.locator("#hint-open").click();
+  await input.fill(`Fresh idea ${stamp}`);
+  await page.getByRole("option", { name: `Create note “Fresh idea ${stamp}”` }).click();
+  await expect(page.locator("#document-title")).toHaveText(`Fresh idea ${stamp}`);
+  await page.keyboard.press("Control+k");
+  await input.fill(`nothingmatcheszz${stamp}`);
+  await expect(page.locator(".palette-option").first()).toContainText("Search note contents for");
 });

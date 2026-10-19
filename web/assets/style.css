@@ -1068,6 +1068,10 @@ input[type="search"]::-webkit-search-cancel-button {
 .footer-left button {
   margin-left: -6px;
 }
+.footer-hints {
+  display: flex;
+  gap: 2px;
+}
 .hint-help kbd {
   font-size: var(--font-small);
   border: 1px solid var(--line);
@@ -1430,6 +1434,71 @@ dialog.theme-picker::backdrop {
   font-size: 13px;
   color: var(--muted);
 }
+dialog.palette {
+  width: min(560px, calc(100% - 32px));
+  margin-top: max(16px, 12vh);
+  max-height: calc(88dvh - 16px);
+  border-radius: 10px;
+}
+.palette form {
+  padding: 12px;
+}
+.palette header,
+.palette .modal-error:empty {
+  display: none;
+}
+.palette input {
+  border-radius: 7px;
+}
+.palette-list {
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, calc(80dvh - 120px));
+  overflow-y: auto;
+  margin-top: 9px;
+}
+.palette-option {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.palette-option.chosen {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+.palette-option > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-label mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+.palette-option.current .palette-label::after {
+  content: " · open";
+  color: var(--muted);
+}
+.palette-option small,
+.palette-option kbd {
+  flex-shrink: 0;
+  font-size: var(--font-small);
+  color: var(--muted);
+}
 .link-list {
   display: flex;
   flex-direction: column;
@@ -1687,7 +1756,8 @@ dialog.theme-picker::backdrop {
     padding: 0 6px 0 12px;
   }
   .footer-left #character-count,
-  .footer-left #character-count + .footer-separator {
+  .footer-left #character-count + .footer-separator,
+  #hint-open {
     display: none;
   }
   .help-grid {

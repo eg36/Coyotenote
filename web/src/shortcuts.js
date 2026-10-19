@@ -9,6 +9,7 @@ import {
   renameDialog,
   themeDialog,
 } from "./dialogs.js";
+import { paletteDialog } from "./palette.js";
 
 async function navigate(delta) {
   const notes = visibleNotes();
@@ -37,7 +38,8 @@ function toggleFocus() {
 // "mod" for Ctrl or ⌘; rows without chords are handled by the editors.
 const shortcuts = [
   ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
-  ["Alt K / Ctrl / ⌘ K", "Find notes", ["alt+k", "mod+k"], findNotes],
+  ["Alt K / Ctrl / ⌘ K", "Quick open a note, heading or command", ["alt+k", "mod+k"], () => paletteDialog()],
+  ["Alt S / Ctrl / ⌘ Shift E", "Search note contents", ["alt+s", "mod+shift+e"], findNotes],
   ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],
   ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views", ["alt+m", "mod+shift+m"], cycleMode],
   ["Alt T / Ctrl / ⌘ Shift T", "Choose a theme", ["alt+t", "mod+shift+t"], themeDialog],
@@ -60,4 +62,4 @@ const shortcutChords = new Map(
   ),
 );
 
-export { navigate, shortcutChords, shortcuts, toggleFocus };
+export { findNotes, navigate, shortcutChords, shortcuts, toggleFocus };

@@ -30,7 +30,7 @@
             placeholder="Search notes"
             autocomplete="off"
             aria-label="Search notes"
-          /><kbd data-keys="K">Ctrl K</kbd></label
+          /><kbd data-keys="⇧E">Ctrl ⇧E</kbd></label
         >
         <div class="list-heading">
           <span class="list-title">Notes <span id="note-count">0</span></span>
@@ -300,9 +300,13 @@
               ><span id="backlinks-label">backlinks</span>
             </button>
           </div>
-          <button id="hint-help" class="hint-help">
-            <kbd>F1</kbd>Shortcuts
-          </button>
+          <div class="footer-hints">
+            <button id="hint-open" class="hint-help">
+              <kbd data-keys="K">Ctrl K</kbd>Quick open</button
+            ><button id="hint-help" class="hint-help">
+              <kbd>F1</kbd>Shortcuts
+            </button>
+          </div>
         </footer>
       </main>
     </div>
