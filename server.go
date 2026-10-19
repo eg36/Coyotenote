@@ -344,15 +344,9 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if err = validateBody(in.Body); err != nil {
 			return err
 		}
-		n, err := a.store.create(in.ID)
+		n, err := a.store.create(in.ID, in.Body)
 		if err != nil {
 			return err
-		}
-		if in.Body != "" {
-			if err = a.store.save(n, in.Body); err != nil {
-				return err
-			}
-			n.Body = in.Body
 		}
 		writeJSON(w, 201, views(a.store, []note{n}, true)[0])
 		return nil

@@ -256,8 +256,9 @@ func atomicWrite(dir, name string, b []byte) error {
 	return syncDir(dir)
 }
 
-// create makes an empty note named id. It never replaces an existing file.
-func (s *store) create(id string) (note, error) {
+// create makes a note named id holding body. It never replaces an existing
+// file, and removes the new file again if writing it fails.
+func (s *store) create(id, body string) (note, error) {
 	if err := checkName(id); err != nil {
 		return note{}, err
 	}
@@ -273,14 +274,18 @@ func (s *store) create(id string) (note, error) {
 	if err != nil {
 		return note{}, err
 	}
-	err = f.Sync()
+	_, err = f.WriteString(body)
+	if err == nil {
+		err = f.Sync()
+	}
 	if e := f.Close(); err == nil {
 		err = e
 	}
-	if err == nil {
-		err = syncDir(dir)
+	if err != nil {
+		_ = os.Remove(s.path(id))
+		return note{}, err
 	}
-	return note{ID: id}, err
+	return note{ID: id, Body: body}, syncDir(dir)
 }
 
 // freeName returns base, or base with the lowest free " N" suffix, in folder.

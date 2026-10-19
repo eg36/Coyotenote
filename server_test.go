@@ -238,7 +238,7 @@ func TestAtomicWriteAndWriterLock(t *testing.T) {
 		second.close()
 		t.Fatal("second vault writer allowed")
 	}
-	n, err := a.store.create("Safe")
+	n, err := a.store.create("Safe", "")
 	if err != nil {
 		t.Fatal(err)
 	}
