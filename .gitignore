@@ -1,3 +1,7 @@
 /bin/
 /coyotenote
-/docs/
+/node_modules/
+/test-results/
+/playwright-report/
+*.log
+/CODEX_HANDOFF.local.md

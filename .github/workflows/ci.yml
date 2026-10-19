@@ -1,7 +1,7 @@
 name: CI
 
 # Tags are already tested on main and are built by the Release workflow.
-# Changes touching only docs, the logo, the license or the release workflow
+# Changes touching only docs, the logos, the license or the release workflow
 # (which CI never runs) skip CI.
 on:
   push:
@@ -10,12 +10,14 @@ on:
       - '**.md'
       - 'LICENSE'
       - 'logo.png'
+      - 'web/logo.png'
       - '.github/workflows/release.yml'
   pull_request:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - 'logo.png'
+      - 'web/logo.png'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 
@@ -39,5 +41,32 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race -count=1 ./...
-      - run: go build -o bin/coyotenote .
-      - run: python3 scripts/smoke.py
+      - run: go build -o bin/coyotenote ./cmd/coyotenote
+      - run: python3 scripts/smoke_terminal.py
+      - run: go build -o bin/coyotenote-web ./cmd/coyotenote-web
+      - run: python3 scripts/smoke_web.py
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verify committed browser assets are current
+        run: git diff --exit-code -- web/assets
+      - run: go build -o bin/coyotenote-web ./cmd/coyotenote-web
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results/
+          retention-days: 7
