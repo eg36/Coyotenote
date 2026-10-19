@@ -13,7 +13,8 @@ locally, not requested from a CDN.
 The Go app uses Goldmark (MIT) and golang.org/x/sys (BSD-3-Clause). Their license
 texts are in `docs/licenses/`.
 
-Theme colors retain the terminal app's exact application-role values. Upstream
+The 12 named upstream palettes retain the terminal app's application-role values.
+Coyote Light/Dark use neutral web surfaces with blue accents. Upstream
 palettes: [Ayu](https://github.com/ayu-theme/ayu-colors),
 [Catppuccin](https://catppuccin.com/palette/),
 [Nord](https://www.nordtheme.com/docs/colors-and-palettes/),

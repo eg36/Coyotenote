@@ -14,7 +14,7 @@ commit; no merge or source change was made on `main`.
 | Markdown textarea | CodeMirror source with selection, history, find and completion |
 | Glamour preview | Goldmark GFM HTML with raw HTML disabled and images suppressed |
 | Editor / preview / split | Markdown / Preview / Split, plus Tiptap Write mode |
-| 14 manual themes | Same IDs and exact role colors; live-preview chooser with cancel |
+| 14 manual themes | Same IDs; neutral blue Coyote themes, 12 unchanged named palettes; compact keyboard preview with cancel |
 | Wiki resolution, aliases, heading links, backlinks | Reused parser/resolver; rich wiki node; clickable preview; backlinks dialog |
 | 400 ms atomic autosave | Same store with serialized browser saves and hash revision checks |
 | Disk recovery copy on failed exit | Browser drafts plus download/recovery-copy actions on save failure |

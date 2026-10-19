@@ -1,17 +1,17 @@
 :root {
-  --surface: #22252d;
-  --chrome: #2d313d;
-  --text: #dde2ef;
-  --muted: #a3adc2;
-  --accent: #c4a7ff;
-  --cyan: #89dceb;
-  --good: #a6da95;
-  --warn: #eed49f;
-  --danger: #f29baa;
-  --line: #475069;
-  --pink: #ff8cc6;
-  --blue: #8aadf4;
-  --onPill: #1b1d24;
+  --surface: #212121;
+  --chrome: #181818;
+  --text: #ececec;
+  --muted: #ababab;
+  --accent: #76b9ed;
+  --cyan: #8bc8f3;
+  --good: #8ec49a;
+  --warn: #d4b778;
+  --danger: #f28b82;
+  --line: #424242;
+  --pink: #8ebde8;
+  --blue: #76b9ed;
+  --onPill: #15202b;
   --font-small: 12px;
   --font-ui: Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -737,6 +737,10 @@ input[type="search"]::-webkit-search-cancel-button {
 .prose strong {
   color: var(--warn);
   font-weight: 700;
+}
+/* Keep Coyote writing surfaces neutral; named palettes retain their colors. */
+:is([data-theme="light"], [data-theme="dark"]) .prose :is(h1, h2, h3, h4, h5, h6, strong) {
+  color: var(--text);
 }
 .prose a,
 .wiki-link {

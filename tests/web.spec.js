@@ -113,7 +113,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
   await page.locator('[data-theme-id="light"]').click();
   await expect(page.locator("#rich-pane")).toHaveCSS(
     "background-color",
-    "rgb(250, 248, 245)",
+    "rgb(255, 255, 255)",
   );
 });
 

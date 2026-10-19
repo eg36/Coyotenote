@@ -6,7 +6,7 @@
   alpha development. The monorepo and combined releases are planned separately.
 - Go embeds `web/index.html` and the committed `web/assets/` bundle. Frontend edits
   require `npm run build`, followed by a Go rebuild.
-- Preserve plain Markdown vaults, the original theme IDs/palettes, atomic writes,
+- Preserve plain Markdown vaults, the original theme IDs and named upstream palettes, atomic writes,
   revision conflict checks and recoverable browser drafts.
 - Give each feature, fix or independent change its own focused commit. Include
   its relevant tests and generated bundle changes; do not bundle unrelated work.

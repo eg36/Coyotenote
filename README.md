@@ -90,7 +90,8 @@ Close the terminal app before opening the **same** vault: they share the origina
   notes; the back arrow returns from linked-note navigation. A link button in the
   footer lists backlinks. Hidden folders and symlinks are skipped just as on `main`.
 - Click the theme name for all **14 palettes**, including the four Catppuccin
-  flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Hover/focus previews a theme;
+  flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Coyote Light/Dark use neutral
+  white/charcoal surfaces and blue accents for the web. Hover/focus previews a theme;
   or use ↑/↓ to preview in a compact palette list. Enter/click keeps it; Escape
   restores the previous theme. The picker leaves the background sharp and visible.
   No system theme detection.
@@ -220,7 +221,8 @@ The functional reference is `main` at
 [`dcb6a51`](https://github.com/eg36/Coyotenote/commit/dcb6a51c5dbf79efd6859cb506dd736bdc061996).
 `store.go`, path validation, locking, atomic writes, trash and link-resolution
 logic were copied into this branch; the original files on `main` were not edited.
-Theme IDs, names and color values are preserved exactly. No monorepo conversion
+Theme IDs and names are preserved. The 12 named upstream palettes retain their
+original color values; Coyote Light/Dark have neutral web surfaces with blue accents. No monorepo conversion
 has happened yet.
 
 Go's standard `net/http` is sufficient for a local embedded app; Goldmark supplies
