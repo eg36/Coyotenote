@@ -8,6 +8,8 @@
   require `npm run build`, followed by a Go rebuild.
 - Preserve plain Markdown vaults, the original theme IDs/palettes, atomic writes,
   revision conflict checks and recoverable browser drafts.
+- Give each feature, fix or independent change its own focused commit. Include
+  its relevant tests and generated bundle changes; do not bundle unrelated work.
 - Validate relevant changes with `go vet ./...`, `go test -race ./...`,
   `go build -o bin/coyotenote .`, `python3 scripts/smoke.py`, and browser tests
   (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm test` when using an installed
