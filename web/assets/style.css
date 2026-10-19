@@ -1238,52 +1238,86 @@ dialog footer {
   gap: 8px;
   margin-top: 24px;
 }
-.theme-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 11px;
-  margin-top: 20px;
+dialog.theme-picker {
+  width: min(360px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  border-radius: 10px;
 }
-.theme-card {
-  padding: 0 0 13px;
+dialog.theme-picker::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+.theme-picker form {
+  padding: 12px;
+}
+.theme-picker header {
+  display: none;
+}
+.theme-picker .modal-error:empty {
+  display: none;
+}
+.theme-search {
+  position: relative;
+}
+.theme-picker .theme-search input {
+  padding: 10px 34px 10px 11px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.theme-search > svg {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  color: var(--muted);
+}
+.theme-list {
+  display: flex;
+  flex-direction: column;
+  max-height: min(448px, calc(100dvh - 130px));
+  overflow-y: auto;
+  margin-top: 9px;
+}
+.theme-option {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 13px;
+  width: 100%;
+  min-height: 31px;
+  padding: 7px 10px;
   text-align: left;
-  background: var(--chrome);
-  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
-  border-radius: 9px;
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
 }
-.theme-card:hover,
-.theme-card:focus,
-.theme-card.chosen {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+.theme-option:hover,
+.theme-option:focus-visible,
+.theme-option.chosen {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
 }
 .theme-swatch {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  background: var(--sample-surface);
-  height: 58px;
-  border-bottom: 9px solid var(--sample-chrome);
-  margin-bottom: 12px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 .theme-swatch i {
-  width: 13px;
-  height: 13px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
 }
-.theme-card strong {
-  font-size: 10px;
-  display: block;
-  margin: 0 10px 5px;
-  font-weight: 550;
+.theme-option strong {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 450;
 }
-.theme-card small {
-  display: block;
-  font-size: 8px;
+.theme-option small {
+  font-size: 10px;
   color: var(--muted);
-  margin: 0 10px;
 }
 .link-list {
   display: flex;
@@ -1709,9 +1743,6 @@ dialog footer {
   }
   .footer-hints {
     gap: 0;
-  }
-  .theme-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
   .help-grid {
     gap: 11px 12px;

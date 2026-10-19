@@ -90,7 +90,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
 }) => {
   await openSeed(page, "# Theme test\n\nHello.");
   await page.locator("#theme-button").click();
-  await expect(page.locator(".theme-card")).toHaveCount(14);
+  await expect(page.locator(".theme-option")).toHaveCount(14);
   await page.locator('[data-theme-id="catppuccin-mocha"]').click();
   await expect(page.locator("html")).toHaveAttribute(
     "data-theme",
@@ -115,6 +115,30 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "background-color",
     "rgb(250, 248, 245)",
   );
+});
+
+test("theme picker is a compact palette list with an unobscured backdrop", async ({ page }) => {
+  await openSeed(page, "# Themes");
+  await page.locator("#theme-button").click();
+  const picker = page.getByRole("dialog", { name: "Choose a theme" });
+  await expect(picker).toBeVisible();
+  expect((await picker.boundingBox()).width).toBeLessThanOrEqual(360);
+  expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backdropFilter)).toBe("none");
+  expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  await expect(picker.locator(".theme-option")).toHaveCount(14);
+  await expect(picker.locator(".theme-swatch i")).toHaveCount(56);
+  const rows = await picker.locator(".theme-option").evaluateAll((els) => els.map((el) => el.getBoundingClientRect().x));
+  expect(new Set(rows).size).toBe(1);
+  await page.getByLabel("Find a theme").fill("catppuccin");
+  await expect(picker.locator(".theme-option")).toHaveCount(4);
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.locator("#sidebar-toggle").click();
+  await page.locator("#theme-button").click();
+  const box = await picker.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(375);
+  expect(box.height).toBeLessThanOrEqual(635);
 });
 
 test("create in folders, body search, rename, trash and undo", async ({

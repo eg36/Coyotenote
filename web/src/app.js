@@ -552,8 +552,9 @@ function openModal(
   title,
   content,
   action,
-  { submit = "Continue", eyebrow = "COYOTENOTE", hideFooter = false } = {},
+  { submit = "Continue", eyebrow = "COYOTENOTE", hideFooter = false, className = "" } = {},
 ) {
+  $("modal").className = className;
   $("modal-title").textContent = title;
   $("modal-eyebrow").textContent = eyebrow;
   $("modal-content").replaceChildren(content);
@@ -681,15 +682,11 @@ async function undoTrash() {
 function themeDialog() {
   themeOriginal = state.theme;
   const container = document.createElement("div");
-  const description = document.createElement("p");
-  description.className = "dialog-description";
-  description.textContent =
-    "A different light for the same thoughts. Preview a palette, then choose it.";
   const search = document.createElement("input");
   search.placeholder = "Find a theme…";
   search.setAttribute("aria-label", "Find a theme");
   const grid = document.createElement("div");
-  grid.className = "theme-grid";
+  grid.className = "theme-list";
   function render() {
     grid.replaceChildren();
     for (const theme of state.themes.filter((t) =>
@@ -698,10 +695,8 @@ function themeDialog() {
       const button = document.createElement("button");
       button.type = "button";
       button.className =
-        "theme-card" + (state.theme === theme.id ? " chosen" : "");
+        "theme-option" + (state.theme === theme.id ? " chosen" : "");
       button.dataset.themeId = theme.id;
-      button.style.setProperty("--sample-surface", theme.colors.surface);
-      button.style.setProperty("--sample-chrome", theme.colors.chrome);
       const swatch = document.createElement("span");
       swatch.className = "theme-swatch";
       for (const color of [
@@ -734,9 +729,13 @@ function themeDialog() {
     }
   }
   search.oninput = render;
-  container.append(description, search, grid);
-  openModal("Find your atmosphere", container, null, {
-    eyebrow: "14 FAMILIAR THEMES",
+  const searchRow = document.createElement("div");
+  searchRow.className = "theme-search";
+  searchRow.innerHTML = icon("chevronDown");
+  searchRow.prepend(search);
+  container.append(searchRow, grid);
+  openModal("Choose a theme", container, null, {
+    className: "theme-picker",
     hideFooter: true,
   });
   render();
