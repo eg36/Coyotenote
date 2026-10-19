@@ -4,6 +4,7 @@ import { icon } from "./icons.js";
 import { $, showError, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
 import { moveNote } from "./dialogs.js";
+import { setSidebar } from "./sidebar.js";
 
 // excerpt cleans a note's opening text for short previews, leaving out a leading
 // heading that only repeats the note's title.
@@ -179,8 +180,7 @@ function filterTag(tag: string) {
   renderList();
   if (tag) {
     $("tag-filter").open = true;
-    $("app").classList.remove("sidebar-hidden", "focus-mode");
-    $("app").classList.add("sidebar-open");
+    setSidebar(true);
   }
 }
 // Rows remember what they show. A render that keeps the same rows in the

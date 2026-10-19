@@ -1,6 +1,7 @@
 import type { AppState, Note, StateResponse } from "./types.js";
 // The open note: editing, saving, loading, views and the formatting toolbar.
 import { icon } from "./icons.js";
+import { setSidebar } from "./sidebar.js";
 import {
   $,
   clearError,
@@ -190,7 +191,8 @@ async function openNote(
   await setMode(state.mode, { focus: false });
   schedulePreview(true);
   renderOutline(true);
-  $("app").classList.remove("sidebar-open");
+  // Choosing a note dismisses the phone drawer without changing its preference.
+  if (window.innerWidth < 800) setSidebar(false, false);
   if (heading) setTimeout(() => scrollToHeading(heading), 300);
 }
 // emptyNotebook shows the start page: a new note is one click away, and an

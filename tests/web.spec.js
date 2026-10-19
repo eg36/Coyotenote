@@ -860,6 +860,32 @@ test("start-page navigation stays together and status sits at the right edge", a
   }
 });
 
+test("sidebar remembers open and closed choices across reloads at home and in a note", async ({ page }) => {
+  const id = await openSeed(page, "Remember the notes sidebar.");
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const url of ["/", "/?note=" + encodeURIComponent(id)]) {
+      await page.goto(url);
+      await expect(page.locator("#app")).toHaveClass(url === "/" ? /at-home/ : /^(?!.*at-home)/);
+      for (const open of [true, false]) {
+        if ((await page.locator("#sidebar-toggle").getAttribute("aria-expanded")) !== String(open))
+          await page.locator("#sidebar-toggle").click();
+        await page.reload();
+        await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", String(open));
+        if (open) await expect(page.locator("#sidebar")).toBeInViewport();
+        else await expect(page.locator("#sidebar")).not.toBeInViewport();
+      }
+    }
+  }
+  // Mobile and desktop choices remain independent across breakpoint changes.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator("#sidebar-toggle").click();
+  await page.setViewportSize({ width: 390, height: 900 });
+  await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "true");
+});
+
 test("collapsed sidebar and focus mode keep the workspace full width", async ({ page }) => {
   await openSeed(page, "# Room to write\n\nThe editor should use the available space.");
   await mode(page, "Markdown");

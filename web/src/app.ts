@@ -69,6 +69,7 @@ import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
 import { dailyNote } from "./daily.js";
 import { setupTooltips } from "./tooltip.js";
+import { restoreSidebar, setSidebar, toggleSidebar } from "./sidebar.js";
 
 function isMode(value: unknown): value is AppState["mode"] {
   return typeof value === "string" && ["write", "source", "preview", "split"].includes(value);
@@ -126,6 +127,7 @@ async function initialize() {
   if (requested && state.notes.some((n) => n.id === requested))
     await openNote(requested, { skipSave: true });
   else emptyNotebook();
+  restoreSidebar();
   if (new URL(location.href).searchParams.has("new")) newNoteDialog();
 }
 $("new-note").onclick = newNoteDialog;
@@ -202,13 +204,9 @@ $("search").oninput = () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => refresh().catch(showError), 120);
 };
-$("sidebar-toggle").onclick = () => {
-  $("app").classList.toggle(
-    window.innerWidth < 800 ? "sidebar-open" : "sidebar-hidden",
-  );
-};
+$("sidebar-toggle").onclick = toggleSidebar;
 $("sidebar-scrim").onclick = () => {
-  $("app").classList.remove("sidebar-open");
+  setSidebar(false);
 };
 $("settings-button").onclick = () => settingsDialog();
 $("trash-button").onclick = () => trashDialog().catch(showError);

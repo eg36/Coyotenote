@@ -13,6 +13,7 @@ import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
 import { dailyNote } from "./daily.js";
 import { settingsDialog } from "./settings.js";
+import { setSidebar } from "./sidebar.js";
 
 async function navigate(delta: number) {
   const notes = visibleNotes();
@@ -24,8 +25,7 @@ async function navigate(delta: number) {
   openNote(notes[next].id).catch(showError);
 }
 function showNotes() {
-  if (window.innerWidth < 800) $("app").classList.add("sidebar-open");
-  else $("app").classList.remove("sidebar-hidden", "focus-mode");
+  setSidebar(true);
 }
 function findNotes() {
   showNotes();
@@ -68,7 +68,7 @@ const shortcuts: Shortcut[] = [
   ["F1", "Keyboard shortcuts", ["f1"], helpDialog],
   ["Escape", "Close a dialog or the notes drawer", ["escape"],
     () => {
-      $("app").classList.remove("sidebar-open");
+      if (window.innerWidth < 800) setSidebar(false);
       if (window.innerWidth < 800 && !$("outline").hidden) toggleOutline(false);
     }, { keepDefault: true }],
 ];
