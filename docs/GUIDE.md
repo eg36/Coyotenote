@@ -115,6 +115,11 @@ are at least 12 px.
 - **Today's note** (File menu, Quick open command, or Alt+J) opens
   `Journal/YYYY-MM-DD` using your computer's local date, creating an empty note
   when it does not exist. Repeating the command keeps the same note and its text.
+- **Templates:** keep reusable notes in a `Templates/` folder. The New note
+  dialog's **Start with** menu offers these notes, including subfolders, or a
+  blank note. Creating a note copies the selected template's current Markdown,
+  including properties, and leaves the original template untouched. Templates
+  are ordinary notes; edit them in the same way as any other note.
 - The **outline** button (Alt+O) lists the note's headings beside the text,
   indented by level. Click one to bring it into view in any view; the outline
   marks the section you are reading as you scroll. It stays open across reloads

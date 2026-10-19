@@ -1757,3 +1757,42 @@ test.describe("daily notes", () => {
     expect(await page.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith("coyote-draft:") && localStorage[k].includes("Unsaved before journal navigation.")))).toBeTruthy();
   });
 });
+
+test("new notes copy a template's current Markdown without changing the original", async ({ page }) => {
+  const template = `Templates/Meetings/Weekly ${Date.now()}`;
+  const original = '---\ntags: [meeting]\n---\n\n# Agenda\n\n- [ ] A task\n\n[[Next week]]\n';
+  await openSeed(page, original, template);
+  await mode(page, "Markdown");
+  const edited = original + '\nEdited before using this template.\n';
+  await page.locator(".cm-content").fill(edited);
+  await page.keyboard.press("Alt+n");
+  await page.getByLabel("Name your note").fill("Weekly copy " + Date.now());
+  const name = await page.getByLabel("Name your note").inputValue();
+  await page.getByLabel("Start with", { exact: true }).selectOption(template);
+  await page.getByRole("button", { name: "Create note", exact: true }).click();
+  await expect(page.locator("#document-title")).toHaveText(name);
+  expect(await diskBody(page, name)).toBe(edited);
+  expect(await diskBody(page, template)).toBe(edited);
+  await page.locator(".cm-content").fill("Only the copy changes.");
+  await expect.poll(() => diskBody(page, name)).toBe("Only the copy changes.");
+  expect(await diskBody(page, template)).toBe(edited);
+});
+
+test("an unavailable template keeps the new-note dialog and name for retry", async ({ page }) => {
+  const template = `Templates/Missing ${Date.now()}`;
+  await seed(page, template, "Template contents.");
+  await page.goto("/");
+  await page.locator("#new-note").click();
+  const name = "Not created " + Date.now();
+  await page.getByLabel("Name your note").fill(name);
+  await page.getByLabel("Start with", { exact: true }).selectOption(template);
+  await page.route((url) => url.pathname === "/api/note" && url.searchParams.get("id") === template,
+    (route) => route.fulfill({status:404, contentType:"application/json", body:JSON.stringify({error:"Template was moved or deleted."})}));
+  await page.getByRole("button", { name: "Create note", exact: true }).click();
+  await expect(page.locator("#modal-error")).toContainText("Template was moved or deleted.");
+  await expect(page.getByLabel("Name your note")).toHaveValue(name);
+  await page.getByLabel("Start with", { exact: true }).selectOption("");
+  await page.getByRole("button", { name: "Create note", exact: true }).click();
+  await expect(page.locator("#document-title")).toHaveText(name);
+  expect(await diskBody(page, name)).toBe("");
+});

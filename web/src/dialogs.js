@@ -105,18 +105,38 @@ function inputDialog(title, label, value, action, options = {}) {
   setTimeout(() => input.select(), 50);
 }
 function newNoteDialog() {
-  inputDialog(
-    "New note",
-    "Name your note",
-    "",
-    (name) => createNote(name),
-    {
-      submit: "Create note",
-      required: false,
-      description:
-        "Use Folder/Name to keep related notes together. An empty name becomes Untitled.",
-    },
-  );
+  const container = document.createElement("div");
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.htmlFor = "dialog-input";
+  label.textContent = "Name your note";
+  const input = document.createElement("input");
+  input.id = "dialog-input";
+  input.autocomplete = "off";
+  input.maxLength = 220;
+  input.placeholder = "Untitled";
+  const description = document.createElement("p");
+  description.className = "dialog-description";
+  description.textContent = "Use Folder/Name to keep related notes together. An empty name becomes Untitled.";
+  const templateLabel = document.createElement("label");
+  templateLabel.className = "field-label";
+  templateLabel.htmlFor = "note-template";
+  templateLabel.textContent = "Start with";
+  const select = document.createElement("select");
+  select.id = "note-template";
+  select.add(new Option("Blank note", ""));
+  for (const note of state.notes.filter((n) => n.id.startsWith("Templates/")).sort((a, b) => a.id.localeCompare(b.id)))
+    select.add(new Option(note.id.slice("Templates/".length), note.id));
+  const hint = document.createElement("p");
+  hint.className = "dialog-description field-hint";
+  hint.textContent = "Notes in Templates/ appear here as reusable starting points.";
+  container.append(label, input, description, templateLabel, select, hint);
+  openModal("New note", container, async () => {
+    // Save before reading: the selected template might be the note being edited.
+    await save();
+    const template = select.value ? await api("/api/note?id=" + encodeURIComponent(select.value)) : null;
+    await createNote(input.value.trim(), template?.body || "");
+  }, { submit: "Create note" });
 }
 function renameDialog() {
   if (!state.current) return;

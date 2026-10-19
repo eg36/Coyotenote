@@ -1633,6 +1633,16 @@ dialog input:not([type="checkbox"])::placeholder {
   color: var(--muted);
   opacity: 1;
 }
+dialog select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.field-hint {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
 .field-label {
   display: block;
   font-size: 13px;
