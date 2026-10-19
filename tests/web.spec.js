@@ -786,3 +786,37 @@ test("the trash lists trashed notes and restores any of them", async ({
   await expect(page.locator(".trash-list")).not.toContainText(first);
   await expect(page.locator(".trash-list")).toContainText(second);
 });
+
+test("a conflict compares both versions and keeps whichever is chosen", async ({
+  page,
+  context,
+}) => {
+  const id = await openSeed(page, "Shared line.\nOriginal ending.");
+  await mode(page, "Markdown");
+  const second = await context.newPage();
+  await second.goto("/?note=" + encodeURIComponent(id));
+  await mode(second, "Markdown");
+  await page.locator(".cm-content").fill("Shared line.\nFirst tab ending.");
+  await expect.poll(() => diskBody(page, id)).toContain("First tab ending.");
+  await second.locator(".cm-content").fill("Shared line.\nSecond tab ending.");
+  await expect(second.locator("#compare-versions")).toBeVisible();
+  await second.locator("#compare-versions").click();
+  const disk = second.getByLabel("On disk", { exact: true });
+  const mine = second.getByLabel("Your edits", { exact: true });
+  await expect(disk).toContainText("First tab ending.");
+  await expect(mine).toContainText("Second tab ending.");
+  await expect(disk.locator(".changed")).toHaveText(["First tab ending."]);
+  await expect(mine.locator(".changed")).toHaveText(["Second tab ending."]);
+  await second.getByRole("button", { name: "Keep my edits" }).click();
+  await expect(second.locator("#error-banner")).toBeHidden();
+  await expect.poll(() => diskBody(page, id)).toContain("Second tab ending.");
+
+  await page.locator(".cm-content").fill("Shared line.\nFirst tab again.");
+  await expect(page.locator("#compare-versions")).toBeVisible();
+  await page.locator("#compare-versions").click();
+  await page.getByRole("button", { name: "Use disk version" }).click();
+  await expect(page.locator(".cm-content")).toContainText("Second tab ending.");
+  await expect(page.locator("#error-banner")).toBeHidden();
+  expect(await diskBody(page, id)).toContain("Second tab ending.");
+  await second.close();
+});
