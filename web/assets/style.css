@@ -200,10 +200,10 @@ input[type="search"]::-webkit-search-cancel-button {
 .new-button kbd {
   color: inherit;
 }
-/* Lexend's visible letters sit slightly below its line-box center. */
+/* Align the plus with the visible lowercase letters in Lexend. */
 .new-button > [data-icon="plus"],
 #first-note > [data-icon="plus"] {
-  transform: translateY(0.5px);
+  transform: translateY(1.5px);
 }
 .search {
   display: flex;
@@ -247,6 +247,8 @@ input[type="search"]::-webkit-search-cancel-button {
   width: 12px;
   height: 12px;
   color: currentColor;
+  /* The shortcut font's capitals sit above the line-box center. */
+  transform: translateY(-2px);
 }
 .tag-filter {
   width: 100%;
