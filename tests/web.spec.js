@@ -905,6 +905,7 @@ test("writing starts right below the header, which holds the editor controls on 
     // From 1280 px the toolbar shares the header row; below, it takes a second one.
     const top = (await page.locator(".topbar").boundingBox()).height;
     if (width >= 1280) expect(top).toBeLessThanOrEqual(70);
+    await expect(page.locator("#save-state")).toHaveAttribute("title", "All changes saved");
     expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 220 : width < 800 ? 170 : width < 1280 ? 120 : 72);
     await expect(page.locator(".tiptap p")).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();

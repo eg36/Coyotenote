@@ -146,6 +146,8 @@ function clearError() {
 function setSaveState(kind: string, label: string) {
   $("save-state").className = `save-state ${kind}`;
   $("save-label").textContent = label;
+  // Wide headers show "Saved" only as a dot; hovering it names the state.
+  $("save-state").title = label;
 }
 function updateCounts() {
   const words = state.body.trim() ? state.body.trim().split(/\s+/).length : 0;
