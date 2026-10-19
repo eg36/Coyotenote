@@ -9,7 +9,7 @@ export default defineConfig({
   workers: 1,
   timeout: 30000,
   expect: { timeout: 8000 },
-  reporter: "list",
+  reporter: process.env.CI ? [["list"], ["github"]] : "list",
   use: {
     baseURL: "http://127.0.0.1:4289",
     viewport: { width: 1440, height: 1000 },
