@@ -71,8 +71,52 @@ try {
 } catch {
   tabId = crypto.randomUUID();
 }
+// A duplicated tab, or a window opened from this one, copies sessionStorage
+// and with it the tab ID. Each page holds a lock named after its ID, so a
+// copy finds the ID taken and picks its own, while a reload keeps it.
+function holdTab(id) {
+  return new Promise((resolve, reject) =>
+    navigator.locks
+      .request("coyote-tab:" + id, { ifAvailable: true }, (lock) => {
+        resolve(Boolean(lock));
+        if (lock) return new Promise(() => {});
+      })
+      .catch(reject),
+  );
+}
+async function claimTab() {
+  try {
+    if (await holdTab(tabId)) return;
+    tabId = crypto.randomUUID();
+    try {
+      sessionStorage.setItem("coyote-tab", tabId);
+    } catch {}
+    await holdTab(tabId);
+  } catch {
+    // Without locks, a copied tab shares drafts as before.
+  }
+}
+async function liveTabs() {
+  try {
+    const { held } = await navigator.locks.query();
+    return new Set(
+      held
+        .map((lock) => lock.name)
+        .filter((name) => name.startsWith("coyote-tab:"))
+        .map((name) => name.slice("coyote-tab:".length)),
+    );
+  } catch {
+    return new Set();
+  }
+}
 const draftPrefix = () => `coyote-draft:${state.vaultId}:`;
 const draftKey = () => `${draftPrefix()}${tabId}:${state.current?.id}`;
+// releaseDraft forgets a stored draft unless another open tab wrote it:
+// that tab still has those edits and the draft is its only stored copy.
+async function releaseDraft(key) {
+  const owner = key.slice(draftPrefix().length).split(":")[0];
+  if (owner === tabId || !(await liveTabs()).has(owner)) storage.remove(key);
+}
 
 // A restarted server issues a new token. Renew it once, but only when the
 // server still serves this tab's vault, so edits never reach another vault.
@@ -1227,6 +1271,7 @@ function downloadDraft() {
 }
 
 async function initialize() {
+  await claimTab();
   hydrateIcons();
   buildBlockMenu();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -1435,7 +1480,7 @@ $("restore-draft").onclick = () => {
   if (conflict) state.current.revision = draft.base;
   state.source.replace(state.body, { reset: true });
   state.pendingDraft = null;
-  storage.remove(draft.key);
+  releaseDraft(draft.key);
   $("draft-banner").hidden = true;
   applyEditability();
   storeDraft();
@@ -1452,7 +1497,7 @@ $("restore-draft").onclick = () => {
     );
 };
 $("discard-draft").onclick = () => {
-  if (state.pendingDraft) storage.remove(state.pendingDraft.key);
+  if (state.pendingDraft) releaseDraft(state.pendingDraft.key);
   state.pendingDraft = null;
   $("draft-banner").hidden = true;
   applyEditability();

@@ -461,6 +461,53 @@ test("undoing back to the saved text during a save keeps the undo recoverable", 
   await expect.poll(() => diskBody(page, id)).toBe("Original text.");
 });
 
+test("a window opened from a tab cannot discard that tab's only draft", async ({
+  page,
+  context,
+}) => {
+  const id = await openSeed(page, "Saved base.");
+  await mode(page, "Markdown");
+  await context.route("**/api/note", (route) =>
+    route.request().method() === "PUT" ? route.abort() : route.fallback(),
+  );
+  await page.locator(".cm-content").fill("Parent unique unsaved text.");
+  await expect(page.locator("#error-banner")).toBeVisible();
+  const drafts = (target) =>
+    target.evaluate(() =>
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("coyote-draft:"))
+        .map((key) => JSON.parse(localStorage.getItem(key)).body),
+    );
+  await expect.poll(() => drafts(page)).toEqual(["Parent unique unsaved text."]);
+
+  // The opened window starts with a copy of the parent's sessionStorage.
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.evaluate((id) => window.open("/?note=" + encodeURIComponent(id)), id),
+  ]);
+  await expect(popup.locator("#draft-banner")).toBeVisible();
+  const tab = (target) => target.evaluate(() => sessionStorage.getItem("coyote-tab"));
+  expect(await tab(popup)).not.toBe(await tab(page));
+  await popup.locator("#discard-draft").click();
+  await expect(popup.locator("#draft-banner")).toBeHidden();
+  await popup.waitForTimeout(200);
+  expect(await drafts(page)).toEqual(["Parent unique unsaved text."]);
+
+  // Once the parent is gone, its leftover draft can be discarded. Routes no
+  // longer intercept a closing page, so its last save fails in the page.
+  await page.evaluate(() => {
+    const fetch = window.fetch;
+    window.fetch = (url, options) =>
+      options?.method === "PUT" ? Promise.reject(new Error("offline")) : fetch(url, options);
+  });
+  await page.close({ runBeforeUnload: false });
+  await popup.reload();
+  await expect(popup.locator("#draft-banner")).toBeVisible();
+  await popup.locator("#discard-draft").click();
+  await expect.poll(() => drafts(popup)).toEqual([]);
+  await context.unroute("**/api/note");
+});
+
 test("unsupported Markdown is kept in source, without normalization", async ({
   page,
 }) => {
