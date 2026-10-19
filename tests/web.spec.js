@@ -421,6 +421,46 @@ test("browser draft recovers after a reload while server writes fail", async ({
   await expect.poll(() => diskBody(page, id)).toBe(draft);
 });
 
+test("undoing back to the saved text during a save keeps the undo recoverable", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "Original text.");
+  await mode(page, "Markdown");
+  // The save reaches the file, but its answer is held back.
+  let release;
+  await page.route("**/api/note", async (route) => {
+    if (route.request().method() !== "PUT") return route.fallback();
+    const response = await route.fetch();
+    await new Promise((resolve) => (release = resolve));
+    await route.fulfill({ response }).catch(() => {});
+  });
+  await page.locator(".cm-content").fill("Earlier edit already saved on disk.");
+  await expect.poll(() => typeof release).toBe("function");
+  await expect.poll(() => diskBody(page, id)).toBe("Earlier edit already saved on disk.");
+  await page.locator(".cm-content").fill("Original text.");
+  await expect(page.locator("#save-label")).not.toHaveText("All changes saved");
+  const storedDraft = () =>
+    page.evaluate((id) => {
+      for (const key of Object.keys(localStorage)) {
+        if (!key.startsWith("coyote-draft:")) continue;
+        const value = JSON.parse(localStorage.getItem(key));
+        if (value.id === id) return value.body;
+      }
+      return null;
+    }, id);
+  expect(await storedDraft()).toBe("Original text.");
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.unroute("**/api/note");
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  await page.locator("#restore-draft").click();
+  // The draft predates the held save, so keeping it is a deliberate choice.
+  await page.keyboard.press("Control+s");
+  await page.getByRole("button", { name: "Compare versions" }).click();
+  await page.getByRole("button", { name: "Keep my edits" }).click();
+  await expect.poll(() => diskBody(page, id)).toBe("Original text.");
+});
+
 test("unsupported Markdown is kept in source, without normalization", async ({
   page,
 }) => {

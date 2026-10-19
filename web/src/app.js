@@ -17,6 +17,7 @@ const state = {
   vaultId: "",
   dirty: false,
   saving: null,
+  savingBody: null,
   saveTimer: null,
   previewTimer: null,
   previewGeneration: 0,
@@ -215,7 +216,11 @@ function changed(body, from) {
   if (state.restoring || !state.current || state.body === body) return;
   state.edits++;
   state.body = body;
-  state.dirty = body !== state.savedBody;
+  // While a save is on its way, the file may end up holding either version,
+  // so only the body being saved can count as saved once it is confirmed.
+  state.dirty =
+    body !== state.savedBody ||
+    (state.savingBody !== null && body !== state.savingBody);
   storeDraft();
   updateCounts();
   setSaveState(
@@ -240,6 +245,7 @@ async function save() {
     body = state.body,
     base = state.current.revision;
   setSaveState("saving", "Saving…");
+  state.savingBody = body;
   state.saving = (async () => {
     const note = await api("/api/note", "PUT", { id, body, revision: base });
     if (state.current?.id !== id) return;
@@ -263,6 +269,7 @@ async function save() {
     throw error;
   } finally {
     state.saving = null;
+    state.savingBody = null;
   }
   if (state.dirty) return save();
 }
