@@ -421,7 +421,7 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
-    expect((await frame.boundingBox()).width).toBeCloseTo(width - (width <= 1200 ? 60 : 88), 0);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width, 0);
     await expect(page.locator("#source-pane")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.locator("#sidebar-toggle").click();
@@ -429,19 +429,29 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await page.locator("#focus-button").click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
-    expect((await frame.boundingBox()).width).toBeCloseTo(width - (width <= 1200 ? 60 : 88), 0);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width, 0);
     await page.locator("#focus-button").click();
   }
   // Keep the correct column after switching from a collapsed desktop to mobile.
   await page.locator("#sidebar-toggle").click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
-  expect((await frame.boundingBox()).width).toBeCloseTo(366, 0);
+  expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
   await page.locator("#sidebar-toggle").click();
   await expect(page.getByLabel("Search notes")).toBeVisible();
   await page.locator("#sidebar-scrim").click();
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
-  expect((await frame.boundingBox()).width).toBeCloseTo(366, 0);
+  expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
+});
+
+test("writing starts below one header and one editor bar, even when zoomed", async ({ page }) => {
+  await openSeed(page, "# Close to the top\n\nThe first paragraph should be in view.");
+  for (const [width, height] of [[1440, 900], [720, 450], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 145 : 105);
+    await expect(page.locator(".tiptap p")).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  }
 });
 
 test("readable footer shortcuts stay available across screen sizes and focus mode", async ({ page }) => {
@@ -858,7 +868,9 @@ test("typing in search after closing a dialog never lands in the note", async ({
     .click();
   await page.getByRole("button", { name: "Move to trash", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("Note moved to trash.");
-  const opened = await page.locator("#breadcrumb-name").textContent();
+  const opened = await page
+    .locator("#note-list .note-row.selected")
+    .getAttribute("data-note");
   await page.locator("#search").click();
   await page.keyboard.type(`k${stamp}`, { delay: 40 });
   await expect(page.locator("#search")).toHaveValue(`k${stamp}`);

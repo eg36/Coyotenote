@@ -420,12 +420,10 @@ async function openNote(
   state.restoring = true;
   state.source.replace(state.body, { reset: true });
   state.restoring = false;
-  $("breadcrumb-name").textContent = note.id;
   $("document-title").textContent = note.title.split("/").pop();
-  $("note-folder").textContent = note.id.includes("/")
-    ? note.id.split("/").slice(0, -1).join(" / ")
-    : "YOUR NOTEBOOK";
+  $("note-folder").textContent = note.id.split("/").slice(0, -1).join(" / ");
   $("document-head").hidden = false;
+  $("document-actions").hidden = false;
   $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
@@ -449,12 +447,12 @@ function emptyNotebook() {
   state.dirty = false;
   $("history-back").disabled = true;
   $("document-head").hidden = true;
+  $("document-actions").hidden = true;
   $("editor-frame").hidden = true;
   $("editor-area").hidden = true;
   $("editor-toolbar").hidden = true;
   $("empty-state").hidden = false;
   $("draft-banner").hidden = true;
-  $("breadcrumb-name").textContent = "A little room to think";
   history.replaceState(null, "", location.pathname);
   setSaveState("ready", "Ready when you are");
   updateCounts();
@@ -597,6 +595,8 @@ function updateBacklinks() {
   const note = state.notes.find((n) => n.id === state.current?.id);
   state.currentBacklinks = state.current?.backlinks || note?.backlinks || [];
   $("backlinks-count").textContent = state.currentBacklinks.length;
+  $("backlinks-label").textContent =
+    state.currentBacklinks.length === 1 ? "backlink" : "backlinks";
   $("backlinks-button").disabled = !state.current;
 }
 function scrollToHeading(heading) {
@@ -1137,7 +1137,6 @@ async function initialize() {
 
 $("new-note").onclick = newNoteDialog;
 $("first-note").onclick = newNoteDialog;
-$("hint-new").onclick = newNoteDialog;
 $("document-title").onclick = renameDialog;
 $("delete-note").onclick = deleteDialog;
 $("history-back").onclick = async () => {
@@ -1183,10 +1182,8 @@ $("sidebar-scrim").onclick = () => {
 };
 $("theme-button").onclick = themeDialog;
 $("trash-button").onclick = () => trashDialog().catch(showError);
-$("hint-theme").onclick = themeDialog;
 $("hint-help").onclick = helpDialog;
 $("focus-button").onclick = toggleFocus;
-$("hint-search").onclick = findNotes;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);
 for (const button of document.querySelectorAll("[data-format]")) {
