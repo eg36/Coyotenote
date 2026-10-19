@@ -1,11 +1,11 @@
 import type { Note } from "./types.js";
-// The sidebar note list: ordering, excerpts and search highlights.
+// The sidebar note list: ordering, rows and search highlights.
 import { icon } from "./icons.js";
 import { $, showError, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
 import { moveNote } from "./dialogs.js";
 
-// excerpt cleans a note's opening text for the list, leaving out a leading
+// excerpt cleans a note's opening text for short previews, leaving out a leading
 // heading that only repeats the note's title.
 function excerpt(text: string, title = "") {
   const plain = text
@@ -172,7 +172,7 @@ function fillRow(button: HTMLButtonElement, note: Note) {
   button.classList.toggle("selected", selected);
   button.setAttribute("aria-current", selected ? "page" : "false");
   const found = state.filteredIds && state.snippets?.[note.id];
-  const content = JSON.stringify([note.title, note.modified, note.excerpt, found, state.searched]);
+  const content = JSON.stringify([note.title, note.modified, found, state.searched]);
   if (rowContent.get(button) === content) return;
   rowContent.set(button, content);
   const head = document.createElement("span");
@@ -184,13 +184,14 @@ function fillRow(button: HTMLButtonElement, note: Note) {
   date.className = "note-date";
   date.textContent = shortDate(note.modified);
   head.append(label, date);
-  const text = document.createElement("span");
-  text.className = "note-excerpt";
-  if (found) highlight(text, found, state.searched || "");
-  else
-    text.textContent =
-      excerpt(note.excerpt, label.textContent) || "Empty note";
-  button.replaceChildren(head, text);
+  button.replaceChildren(head);
+  // Rows show only the title and date; search adds the matching passage.
+  if (found) {
+    const text = document.createElement("span");
+    text.className = "note-excerpt";
+    highlight(text, found, state.searched || "");
+    button.append(text);
+  }
 }
 function renderList() {
   renderTags();

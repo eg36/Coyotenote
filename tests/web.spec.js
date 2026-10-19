@@ -315,7 +315,7 @@ test("note sorting remembers titles, uses edit times and follows search navigati
   });
   await page.goto("/?note=" + encodeURIComponent(ids[0]));
   const sort = page.getByRole("combobox", { name: "Sort notes" });
-  const rows = page.locator(".note-row").filter({ hasText: "sorting needle" });
+  const rows = page.locator(`.note-row[data-note^="${folder}/"]`);
   const order = () => rows.evaluateAll((els) => els.map((el) => el.dataset.note));
   await expect(sort).toHaveValue("modified");
   await expect.poll(order).toEqual([ids[0], ids[2], ids[1]]);
@@ -1248,7 +1248,9 @@ test("opening a note updates the list in place, and saves still refresh its row"
   expect(await row(second).evaluate((el) => el.kept)).toBe(true);
   await mode(page, "Markdown");
   await page.locator(".cm-content").fill("Edited in place.");
-  await expect(row(second).locator(".note-excerpt")).toHaveText("Edited in place.");
+  await expect.poll(() => diskBody(page, second)).toBe("Edited in place.");
+  // The saved row's date refreshes in place.
+  await expect(row(second).locator(".note-date")).not.toBeEmpty();
   expect(await row(second).evaluate((el) => el.kept)).toBe(true);
 });
 
@@ -1320,8 +1322,10 @@ test("returning to the tab picks up notes changed outside the app", async ({
     headers: { "X-Labradorite-Token": bootstrap.token },
     data: { id, body: "Second outside edit.", revision: latest.revision },
   });
+  const later = `Outside later ${Date.now()}`;
+  await seed(page, later, "Also made elsewhere.");
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect(page.locator("#note-list")).toContainText("Second outside edit");
+  await expect(page.locator("#note-list")).toContainText(later);
   await expect(editor).toContainText("Unsaved local words.");
 });
 
@@ -1425,7 +1429,7 @@ test("a conflict compares both versions and keeps whichever is chosen", async ({
   await second.close();
 });
 
-test("note rows show the title, edit date and an excerpt that skips the title heading", async ({
+test("note rows show only the title and edit date", async ({
   page,
 }) => {
   const id = `Seed list ${Date.now()}`;
@@ -1434,7 +1438,8 @@ test("note rows show the title, edit date and an excerpt that skips the title he
   await expect(row).toHaveAttribute("aria-current", "page");
   await expect(row.locator(".note-title")).toHaveText(id);
   await expect(row.locator(".note-date")).not.toBeEmpty();
-  await expect(row.locator(".note-excerpt")).toHaveText("Start the beans in May.");
+  await expect(row.locator(".note-excerpt")).toHaveCount(0);
+  await expect(row).not.toContainText("Start the beans");
 });
 
 test("search results show the matching passage with the match marked", async ({
