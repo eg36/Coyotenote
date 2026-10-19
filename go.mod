@@ -1,6 +1,6 @@
 module github.com/eg36/coyotenote
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/alecthomas/chroma/v2 v2.14.0
@@ -13,8 +13,8 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/muesli/termenv v0.16.0
 	github.com/rivo/uniseg v0.4.7
-	github.com/yuin/goldmark v1.7.8
-	golang.org/x/sys v0.36.0
+	github.com/yuin/goldmark v1.7.17
+	golang.org/x/sys v0.48.0
 )
 
 require (
@@ -37,7 +37,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark-emoji v1.0.5 // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/term v0.46.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 )

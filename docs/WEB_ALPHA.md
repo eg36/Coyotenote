@@ -11,7 +11,7 @@ Keep important notes backed up and test a copy of your vault first. Coyotenote i
 
 ## Try it locally
 
-Go **1.24+** is the only requirement to build and run. Linux amd64 matches the current
+Go **1.26+** is the only requirement to build and run. Linux amd64 matches the current
 `main` CI target. Browser assets are bundled and committed: Node and npm are **not**
 needed to run the app, and there are no CDNs or runtime third-party requests.
 

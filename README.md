@@ -17,7 +17,7 @@ or network access.
 
 Download the Linux amd64 archive from
 [Releases](https://github.com/eg36/Coyotenote/releases) and check it against
-`SHA256SUMS`, or build it with Go 1.24+:
+`SHA256SUMS`, or build it with Go 1.26+:
 
 ```sh
 go build -o bin/coyotenote ./cmd/coyotenote
