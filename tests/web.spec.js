@@ -85,6 +85,49 @@ test("rich formatting and Markdown survive source, split and preview modes", asy
   await expect(page.locator("#preview")).toContainText("fmt.Println");
 });
 
+test("the text style menu previews each style and applies it by mouse or keyboard", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "A plain line.");
+  const trigger = page.getByRole("button", { name: "Normal text" });
+  const menu = page.getByRole("listbox", { name: "Text style" });
+  await page.locator(".tiptap p").click();
+  await trigger.click();
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("option")).toHaveCount(7);
+  await expect(
+    menu.getByRole("option", { name: /Normal text/, selected: true }),
+  ).toBeVisible();
+  const sizes = await menu
+    .locator(".block-sample")
+    .evaluateAll((samples) =>
+      samples.map((s) => parseFloat(getComputedStyle(s).fontSize)),
+    );
+  expect(sizes[1]).toBeGreaterThan(sizes[2]);
+  expect(sizes[2]).toBeGreaterThan(sizes[3]);
+  await menu.getByRole("option", { name: /Heading 2/ }).click();
+  await expect(menu).toBeHidden();
+  await expect(page.locator(".tiptap h2")).toHaveText("A plain line.");
+  await expect(page.locator("#block-type-label")).toHaveText("Heading 2");
+  await expect.poll(() => diskBody(page, id)).toMatch(/^## A plain line\.\s*$/);
+  await page.locator("#block-type").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(menu).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".tiptap h3")).toHaveText("A plain line.");
+  await expect(page.locator(".tiptap")).toBeFocused();
+  await page.locator("#block-type").click();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(page.locator(".tiptap")).toBeFocused();
+  await page.locator("#block-type").click();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".tiptap p").first()).toHaveText("A plain line.");
+  await expect.poll(() => diskBody(page, id)).toMatch(/^A plain line\.\s*$/);
+});
+
 test("all fourteen themes, preview cancel and persistence", async ({
   page,
 }) => {
@@ -747,7 +790,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText(
     "Keyboard shortcuts",
   );
-  await expect(page.locator(".help-grid kbd")).toHaveCount(14);
+  await expect(page.locator(".help-grid kbd")).toHaveCount(15);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
   await page.keyboard.press("Escape");
   await page.locator("body").click({ position: { x: 5, y: 5 } });

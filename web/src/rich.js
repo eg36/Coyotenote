@@ -258,7 +258,7 @@ export function createRich(
         case "block":
           value === "p"
             ? chain.setParagraph().run()
-            : chain.toggleHeading({ level: Number(value[1]) }).run();
+            : chain.setHeading({ level: Number(value[1]) }).run();
           break;
         case "link":
           if (value)

@@ -174,11 +174,17 @@
           aria-label="Formatting"
           hidden
         >
-          <select id="block-type" aria-label="Text style">
-            <option value="p">Paragraph</option>
-            <option value="h1">Heading 1</option>
-            <option value="h2">Heading 2</option>
-            <option value="h3">Heading 3</option></select
+          <button
+            id="block-type"
+            class="block-type"
+            type="button"
+            title="Text style"
+            aria-haspopup="listbox"
+            aria-controls="block-menu"
+            aria-expanded="false"
+          >
+            <span id="block-type-label">Normal text</span
+            ><span data-icon="chevronDown"></span></button
           ><span class="toolbar-divider"></span
           ><button data-format="bold" title="Bold · Ctrl/⌘ B" aria-label="Bold">
             <b>B</b></button
@@ -314,7 +320,15 @@
         </footer>
       </form>
     </dialog>
-    <div id="toast" class="toast" role="status" hidden>
+    <div
+      id="block-menu"
+      class="block-menu"
+      role="listbox"
+      aria-label="Text style"
+      tabindex="-1"
+      hidden
+    ></div>
+    <div id="toast"class="toast" role="status" hidden>
       <span id="toast-text"></span><button id="undo-trash">Undo</button
       ><button
         id="toast-close"

@@ -28,6 +28,7 @@ const state = {
   trash: [],
   back: [],
   pendingDraft: null,
+  block: "p",
   lastError: null,
   ready: false,
   restoring: false,
@@ -547,6 +548,7 @@ async function setMode(mode, { focus = true } = {}) {
   $("rich-pane").hidden = mode !== "write";
   $("preview-pane").hidden = !["preview", "split"].includes(mode);
   $("editor-toolbar").hidden = mode !== "write";
+  closeBlockMenu();
   for (const button of document.querySelectorAll("[data-mode]")) {
     button.classList.toggle("active", button.dataset.mode === mode);
     button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
@@ -611,9 +613,65 @@ function updateToolbar() {
     button.setAttribute("aria-pressed", String(editor.isActive(format)));
   }
   let block = "p";
-  for (let level = 1; level <= 3; level++)
+  for (let level = 1; level <= 6; level++)
     if (editor.isActive("heading", { level })) block = "h" + level;
-  $("block-type").value = block;
+  state.block = block;
+  $("block-type-label").textContent = blockStyles.find(
+    ([value]) => value === block,
+  )[1];
+  for (const option of $("block-menu").children)
+    option.setAttribute("aria-selected", String(option.dataset.block === block));
+}
+// The text style menu previews each style in its own type and names the
+// editor's shortcut for it. It floats outside the toolbar, which scrolls.
+const blockStyles = [
+  ["p", "Normal text"],
+  ["h1", "Heading 1"],
+  ["h2", "Heading 2"],
+  ["h3", "Heading 3"],
+  ["h4", "Heading 4"],
+  ["h5", "Heading 5"],
+  ["h6", "Heading 6"],
+];
+function buildBlockMenu() {
+  const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ ⌥ " : "Ctrl Alt ";
+  $("block-menu").innerHTML = blockStyles
+    .map(
+      ([value, label], index) =>
+        `<div class="block-option" role="option" id="block-option-${value}" data-block="${value}" aria-selected="false">${icon("check")}<span class="block-sample">${label}</span><kbd>${mod}${index}</kbd></div>`,
+    )
+    .join("");
+}
+function openBlockMenu() {
+  const menu = $("block-menu"),
+    trigger = $("block-type");
+  if (trigger.disabled || !state.rich?.editor) return;
+  menu.hidden = false;
+  trigger.setAttribute("aria-expanded", "true");
+  const box = trigger.getBoundingClientRect();
+  menu.style.top = box.bottom + 4 + "px";
+  menu.style.left =
+    Math.max(8, Math.min(box.left, innerWidth - menu.offsetWidth - 8)) + "px";
+  menu.style.maxHeight = innerHeight - box.bottom - 16 + "px";
+  highlightBlock(blockStyles.findIndex(([value]) => value === state.block));
+  menu.focus({ preventScroll: true });
+}
+function closeBlockMenu(refocus = false) {
+  if ($("block-menu").hidden) return;
+  $("block-menu").hidden = true;
+  $("block-type").setAttribute("aria-expanded", "false");
+  if (refocus) state.rich?.focus();
+}
+function highlightBlock(index) {
+  const options = [...$("block-menu").children];
+  index = (index + options.length) % options.length;
+  options.forEach((option, i) => option.classList.toggle("active", i === index));
+  $("block-menu").setAttribute("aria-activedescendant", options[index].id);
+  options[index].scrollIntoView({ block: "nearest" });
+}
+function chooseBlock(value) {
+  closeBlockMenu();
+  state.rich?.command("block", value);
 }
 function updateBacklinks() {
   const note = state.notes.find((n) => n.id === state.current?.id);
@@ -1126,6 +1184,7 @@ function downloadDraft() {
 
 async function initialize() {
   hydrateIcons();
+  buildBlockMenu();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   for (const key of document.querySelectorAll("kbd[data-keys]"))
     key.textContent = (mac ? "⌘" : "Ctrl ") + key.dataset.keys;
@@ -1213,8 +1272,43 @@ for (const button of document.querySelectorAll("[data-format]")) {
     else state.rich?.command(name);
   };
 }
-$("block-type").onchange = () =>
-  state.rich?.command("block", $("block-type").value);
+$("block-type").onmousedown = (e) => e.preventDefault();
+$("block-type").onclick = () =>
+  $("block-menu").hidden ? openBlockMenu() : closeBlockMenu(true);
+$("block-type").onkeydown = (event) => {
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  event.preventDefault();
+  openBlockMenu();
+};
+$("block-menu").onmousedown = (e) => e.preventDefault();
+$("block-menu").onclick = (event) => {
+  const option = event.target.closest("[data-block]");
+  if (option) chooseBlock(option.dataset.block);
+};
+$("block-menu").onmousemove = (event) => {
+  const option = event.target.closest("[data-block]");
+  if (option && !option.classList.contains("active"))
+    highlightBlock([...$("block-menu").children].indexOf(option));
+};
+$("block-menu").onkeydown = (event) => {
+  const options = [...$("block-menu").children];
+  const index = options.findIndex((o) => o.classList.contains("active"));
+  const moves = {
+    ArrowDown: index + 1,
+    ArrowUp: index - 1,
+    Home: 0,
+    End: options.length - 1,
+  };
+  if (event.key in moves) highlightBlock(moves[event.key]);
+  else if (event.key === "Enter" || event.key === " ")
+    chooseBlock(options[index].dataset.block);
+  else if (event.key === "Escape" || event.key === "Tab") closeBlockMenu(true);
+  else return;
+  event.preventDefault();
+  event.stopPropagation();
+};
+$("block-menu").addEventListener("focusout", () => closeBlockMenu());
+addEventListener("resize", () => closeBlockMenu());
 $("modal-form").onsubmit = async (event) => {
   event.preventDefault();
   if (!modalAction) return;
@@ -1370,6 +1464,7 @@ const shortcuts = [
   ["Alt ↑ / ↓", "Previous / next note", ["alt+arrowup", "alt+arrowdown"],
     (chord) => navigate(chord.endsWith("up") ? -1 : 1)],
   ["Ctrl / ⌘ B, I", "Bold / italic in Write"],
+  ["Ctrl / ⌘ Alt 0–6", "Normal text / heading level in Write"],
   ["Ctrl / ⌘ Z", "Undo an edit"],
   ["Ctrl / ⌘ Shift Z", "Redo an edit"],
   ["F1", "Keyboard shortcuts", ["f1"], helpDialog],
