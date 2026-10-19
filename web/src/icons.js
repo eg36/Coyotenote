@@ -4,6 +4,7 @@ const paths = {
   notebook:
     '<rect x="5" y="3" width="15" height="18" rx="2"/><path d="M9 3v18M3 7h4m-4 5h4m-4 5h4m6-10h4m-4 4h4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  shift: '<path d="m12 3 9 9h-5v8H8v-8H3Z"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
   chevronDown: '<path d="m7 10 5 5 5-5"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>',

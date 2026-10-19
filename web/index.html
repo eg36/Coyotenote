@@ -109,7 +109,9 @@
             placeholder="Search notes"
             autocomplete="off"
             aria-label="Search notes"
-          /><kbd data-keys="Shift E">Ctrl Shift E</kbd></label
+          /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
+            <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
+          </kbd></label
         >
         <select id="tag-filter" class="tag-filter" aria-label="Show notes with a tag" hidden></select>
         <div class="list-heading">

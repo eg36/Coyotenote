@@ -68,6 +68,11 @@ async function initialize() {
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   for (const key of document.querySelectorAll("kbd[data-keys]"))
     key.textContent = (mac ? "⌘" : "Ctrl ") + key.dataset.keys;
+  const searchShortcut = $("search-shortcut");
+  searchShortcut.querySelector("[data-modifier]").textContent = mac ? "⌘" : "Ctrl";
+  searchShortcut.title = `${mac ? "⌘" : "Ctrl"} + Shift + E`;
+  searchShortcut.setAttribute("aria-label", `${mac ? "Command" : "Control"} Shift E`);
+  $("search").setAttribute("aria-keyshortcuts", `${mac ? "Meta" : "Control"}+Shift+E`);
   state.mode = storage.get("coyote-view") || "write";
   const sort = storage.get("coyote-sort");
   if (["modified", "title-asc", "title-desc"].includes(sort)) state.sort = sort;
