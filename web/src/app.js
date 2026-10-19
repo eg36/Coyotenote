@@ -1392,7 +1392,6 @@ $("restore-draft").onclick = () => {
   state.dirty = state.body !== state.savedBody;
   if (conflict) state.current.revision = draft.base;
   state.source.replace(state.body, { reset: true });
-  state.rich?.set(state.body, state.current.id);
   state.pendingDraft = null;
   storage.remove(draft.key);
   $("draft-banner").hidden = true;
@@ -1401,6 +1400,9 @@ $("restore-draft").onclick = () => {
   updateCounts();
   schedulePreview(true);
   setSaveState("dirty", "Restored draft not saved yet");
+  // Load the draft into Write through setMode, which keeps a draft with
+  // syntax Write cannot round-trip in Markdown instead.
+  if (state.mode === "write") setMode("write", { focus: false }).catch(showError);
   if (conflict)
     showToast(
       "The file changed since this draft. Saving will report a conflict; download your edits or make a recovery copy to keep both versions.",

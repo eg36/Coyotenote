@@ -74,12 +74,16 @@ const WikiLink = Node.create({
 });
 
 export function supportsRich(body) {
-  if (/^---\r?\n/.test(body))
+  // YAML (---) or TOML (+++) front matter, possibly after a byte order mark.
+  if (/^\uFEFF?(---|\+\+\+)\r?\n/.test(body))
     return "This note has front matter. Use Markdown to keep it intact.";
   let reason = "";
   marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
     if (token.type === "html")
       reason = "This note has raw HTML. Use Markdown to keep it intact.";
+    if (token.type === "def")
+      reason =
+        "This note has reference-style links. Use Markdown to keep their definitions intact.";
     if (token.type === "image")
       reason =
         "This note references an image. Use Markdown to keep its reference intact; images are not fetched.";

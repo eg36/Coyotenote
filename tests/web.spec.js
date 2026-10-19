@@ -432,6 +432,47 @@ test("unsupported Markdown is kept in source, without normalization", async ({
   expect(await diskBody(page, id)).toBe(body);
 });
 
+test("other front matter and link definitions also stay in source", async ({
+  page,
+}) => {
+  for (const body of [
+    "\uFEFF---\ntitle: Keep this metadata\n---\n\nText.\n",
+    '+++\ntitle = "Keep this metadata"\n+++\n\nText.\n',
+    "Text with a [reference][r].\n\n[r]: https://example.com\n[unused]: https://example.org\n",
+  ]) {
+    const id = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#source-pane")).toBeVisible();
+    await expect(page.locator("#rich-pane")).toBeHidden();
+    expect(await diskBody(page, id)).toBe(body);
+  }
+});
+
+test("restoring a draft Write cannot keep intact opens it in source", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "Plain saved file.");
+  await mode(page, "Markdown");
+  await page.route("**/api/note", (route) =>
+    route.request().method() === "PUT" ? route.abort() : route.continue(),
+  );
+  const draft = '+++\ntitle = "Draft metadata"\n+++\n\nDraft text.';
+  await page.locator(".cm-content").fill(draft);
+  await expect(page.locator("#error-banner")).toBeVisible();
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await page.unroute("**/api/note");
+  await page.locator("#restore-draft").click();
+  await expect(page.locator("#source-pane")).toBeVisible();
+  await expect(page.locator("#rich-pane")).toBeHidden();
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe(draft);
+});
+
 test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openSeed(page, "# Small screen\n\nA responsive thought.");
