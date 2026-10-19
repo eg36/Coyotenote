@@ -49,17 +49,17 @@ function headingElements() {
   return [...root.querySelectorAll("h1, h2, h3, h4, h5, h6")];
 }
 
-// currentHeading is the index of the last heading above the top of the
-// view, or -1 above the first one.
-function currentHeading(list) {
+// currentHeading passes then the index of the last heading above the top
+// of the view, or -1 above the first one.
+function currentHeading(list, then) {
   const elements = headingElements();
   if (!elements) {
-    const top = state.source.topLine();
-    return list.findLastIndex((heading) => heading.line <= top);
+    state.source.topLine((top) => then(list.findLastIndex((heading) => heading.line <= top)));
+    return;
   }
   const pane = state.mode === "write" ? $("rich-pane") : $("preview-pane");
   const limit = pane.getBoundingClientRect().top + 48;
-  return elements.findLastIndex((el) => el.getBoundingClientRect().top <= limit);
+  then(elements.findLastIndex((el) => el.getBoundingClientRect().top <= limit));
 }
 
 let outlineTimer = null;
@@ -96,9 +96,10 @@ function renderOutline(immediate = false) {
 
 function markCurrent() {
   if ($("outline").hidden || !state.current) return;
-  const index = currentHeading(headings(state.body));
-  for (const [i, button] of [...$("outline-list").children].entries())
-    button.toggleAttribute("aria-current", i === index);
+  currentHeading(headings(state.body), (index) => {
+    for (const [i, button] of [...$("outline-list").children].entries())
+      button.toggleAttribute("aria-current", i === index);
+  });
 }
 
 // toggleOutline shows or hides the outline and remembers the choice.

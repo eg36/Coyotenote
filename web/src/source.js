@@ -212,9 +212,15 @@ export function createSource(
     refresh() {
       view.requestMeasure();
     },
-    topLine() {
-      const top = view.scrollDOM.scrollTop;
-      return view.state.doc.lineAt(view.lineBlockAtHeight(top).from).number;
+    // topLine passes the first visible line's number to then. It reads the
+    // layout in CodeMirror's own measure cycle: forcing a measure while keys
+    // arrive could put typed characters out of order.
+    topLine(then) {
+      view.requestMeasure({
+        key: "coyote-top-line",
+        read: (v) => v.state.doc.lineAt(v.lineBlockAtHeight(v.scrollDOM.scrollTop).from).number,
+        write: then,
+      });
     },
     onScroll(listener) {
       view.scrollDOM.addEventListener("scroll", listener, { passive: true });

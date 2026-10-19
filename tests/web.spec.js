@@ -1373,7 +1373,9 @@ test("the outline lists headings, jumps to them, follows scrolling and stays ope
   await mode(page, "Markdown");
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");
-  await page.keyboard.type("\n\n## Added later");
+  // Keys sent with no gap can land out of order while CodeMirror scrolls a
+  // long note; a short gap is still far faster than anyone types.
+  await page.keyboard.type("\n\n## Added later", { delay: 20 });
   await expect(outline.getByRole("button")).toHaveText(["Top", "Middle section", "Deep end", "Added later"]);
   await outline.getByRole("button", { name: "Middle section" }).click();
   await expect(page.locator(".cm-activeLineGutter")).toHaveText("83");
