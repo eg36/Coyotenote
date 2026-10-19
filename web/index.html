@@ -13,32 +13,27 @@
     <div class="app" id="app">
       <aside class="sidebar" id="sidebar" aria-label="Notes">
         <a class="brand" href="/" aria-label="coyotenote home"
-          ><img class="brand-mark" src="/assets/logo.png" alt="" width="52" height="52"
-          ><span>coyotenote<span class="brand-label">web</span></span></a
+          ><img class="brand-mark" src="/assets/logo.png" alt="" width="32" height="32"
+          ><span>coyotenote</span></a
         >
-        <div class="vault-label">
-          <span data-icon="vault"></span
-          ><span id="vault-name">Local notebook</span
-          ><span class="local-dot" title="Stored locally"></span>
+        <div class="vault-label" id="vault-name" title="Notes folder on this computer">
+          Local notebook
         </div>
         <button class="new-button" id="new-note">
-          <span data-icon="plus"></span>New note<kbd>⌘/Ctrl N</kbd>
+          <span data-icon="plus"></span>New note<kbd data-keys="N">Ctrl N</kbd>
         </button>
         <label class="search"
           ><span data-icon="search"></span
           ><input
             id="search"
             type="search"
-            placeholder="Find a thought…"
+            placeholder="Search notes"
             autocomplete="off"
             aria-label="Search notes"
-          /><kbd>⌘K</kbd></label
+          /><kbd data-keys="K">Ctrl K</kbd></label
         >
         <div class="list-heading">
-          <span>YOUR NOTES</span><span id="note-count">0</span>
-        </div>
-        <div class="note-sort">
-          <label for="note-sort">Sort by</label>
+          <span class="list-title">Notes <span id="note-count">0</span></span>
           <select id="note-sort" aria-label="Sort notes">
             <option value="modified">Recently edited</option>
             <option value="title-asc">Title A–Z</option>

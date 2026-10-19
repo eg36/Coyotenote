@@ -831,6 +831,18 @@ test("a conflict compares both versions and keeps whichever is chosen", async ({
   await second.close();
 });
 
+test("note rows show the title, edit date and an excerpt that skips the title heading", async ({
+  page,
+}) => {
+  const id = `Seed list ${Date.now()}`;
+  await openSeed(page, `# ${id}\n\nStart the beans in May.`, id);
+  const row = page.locator(`#note-list .note-row[data-note="${id}"]`);
+  await expect(row).toHaveAttribute("aria-current", "page");
+  await expect(row.locator(".note-title")).toHaveText(id);
+  await expect(row.locator(".note-date")).not.toBeEmpty();
+  await expect(row.locator(".note-excerpt")).toHaveText("Start the beans in May.");
+});
+
 test("search results show the matching passage with the match marked", async ({
   page,
 }) => {

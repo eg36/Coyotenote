@@ -284,11 +284,25 @@ async function refresh({ query = state.search } = {}) {
   updateBacklinks();
   return data;
 }
-function excerpt(text) {
-  return text
+// excerpt cleans a note's opening text for the list, leaving out a leading
+// heading that only repeats the note's title.
+function excerpt(text, title = "") {
+  const plain = text
     .replace(/^#+\s*/, "")
     .replace(/\[\[([^\]]+)\]\]/g, "$1")
     .replace(/[*`_]/g, "");
+  return title && plain.toLowerCase().startsWith(title.toLowerCase() + " ")
+    ? plain.slice(title.length + 1)
+    : plain;
+}
+// shortDate names the day a note changed, adding the year only when it is
+// not the current one.
+function shortDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  const options = { month: "short", day: "numeric" };
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+  return date.toLocaleDateString(undefined, options);
 }
 const noteCollator = new Intl.Collator(undefined, {
   numeric: true,
@@ -346,11 +360,12 @@ function renderList() {
     const el = document.createElement("p");
     el.className = "list-empty";
     el.textContent = state.search
-      ? "No matching notes. Try another thought."
-      : "Your next idea starts here.";
+      ? "No matching notes. Try a different word."
+      : "No notes yet.";
     list.append(el);
     return;
   }
+  list.classList.toggle("searching", Boolean(state.filteredIds));
   let lastFolder = null;
   for (const note of notes) {
     const parts = note.id.split("/");
@@ -377,22 +392,22 @@ function renderList() {
     );
     const head = document.createElement("span");
     head.className = "note-row-head";
-    head.innerHTML = icon("note");
     const label = document.createElement("span");
+    label.className = "note-title";
     label.textContent = note.title.split("/").pop();
-    head.append(label);
+    const date = document.createElement("time");
+    date.className = "note-date";
+    date.textContent = shortDate(note.modified);
+    head.append(label, date);
     button.append(head);
     const text = document.createElement("span");
     text.className = "note-excerpt";
     const found = state.filteredIds && state.snippets?.[note.id];
     if (found) highlight(text, found, state.searched);
-    else text.textContent = excerpt(note.excerpt) || "An empty page, for now.";
+    else
+      text.textContent =
+        excerpt(note.excerpt, label.textContent) || "Empty note";
     button.append(text);
-    const meta = document.createElement("span");
-    meta.className = "note-meta";
-    const date = new Date(note.modified);
-    meta.textContent = `${Number.isNaN(date.valueOf()) ? "" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${note.words} words`;
-    button.append(meta);
     button.onclick = () => openNote(note.id).catch(showError);
     list.append(button);
   }
@@ -761,11 +776,9 @@ async function trashDialog() {
     const name = document.createElement("strong");
     name.textContent = note.id;
     const detail = document.createElement("small");
-    const date = new Date(note.modified);
+    const edited = shortDate(note.modified);
     detail.textContent = [
-      Number.isNaN(date.valueOf())
-        ? ""
-        : "Last edited " + date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      edited && "Last edited " + edited,
       excerpt(note.excerpt),
     ]
       .filter(Boolean)
@@ -1111,6 +1124,9 @@ function downloadDraft() {
 
 async function initialize() {
   hydrateIcons();
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  for (const key of document.querySelectorAll("kbd[data-keys]"))
+    key.textContent = (mac ? "⌘" : "Ctrl ") + key.dataset.keys;
   state.mode = storage.get("coyote-view") || "write";
   const sort = storage.get("coyote-sort");
   if (["modified", "title-asc", "title-desc"].includes(sort)) state.sort = sort;
