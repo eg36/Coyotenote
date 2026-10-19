@@ -1679,3 +1679,20 @@ test("drafts kept under the vault's former ID are found after its folder moves",
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("coyote-draft:")));
   expect(keys).toEqual([`coyote-draft:${vaultId}:oldtab:${id}`]);
 });
+
+test("the app starts on a page with a New note button, and a reload keeps the open note", async ({ page }) => {
+  const id = await openSeed(page, "Already here.");
+  await page.goto("/");
+  await expect(page.locator("#empty-state")).toBeVisible();
+  await expect(page.locator("#home-text")).toHaveText("Pick a note from the list, or start a new one.");
+  await expect(page.locator("#note-list")).toContainText(id);
+  await expect(page.locator("#note-stats")).toBeHidden();
+  await page.getByRole("button", { name: "New note", exact: true }).last().click();
+  await expect(page.getByRole("dialog", { name: "New note" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.locator(".note-row", { hasText: id }).click();
+  await expect(page.locator("#document-title")).toHaveText(id);
+  await expect(page.locator("#note-stats")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("#document-title")).toHaveText(id);
+});

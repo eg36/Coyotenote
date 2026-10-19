@@ -84,13 +84,11 @@ async function initialize() {
   adoptFormerVault(data.formerVaultIds);
   updateOrphans();
   state.version = data.version;
-  const requested =
-    new URL(location.href).searchParams.get("note") ||
-    storage.get("coyote-last:" + state.vaultId);
+  // The app opens on its start page; a reload keeps the open note, which
+  // the address names.
+  const requested = new URL(location.href).searchParams.get("note");
   if (requested && state.notes.some((n) => n.id === requested))
     await openNote(requested, { skipSave: true });
-  else if (state.notes.length)
-    await openNote(visibleNotes()[0].id, { skipSave: true });
   else emptyNotebook();
   if (new URL(location.href).searchParams.has("new")) newNoteDialog();
 }
@@ -316,8 +314,6 @@ document.addEventListener("keydown", (event) => {
 });
 window.addEventListener("beforeunload", (event) => {
   storeDraft();
-  if (state.current)
-    storage.set("coyote-last:" + state.vaultId, state.current.id);
   if (state.dirty || state.saving) {
     event.preventDefault();
     event.returnValue = "";

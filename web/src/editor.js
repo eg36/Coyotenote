@@ -160,6 +160,7 @@ async function openNote(
   $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
+  $("note-stats").hidden = false;
   if (state.pendingDraft) setSaveState("dirty", "Unsaved draft found");
   else setSaveState("saved", "All changes saved");
   updateCounts();
@@ -176,7 +177,15 @@ async function openNote(
   $("app").classList.remove("sidebar-open");
   if (heading) setTimeout(() => scrollToHeading(heading), 300);
 }
+// emptyNotebook shows the start page: a new note is one click away, and an
+// existing one is in the list beside it.
 function emptyNotebook() {
+  const hasNotes = state.notes.length > 0;
+  $("home-text").textContent = hasNotes
+    ? "Pick a note from the list, or start a new one."
+    : "Capture a thought. Connect an idea. Make something worth keeping.";
+  $("first-note-label").textContent = hasNotes ? "New note" : "Create your first note";
+  $("note-stats").hidden = true;
   state.current = null;
   state.body = "";
   state.savedBody = "";
