@@ -20,7 +20,7 @@ Download the Linux amd64 archive from
 `SHA256SUMS`, or build it with Go 1.24+:
 
 ```sh
-go build -o bin/coyotenote .
+go build -o bin/coyotenote ./cmd/coyotenote
 ```
 
 ## Usage
@@ -75,7 +75,7 @@ terminal's own paste always works, including over SSH.
 
 ```sh
 go vet ./... && go test -race ./...
-go build -o bin/coyotenote . && python3 scripts/smoke.py
+go build -o bin/coyotenote ./cmd/coyotenote && python3 scripts/smoke_terminal.py
 ```
 
 Linux amd64 is the only supported platform.

@@ -39,5 +39,5 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race -count=1 ./...
-      - run: go build -o bin/coyotenote .
-      - run: python3 scripts/smoke.py
+      - run: go build -o bin/coyotenote ./cmd/coyotenote
+      - run: python3 scripts/smoke_terminal.py
