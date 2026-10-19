@@ -305,3 +305,20 @@ func TestHeadingIDsCannotShadowAppElements(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchReportsMatchesAlongsideEveryNote(t *testing.T) {
+	a := testApp(t)
+	request(t, a, "POST", "/api/note", mutation{ID: "Garden", Body: "Tomatoes and basil"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Work/Basil plan", Body: "Quarterly"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Other", Body: "Nothing here"}, 201)
+	state := request(t, a, "GET", "/api/state?q=BASIL", nil, 200)
+	if len(state["notes"].([]any)) != 3 {
+		t.Fatalf("search should still list every note: %v", state["notes"])
+	}
+	if got := fmt.Sprint(state["matches"]); got != "[Garden Work/Basil plan]" {
+		t.Fatalf("matches %s", got)
+	}
+	if state := request(t, a, "GET", "/api/state", nil, 200); state["matches"] != nil {
+		t.Fatalf("unfiltered state reported matches %v", state["matches"])
+	}
+}

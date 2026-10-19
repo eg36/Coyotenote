@@ -238,17 +238,8 @@ async function refresh({ query = state.search } = {}) {
   state.token = data.token;
   state.vaultId = data.vaultId;
   state.themes = data.themes;
-  if (query) {
-    state.filteredIds = new Set(data.notes.map((n) => n.id));
-    for (const n of data.notes) {
-      const old = state.notes.find((item) => item.id === n.id);
-      if (old) Object.assign(old, n);
-      else state.notes.push(n);
-    }
-  } else {
-    state.notes = data.notes;
-    state.filteredIds = null;
-  }
+  state.notes = data.notes;
+  state.filteredIds = query ? new Set(data.matches) : null;
   $("vault-name").textContent = data.vault;
   $("vault-name").title = data.vault;
   if (!state.ready) {
@@ -683,8 +674,8 @@ function deleteDialog() {
       state.trash.push({ id, trashId });
       storage.remove(draftKey());
       await refresh();
-      if (state.notes.length)
-        await openNote(visibleNotes()[0].id, { skipSave: true });
+      const next = visibleNotes()[0] || state.notes[0];
+      if (next) await openNote(next.id, { skipSave: true });
       else emptyNotebook();
       showToast("Note moved to trash.", { undo: true });
     },

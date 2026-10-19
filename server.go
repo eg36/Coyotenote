@@ -255,12 +255,14 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			theme = strings.TrimSpace(string(b))
 		}
 		list := views(a.store, notes, false)
+		// Notes always lists the whole vault; matches names the search hits,
+		// so a filtered sidebar never leaves stale notes behind.
+		var matches []string
 		if q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q"))); q != "" {
-			list = []noteView{}
-			all := views(a.store, notes, false)
-			for i, n := range notes {
+			matches = []string{}
+			for _, n := range notes {
 				if strings.Contains(strings.ToLower(n.ID+"\n"+n.Body), q) {
-					list = append(list, all[i])
+					matches = append(matches, n.ID)
 				}
 			}
 		}
@@ -277,7 +279,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": versionString(), "warnings": warnings, "limits": map[string]int{"lines": maxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": versionString(), "warnings": warnings, "limits": map[string]int{"lines": maxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/note" || route == "GET /api/export" {

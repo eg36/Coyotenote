@@ -634,3 +634,27 @@ test("preview headings named like app controls leave the app working", async ({
   await expect(page.locator("dialog#modal")).toBeHidden();
   await mode(page, "Write");
 });
+
+test("trashing the only search match opens another note without errors", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  const keep = `Keeper ${stamp}`,
+    lonely = `Lonely ${stamp}`;
+  await seed(page, keep, "Still here.");
+  await openSeed(page, `Unique word zephyr${stamp}.`, lonely);
+  await page.locator("#search").fill(`zephyr${stamp}`);
+  await expect(page.locator("#note-list .note-row")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Move note to trash", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Move to trash", exact: true }).click();
+  await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+  await expect(page.locator("#modal")).toBeHidden();
+  await expect(page.locator("#document-title")).not.toHaveText(lonely);
+  await expect(page.locator("#note-list")).toContainText("No matching notes");
+  await page.locator("#search").fill("");
+  await page.locator("#search").fill(stamp.toString());
+  await expect(page.locator("#note-list .note-row")).toHaveCount(1);
+  await expect(page.locator("#note-list")).toContainText(keep);
+});
