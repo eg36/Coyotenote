@@ -430,6 +430,7 @@ func (s *Store) Rename(n Note, newID string) error {
 	if err = renameReplace(source, destination); err != nil {
 		return err
 	}
+	s.moveHistory(n.ID, newID)
 	if err = errors.Join(MoveSync(dir), MoveSync(sourceDir)); err != nil {
 		return MovedSyncError{err}
 	}

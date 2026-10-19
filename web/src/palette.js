@@ -4,6 +4,7 @@ import { icon } from "./icons.js";
 import { $, showError, state } from "./core.js";
 import { draftsDialog } from "./drafts.js";
 import { chooseImages } from "./attachments.js";
+import { historyDialog } from "./history.js";
 import { shortDate } from "./list.js";
 import { createNote, openNote, refresh, save, setMode } from "./editor.js";
 import {
@@ -77,6 +78,7 @@ const commands = [
   ["Save now", "Ctrl S", () => save().catch(showError), true],
   ["Show notes linking here", "", backlinksDialog, true],
   ["Insert image", "", chooseImages, true],
+  ["Show note history", "", () => historyDialog().catch(showError), true],
   ["Download note as Markdown", "", () => $("export-note").click(), true],
   ["Write view", "", () => setMode("write").catch(showError), true],
   ["Markdown view", "", () => setMode("source").catch(showError), true],

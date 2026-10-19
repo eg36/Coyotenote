@@ -555,3 +555,48 @@ func TestAttachmentsUploadServeAndRender(t *testing.T) {
 		t.Fatalf("attachments listed as notes: %v", state["notes"])
 	}
 }
+
+func TestHistoryKeepsReplacedTextAndRestoresIt(t *testing.T) {
+	a := testApp(t)
+	n := request(t, a, "POST", "/api/note", mutation{ID: "Plan", Body: "first"}, 201)
+	versions := func(id string) []any {
+		return request(t, a, "GET", "/api/history?id="+id, nil, 200)["versions"].([]any)
+	}
+	// The first save in a session keeps what it replaces; autosaves soon after do not.
+	n = request(t, a, "PUT", "/api/note", mutation{ID: "Plan", Body: "second", Revision: n["revision"].(string)}, 200)
+	n = request(t, a, "PUT", "/api/note", mutation{ID: "Plan", Body: "third", Revision: n["revision"].(string)}, 200)
+	if got := versions("Plan"); len(got) != 1 {
+		t.Fatalf("versions after quick saves: %v", got)
+	}
+	// Text changed outside the app is always kept before it is replaced.
+	if err := os.WriteFile(a.store.Path("Plan"), []byte("from another editor"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	outside := request(t, a, "GET", "/api/note?id=Plan", nil, 200)
+	request(t, a, "PUT", "/api/note", mutation{ID: "Plan", Body: "fourth", Revision: outside["revision"].(string)}, 200)
+	got := versions("Plan")
+	if len(got) != 2 {
+		t.Fatalf("versions after an outside edit: %v", got)
+	}
+	newest := got[0].(map[string]any)["id"].(string)
+	oldest := got[1].(map[string]any)["id"].(string)
+	if body := request(t, a, "GET", "/api/version?id=Plan&v="+newest, nil, 200)["body"]; body != "from another editor" {
+		t.Fatalf("newest version %v", body)
+	}
+	request(t, a, "GET", "/api/version?id=Plan&v=nope", nil, 404)
+
+	// Restoring needs the current revision and keeps the text it replaces.
+	current := request(t, a, "GET", "/api/note?id=Plan", nil, 200)
+	request(t, a, "POST", "/api/history/restore", mutation{ID: "Plan", Name: oldest, Revision: "stale"}, 409)
+	restored := request(t, a, "POST", "/api/history/restore", mutation{ID: "Plan", Name: oldest, Revision: current["revision"].(string)}, 200)
+	if restored["body"] != "first" {
+		t.Fatalf("restored %v", restored["body"])
+	}
+	if got := versions("Plan"); len(got) != 3 || request(t, a, "GET", "/api/version?id=Plan&v="+got[0].(map[string]any)["id"].(string), nil, 200)["body"] != "fourth" {
+		t.Fatalf("restore did not keep the replaced text: %v", got)
+	}
+	request(t, a, "POST", "/api/rename", mutation{ID: "Plan", Name: "Archive/Plan", Revision: restored["revision"].(string)}, 200)
+	if got := versions("Archive%2FPlan"); len(got) != 3 {
+		t.Fatalf("history did not follow the rename: %v", got)
+	}
+}

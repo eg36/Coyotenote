@@ -53,7 +53,12 @@ async function save() {
   setSaveState("saving", "Saving…");
   state.savingBody = body;
   state.saving = (async () => {
-    const note = await api("/api/note", "PUT", { id, body, revision: base });
+    const { warning, ...note } = await api("/api/note", "PUT", {
+      id,
+      body,
+      revision: base,
+    });
+    if (warning) showToast(warning, { persistent: true });
     if (state.current?.id !== id) return;
     state.current = { ...state.current, ...note };
     state.savedBody = body;

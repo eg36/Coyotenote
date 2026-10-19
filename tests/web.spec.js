@@ -1517,3 +1517,35 @@ test("images show in Write and Preview, keep their Markdown, and can be pasted, 
   const notes = (await (await page.request.get("/api/state")).json()).notes.map((n) => n.id);
   expect(notes.some((note) => note.startsWith("attachments/"))).toBe(false);
 });
+
+test("note history shows earlier versions with changes marked and restores one", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "First line.\nKept line.");
+  await mode(page, "Markdown");
+  await page.locator(".cm-content").fill("Rewritten line.\nKept line.");
+  await expect.poll(() => diskBody(page, id)).toBe("Rewritten line.\nKept line.");
+  await page.getByRole("button", { name: "Note history" }).click();
+  const dialog = page.getByRole("dialog", { name: "Note history" });
+  await expect(dialog.getByRole("option")).toHaveCount(1);
+  const preview = dialog.getByLabel("Version text");
+  await expect(preview).toContainText("First line.");
+  await expect(preview.locator(".changed")).toHaveText("First line.");
+  await dialog.getByRole("button", { name: "Restore this version" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator(".cm-content")).toHaveText("First line.Kept line.");
+  expect(await diskBody(page, id)).toBe("First line.\nKept line.");
+  await expect(page.locator("#toast")).toContainText("Restored the version from");
+
+  // The replaced text became a version too, so the restore can be undone.
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type(">history");
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByRole("option")).toHaveCount(2);
+  await expect(dialog.getByLabel("Version text")).toContainText("Rewritten line.");
+  await page.keyboard.press("Escape");
+
+  await openSeed(page, "");
+  await page.getByRole("button", { name: "Note history" }).click();
+  await expect(page.getByRole("dialog", { name: "Note history" })).toContainText("No earlier versions yet");
+});

@@ -40,7 +40,14 @@ type webApp struct {
 	token    string
 	port     int
 	renderer goldmark.Markdown
+	// written holds the revision of what this process last saved to each
+	// note, so a save can tell when the file changed outside the app.
+	written map[string]string
 }
+
+// versionInterval is how often a note's history keeps a version while
+// autosave writes it again and again.
+const versionInterval = 10 * time.Minute
 
 type noteView struct {
 	ID        string   `json:"id"`
@@ -75,7 +82,7 @@ func newWebApp(s *vault.Store) (*webApp, error) {
 	if _, err := rand.Read(token[:]); err != nil {
 		return nil, err
 	}
-	return &webApp{store: s, token: hex.EncodeToString(token[:]), renderer: goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
+	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
 }
 
 func revision(body string) string {
@@ -333,6 +340,27 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		}
 		return nil
 	}
+	if route == "GET /api/history" || route == "GET /api/version" {
+		n, _, err := a.current(r.URL.Query().Get("id"), notes, "")
+		if err != nil {
+			return err
+		}
+		if route == "GET /api/history" {
+			versions, err := a.store.History(n.ID)
+			if err != nil {
+				return err
+			}
+			writeJSON(w, 200, map[string]any{"versions": versions})
+			return nil
+		}
+		body, err := a.store.ReadVersion(n.ID, r.URL.Query().Get("v"))
+		if err != nil {
+			return &apiError{status: 404, message: "That version is no longer kept."}
+		}
+		text, _ := vault.EditorText(body)
+		writeJSON(w, 200, map[string]string{"body": text})
+		return nil
+	}
 	if route == "GET /api/trash" {
 		list, err := a.store.Trashed()
 		if err != nil {
@@ -385,9 +413,11 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			}
 			_, crlf := vault.EditorText(n.Body)
 			body := vault.DiskText(in.Body, crlf)
+			warning := a.keepVersion(n, false)
 			if err = a.store.Save(n, body); err != nil {
 				return &apiError{status: 409, message: err.Error()}
 			}
+			a.written[n.ID] = revision(body)
 			n.Body, n.Modified = body, time.Time{}
 			for i := range notes {
 				if notes[i].ID == n.ID {
@@ -398,6 +428,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
+			view.Warning = warning
 			writeJSON(w, 200, view)
 		case "DELETE /api/note":
 			trashID, err := a.store.Trash(n)
@@ -437,6 +468,29 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			}
 			writeJSON(w, 200, map[string]any{"note": view, "warnings": warnings})
 		}
+		return nil
+	case "POST /api/history/restore":
+		n, _, err := a.current(in.ID, notes, in.Revision)
+		if err != nil {
+			return err
+		}
+		body, err := a.store.ReadVersion(n.ID, in.Name)
+		if err != nil {
+			return &apiError{status: 404, message: "That version is no longer kept."}
+		}
+		if err = validateBody(body); err != nil {
+			return err
+		}
+		// The text being replaced is always kept, so a restore can be undone.
+		if warning := a.keepVersion(n, true); warning != "" {
+			return &apiError{status: 500, message: warning}
+		}
+		if err = a.store.Save(n, body); err != nil {
+			return &apiError{status: 409, message: err.Error()}
+		}
+		a.written[n.ID] = revision(body)
+		n.Body, n.Modified = body, time.Time{}
+		writeJSON(w, 200, views(a.store, []vault.Note{n}, true)[0])
 		return nil
 	case "POST /api/restore":
 		// Name is the note's original path when its trash name has a suffix.
@@ -499,6 +553,26 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	return &apiError{status: 404, message: "API route not found"}
+}
+
+// keepVersion keeps the text a save is about to replace in the note's
+// history: always when forced or when the file changed outside the app since
+// this process last wrote it, otherwise at most every versionInterval. It
+// returns a warning when the version could not be kept.
+func (a *webApp) keepVersion(n vault.Note, force bool) string {
+	if n.Body == "" && !force {
+		return ""
+	}
+	if !force && a.written[n.ID] == revision(n.Body) {
+		versions, err := a.store.History(n.ID)
+		if err == nil && len(versions) > 0 && time.Since(versions[0].Time) < versionInterval {
+			return ""
+		}
+	}
+	if err := a.store.Snapshot(n.ID, n.Body); err != nil {
+		return "An earlier version of this note could not be kept: " + err.Error()
+	}
+	return ""
 }
 
 // completedMove turns the error of a move that finished but could not be

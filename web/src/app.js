@@ -52,6 +52,7 @@ import { compareDialog } from "./compare.js";
 import { navigate, shortcutChords, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
+import { historyDialog } from "./history.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 
 async function initialize() {
@@ -129,6 +130,7 @@ $("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
 $("outline-button").onclick = () => toggleOutline();
+$("history-button").onclick = () => historyDialog().catch(showError);
 $("focus-button").onclick = toggleFocus;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);

@@ -174,6 +174,15 @@ version side by side with changed lines marked; keep either one. **Download edit
 and **Save recovery copy** preserve your edits first, and **Reload from disk**
 requires confirmation. There is no automatic merge.
 
+**Note history** (the clock button, or "Show note history" in Quick open) lists
+earlier versions of the open note. Before a save replaces a note's text, the
+replaced text is kept as a version: at most every 10 minutes while you type, and
+always when the file was changed outside the app since coyotenote last wrote it.
+The dialog shows each version with the lines that differ from the current text
+marked; **Restore this version** brings it back and keeps the text it replaces as
+another version. Versions live in the vault's hidden `.history/` folder (up to 50
+per note), follow a note when it is renamed, and are plain Markdown files.
+
 Recovery copies use `.recovery-*.md` in the vault, with a temporary-directory
 fallback when the vault cannot be written; the UI shows the path. Recovery and
 `.pending-*` files are never promoted over a note automatically. Use the same

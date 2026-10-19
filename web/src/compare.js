@@ -81,4 +81,4 @@ function compareDialog() {
   );
 }
 
-export { compareDialog };
+export { changedLines, compareDialog };
