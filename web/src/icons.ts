@@ -1,4 +1,4 @@
-const paths = {
+const paths: Record<string, string> = {
   vault:
     '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M8 5V3h8v2m-4 5v5m-3-2h6"/>',
   notebook:
@@ -45,11 +45,11 @@ const paths = {
   hash: '<path d="M5 9h15M4 15h15M10 3 8 21m8-18-2 18"/>',
   command: '<path d="m4 17 6-5-6-5m8 12h8"/>',
 };
-export function icon(name) {
+export function icon(name: string) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.note}</svg>`;
 }
-export function hydrateIcons(root = document) {
-  root.querySelectorAll("[data-icon]").forEach((el) => {
-    el.innerHTML = icon(el.dataset.icon);
+export function hydrateIcons(root: ParentNode = document) {
+  root.querySelectorAll<HTMLElement>("[data-icon]").forEach((el) => {
+    el.innerHTML = icon(el.dataset.icon || "note");
   });
 }

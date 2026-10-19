@@ -9,7 +9,7 @@ function settingsDialog() {
   description.textContent = "These preferences stay in this browser.";
   const fields = document.createElement("div");
   fields.className = "settings-fields";
-  function choice(id, label, options, value) {
+  function choice(id: string, label: string, options: [number, string][], value: number) {
     const field = document.createElement("div");
     const title = document.createElement("label");
     title.className = "field-label";

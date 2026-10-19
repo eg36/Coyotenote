@@ -4,7 +4,7 @@ import { splitFrontMatter } from "./frontmatter.js";
 
 // headings lists a note's Markdown headings outside fenced code, with the
 // line each starts on.
-function headings(body) {
+function headings(body: string) {
   const found = [];
   let fence = "";
   // Front matter holds properties, where # starts a comment.
@@ -28,11 +28,11 @@ function headings(body) {
 
 // jumpToHeading brings the open note's heading at index into view in
 // whichever view shows it.
-function jumpToHeading(index) {
+function jumpToHeading(index: number) {
   const heading = headings(state.current ? state.body : "")[index];
   if (!heading) return;
   if (state.mode === "source" || state.mode === "split") {
-    state.source.goToLine(heading.line);
+    state.source?.goToLine(heading.line);
     return;
   }
   const root = state.mode === "write" ? $("rich-editor") : $("preview");
@@ -51,10 +51,10 @@ function headingElements() {
 
 // currentHeading passes then the index of the last heading above the top
 // of the view, or -1 above the first one.
-function currentHeading(list, then) {
+function currentHeading(list: ReturnType<typeof headings>, then: (index: number) => void) {
   const elements = headingElements();
   if (!elements) {
-    state.source.topLine((top) => then(list.findLastIndex((heading) => heading.line <= top)));
+    state.source?.topLine((top) => then(list.findLastIndex((heading) => heading.line <= top)));
     return;
   }
   const pane = state.mode === "write" ? $("rich-pane") : $("preview-pane");
@@ -62,7 +62,7 @@ function currentHeading(list, then) {
   then(elements.findLastIndex((el) => el.getBoundingClientRect().top <= limit));
 }
 
-let outlineTimer = null;
+let outlineTimer: ReturnType<typeof setTimeout> | undefined;
 // renderOutline lists the open note's headings in the outline panel, soon
 // after typing stops.
 function renderOutline(immediate = false) {
@@ -83,7 +83,7 @@ function renderOutline(immediate = false) {
       .replace(/\[\[(?:[^\]|]*\|)?([^\]]+)\]\]/g, "$1")
       .replace(/[*_`]/g, "");
     button.title = button.textContent;
-    button.style.setProperty("--depth", heading.level - minimum);
+    button.style.setProperty("--depth", String(heading.level - minimum));
     button.onclick = () => {
       jumpToHeading(index);
       if (window.innerWidth < 800) toggleOutline(false);
@@ -122,7 +122,7 @@ function setupOutline() {
   };
   for (const id of ["rich-pane", "preview-pane"])
     $(id).addEventListener("scroll", follow, { passive: true });
-  state.source.onScroll(follow);
+  state.source?.onScroll(follow);
 }
 
 export { headings, jumpToHeading, renderOutline, setupOutline, toggleOutline };

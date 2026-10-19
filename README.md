@@ -68,7 +68,7 @@ moves the old default folder, `~/.local/share/coyotenote-web`, to
 ```sh
 go vet ./... && go test -race ./...
 go build -o bin/labradorite ./cmd/labradorite && python3 scripts/smoke_web.py
-npm ci && npm run build && npm test     # browser tests, Node 24+
+npm ci && npm run typecheck && npm run build && npm test     # browser tests, Node 24+
 ```
 
 Linux amd64 is the only supported platform.

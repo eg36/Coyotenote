@@ -56,6 +56,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - run: npm run build
       - name: Verify committed browser assets are current
         run: git diff --exit-code -- web/assets

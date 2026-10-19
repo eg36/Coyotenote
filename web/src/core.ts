@@ -1,6 +1,13 @@
 // Shared page state, browser storage and the status messages every part uses.
-const $ = (id) => document.getElementById(id);
-const state = {
+import type { AppError, AppState } from "./types.js";
+
+// These IDs belong to the static app shell, which is loaded before app.js.
+function $(id: string): HTMLElement {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`Missing app element: ${id}`);
+  return element;
+}
+const state: AppState = {
   openGeneration: 0,
   filteredIds: null,
   notes: [],
@@ -15,8 +22,8 @@ const state = {
   dirty: false,
   saving: null,
   savingBody: null,
-  saveTimer: null,
-  previewTimer: null,
+  saveTimer: undefined,
+  previewTimer: undefined,
   previewGeneration: 0,
   rich: null,
   source: null,
@@ -34,16 +41,16 @@ const state = {
   busy: false,
   tag: "",
 };
-let toastTimer = null;
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
 const storage = {
-  get(key) {
+  get(key: string) {
     try {
       return localStorage.getItem(key);
     } catch {
       return null;
     }
   },
-  set(key, value) {
+  set(key: string, value: string) {
     try {
       localStorage.setItem(key, value);
       return true;
@@ -51,13 +58,13 @@ const storage = {
       return false;
     }
   },
-  remove(key) {
+  remove(key: string) {
     try {
       localStorage.removeItem(key);
     } catch {}
   },
 };
-function showToast(message, { undo = false, persistent = false } = {}) {
+function showToast(message: string, { undo = false, persistent = false } = {}) {
   clearTimeout(toastTimer);
   $("toast-text").textContent = message;
   $("undo-trash").hidden = !undo;
@@ -69,7 +76,7 @@ function showToast(message, { undo = false, persistent = false } = {}) {
 }
 // showError explains a failure in the banner. Recovery actions appear only
 // while there are unsaved edits, and a conflict leads with comparing versions.
-function showError(error) {
+function showError(error: AppError) {
   state.lastError = error;
   const conflict =
     error.status === 409 &&
@@ -90,7 +97,7 @@ function clearError() {
   state.lastError = null;
   $("error-banner").hidden = true;
 }
-function setSaveState(kind, label) {
+function setSaveState(kind: string, label: string) {
   $("save-state").className = `save-state ${kind}`;
   $("save-label").textContent = label;
 }
