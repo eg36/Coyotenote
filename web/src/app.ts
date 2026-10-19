@@ -131,6 +131,20 @@ $("new-note").onclick = newNoteDialog;
 $("first-note").onclick = newNoteDialog;
 $("document-title").onclick = renameDialog;
 $("delete-note").onclick = deleteDialog;
+// The logo goes to the start page without reloading, so the back button
+// can return to the note that was open.
+$("brand").onclick = (event) => {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  if (!state.current) return;
+  const id = state.current.id;
+  save()
+    .then(() => {
+      state.back.push(id);
+      emptyNotebook();
+    })
+    .catch(showError);
+};
 $("history-back").onclick = async () => {
   const id = state.back.at(-1);
   if (!id) return;

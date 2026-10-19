@@ -207,7 +207,7 @@ function emptyNotebook() {
   state.body = "";
   state.savedBody = "";
   state.dirty = false;
-  $("history-back").disabled = true;
+  $("history-back").disabled = state.back.length === 0;
   $("document-head").hidden = true;
   $("document-actions").hidden = true;
   $("find-replace").disabled = true;

@@ -1295,6 +1295,19 @@ test("opening a note updates the list in place, and saves still refresh its row"
   expect(await row(second).evaluate((el) => el.kept)).toBe(true);
 });
 
+test("the logo goes to the start page and back returns to the note that was open", async ({ page }) => {
+  const id = await openSeed(page, "Come back to me.");
+  await page.evaluate(() => { window.stayed = true; });
+  await page.locator("#brand").click();
+  await expect(page.locator("#empty-state")).toBeVisible();
+  // No reload: the page and its back history are the same.
+  expect(await page.evaluate(() => window.stayed)).toBe(true);
+  await expect(page.locator("#history-back")).toBeEnabled();
+  await page.locator("#history-back").click();
+  await expect(page.locator("#document-title")).toHaveText(id);
+  await expect(page.locator("#history-back")).toBeDisabled();
+});
+
 test("the search field offers find and replace in the open note, starting from its words", async ({ page }) => {
   await openSeed(page, "Replace the old word, then the old word again.");
   const box = await searchBox(page);
