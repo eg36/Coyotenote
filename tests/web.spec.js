@@ -183,6 +183,42 @@ test("all fourteen themes, preview cancel and persistence", async ({
   );
 });
 
+test("every theme draws text, muted text, accents and pills at AA contrast", async ({ page }) => {
+  await openSeed(page, "Contrast.");
+  await page.locator("#theme-button").click();
+  const ids = await page.locator(".theme-option").evaluateAll((options) => options.map((o) => o.dataset.themeId));
+  expect(ids).toHaveLength(14);
+  for (const id of ids) {
+    await page.locator(`[data-theme-id="${id}"]`).hover();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", id);
+    const worst = await page.evaluate(() => {
+      const css = getComputedStyle(document.documentElement);
+      const rgb = (name) => {
+        const hex = css.getPropertyValue("--" + name).trim();
+        return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      };
+      const mix = (a, b, t) => a.map((v, i) => v * t + b[i] * (1 - t));
+      const lum = (c) => c.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ratio = (a, b) => {
+        const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+        return (x + 0.05) / (y + 0.05);
+      };
+      const plain = [rgb("surface"), rgb("chrome")];
+      const tinted = plain.map((b) => mix(rgb("accent"), b, 0.24));
+      return {
+        text: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("text"), b))),
+        muted: Math.min(...plain.map((b) => ratio(rgb("muted"), b))),
+        accentText: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("accent-text"), b))),
+        onPill: ratio(rgb("onPill"), rgb("accent")),
+      };
+    });
+    for (const [role, value] of Object.entries(worst))
+      expect(value, `${id} ${role}`).toBeGreaterThanOrEqual(4.5);
+  }
+  await page.keyboard.press("Escape");
+});
+
 test("theme picker is a compact palette list with an unobscured backdrop", async ({ page }) => {
   await openSeed(page, "# Themes");
   await page.locator("#theme-button").click();

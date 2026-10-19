@@ -20,6 +20,7 @@
   --pink: #a3b4f7;
   --blue: #5aaef2;
   --onPill: #0d1824;
+  --accent-text: #5aaef2;
   --control: 32px;
   --hover: color-mix(in srgb, var(--text) 8%, transparent);
   --selected: color-mix(in srgb, var(--accent) 20%, transparent);
@@ -74,7 +75,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
 }
 input:focus-visible,
 select:focus-visible {
@@ -217,7 +218,7 @@ input[type="search"]::-webkit-search-cancel-button {
   min-width: 160px;
 }
 .search:focus-within {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: -1px;
 }
 .search svg {
@@ -278,7 +279,7 @@ input[type="search"]::-webkit-search-cancel-button {
   background: var(--hover);
 }
 .tag-filter summary:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 .tag-filter summary svg {
@@ -347,7 +348,7 @@ input[type="search"]::-webkit-search-cancel-button {
   padding: 1px 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
   font: inherit;
   font-size: 0.9em;
 }
@@ -469,6 +470,14 @@ input[type="search"]::-webkit-search-cancel-button {
 .note-row.selected {
   background: color-mix(in srgb, var(--accent) 16%, var(--chrome));
 }
+/* On accent-tinted selections, secondary text uses the text color, which
+   is kept readable there in every theme; muted can fall below AA. */
+.note-row.selected .note-date,
+.note-row.selected .note-excerpt,
+.palette-option.chosen small,
+.history-list button[aria-selected="true"] small {
+  color: var(--text);
+}
 .note-row-head {
   display: flex;
   align-items: baseline;
@@ -513,7 +522,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .note-excerpt mark {
   background: color-mix(in srgb, var(--warn) 30%, transparent);
-  color: var(--text);
+  color: var(--mark-text, var(--text));
   border-radius: 3px;
 }
 .list-empty {
@@ -925,7 +934,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .block-option svg {
   width: 16px;
   height: 16px;
-  color: var(--accent);
+  color: var(--accent-text);
   visibility: hidden;
 }
 .block-option[aria-selected="true"] svg {
@@ -956,7 +965,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 [data-block="h1"] .block-sample {
   font-size: 26px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 [data-block="h2"] .block-sample {
   font-size: 21px;
@@ -1196,7 +1205,7 @@ input[type="search"]::-webkit-search-cancel-button {
   vertical-align: middle;
 }
 .prose img.ProseMirror-selectednode {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 .properties {
@@ -1272,7 +1281,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .prose h1 {
   font-size: 30px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .prose h2 {
   font-size: 23px;
@@ -1324,7 +1333,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .prose a:hover,
 .wiki-link:hover {
-  color: var(--accent);
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 .prose code {
@@ -1376,7 +1385,7 @@ input[type="search"]::-webkit-search-cancel-button {
   margin: 0;
 }
 .prose li::marker {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .prose ul[data-type="taskList"] {
   padding: 0;
@@ -1425,7 +1434,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .prose th {
   background: var(--chrome);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .prose th p,
 .prose td p {
@@ -1455,7 +1464,7 @@ input[type="search"]::-webkit-search-cancel-button {
   border-radius: 5px;
 }
 .prose .ProseMirror-selectednode {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
 }
 #editor-area[data-mode="split"] .source-pane {
   border-right: 1px solid var(--line);
@@ -1568,7 +1577,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .empty-state h1 em {
   font-style: normal;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .empty-state p {
   font-size: 15px;
@@ -1810,7 +1819,7 @@ dialog.history {
   padding: 8px 12px;
   font-size: 13px;
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: 6px;
 }
@@ -2071,7 +2080,7 @@ dialog.palette {
 }
 .palette-label mark {
   background: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .palette-option.current .palette-label::after {
@@ -2163,7 +2172,7 @@ dialog.danger #modal-submit {
   gap: 13px 20px;
 }
 .help-grid kbd {
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--font-small);
 }
 .help-grid span {
@@ -2200,7 +2209,7 @@ dialog.danger #modal-submit {
 }
 .toast #undo-trash {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--font-small);
   font-weight: 600;
 }

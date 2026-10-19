@@ -9,6 +9,7 @@ interface ResolveResponse { id: string; found: boolean; target: string; heading:
 import { icon } from "./icons.js";
 import { $, showError, showToast, state, storage } from "./core.js";
 import { api } from "./api.js";
+import { readableRoles } from "./contrast.js";
 import { draftKey } from "./drafts.js";
 import { excerpt, shortDate, visibleNotes } from "./list.js";
 import {
@@ -34,6 +35,8 @@ function applyTheme(id: string) {
   root.style.colorScheme = theme.light ? "light" : "dark";
   for (const [role, color] of Object.entries(theme.colors))
     root.style.setProperty("--" + role, color);
+  for (const [role, value] of Object.entries(readableRoles(theme.colors)))
+    root.style.setProperty("--" + role, value);
   $("theme-name").textContent = theme.name;
 }
 async function chooseTheme(id: string) {

@@ -150,7 +150,9 @@ not change the Markdown files or follow the vault to another browser.
 - Click the theme name for all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
   neutral white/charcoal surfaces and blue accents. Hover, focus or ↑/↓ previews a
-  theme; Enter/click keeps it; Escape restores the previous theme.
+  theme; Enter/click keeps it; Escape restores the previous theme. Palettes stay as
+  published; where one of their text colors would fall below WCAG AA contrast (as in
+  Ayu Light or Nord), the app darkens or lightens just that text until it passes.
 - **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 
