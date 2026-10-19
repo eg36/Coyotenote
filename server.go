@@ -511,7 +511,8 @@ func (a *webApp) render(body, from string, notes []note) (string, error) {
 		body = body[:l.start] + "[" + label + "](" + target + ")" + body[l.end:]
 	}
 	var output bytes.Buffer
-	if err := a.renderer.Convert([]byte(body), &output); err != nil {
+	context := parser.NewContext(parser.WithIDs(newHeadingIDs()))
+	if err := a.renderer.Convert([]byte(body), &output, parser.WithContext(context)); err != nil {
 		return "", err
 	}
 	// No remote images in a local notebook: replace generated image tags with

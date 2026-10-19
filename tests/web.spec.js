@@ -618,3 +618,19 @@ test("view changes never replace source edits or normalize untouched Markdown", 
   await page.waitForTimeout(600);
   expect(await diskBody(page, id)).toBe("Source change must survive.");
 });
+
+test("preview headings named like app controls leave the app working", async ({
+  page,
+}) => {
+  await openSeed(page, "# Modal\n\n## Word count\n\nThree small words.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview h2#h-word-count")).toHaveText(
+    "Word count",
+  );
+  await expect(page.locator("#word-count")).toHaveText(/^\d+ words$/);
+  await page.locator("#theme-button").click();
+  await expect(page.locator("dialog#modal")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog#modal")).toBeHidden();
+  await mode(page, "Write");
+});

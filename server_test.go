@@ -290,3 +290,18 @@ func TestTrashKeepsNotesWithRepeatedNames(t *testing.T) {
 	}
 	request(t, a, "POST", "/api/restore", mutation{ID: "Folder/Dup 3", Name: "Folder/Dup"}, 409)
 }
+
+func TestHeadingIDsCannotShadowAppElements(t *testing.T) {
+	a := testApp(t)
+	result := request(t, a, "POST", "/api/render", mutation{Body: "# Modal\n## Word count\n## Word count\n# ¿Qué tal?\n# !!!", ID: "Other"}, 200)["html"].(string)
+	for _, expected := range []string{`id="h-modal"`, `id="h-word-count"`, `id="h-word-count-1"`, `id="h-qué-tal"`, `id="h-heading"`} {
+		if !strings.Contains(result, expected) {
+			t.Errorf("missing %s in %s", expected, result)
+		}
+	}
+	for _, shadow := range []string{`id="modal"`, `id="word-count"`} {
+		if strings.Contains(result, shadow) {
+			t.Errorf("heading took app element %s", shadow)
+		}
+	}
+}

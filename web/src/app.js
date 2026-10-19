@@ -565,7 +565,7 @@ function scrollToHeading(heading) {
   const target = [...root.querySelectorAll("h1,h2,h3,h4,h5,h6")].find(
     (el) =>
       el.textContent.toLowerCase() === heading.toLowerCase() ||
-      el.id === heading.toLowerCase().replace(/ /g, "-"),
+      el.id === "h-" + heading.toLowerCase().replace(/ /g, "-"),
   );
   target?.scrollIntoView({ block: "start", behavior: "smooth" });
 }
