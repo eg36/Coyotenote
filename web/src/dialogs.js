@@ -271,7 +271,33 @@ async function trashDialog() {
     row.append(label, restore);
     container.append(row);
   }
+  if (notes.length) {
+    const empty = document.createElement("button");
+    empty.type = "button";
+    empty.className = "trash-empty";
+    empty.textContent = "Delete all…";
+    empty.onclick = () => emptyTrashDialog(notes.length);
+    container.append(empty);
+  }
   openModal("Trash", container, null, { hideFooter: true });
+}
+// emptyTrashDialog confirms deleting every trashed note for good.
+function emptyTrashDialog(count) {
+  const content = document.createElement("p");
+  content.className = "dialog-description";
+  const notes = count === 1 ? "1 note" : `${count} notes`;
+  content.textContent = `This permanently deletes ${notes} in the trash and the history kept of them. It can't be undone.`;
+  openModal(
+    "Delete all notes in the trash?",
+    content,
+    async () => {
+      const { deleted } = await api("/api/trash/empty", "POST", {});
+      state.trash = [];
+      $("undo-trash").hidden = true;
+      showToast(deleted === 1 ? "Deleted 1 note for good." : `Deleted ${deleted} notes for good.`);
+    },
+    { submit: `Delete ${notes}`, className: "danger" },
+  );
 }
 function themeDialog() {
   themeOriginal = state.theme;

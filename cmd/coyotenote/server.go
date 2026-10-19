@@ -471,6 +471,13 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			writeJSON(w, 200, map[string]any{"note": view, "warnings": warnings})
 		}
 		return nil
+	case "POST /api/trash/empty":
+		deleted, err := a.store.EmptyTrash(notes)
+		if err != nil {
+			return err
+		}
+		writeJSON(w, 200, map[string]int{"deleted": deleted})
+		return nil
 	case "POST /api/history/restore":
 		n, _, err := a.current(in.ID, notes, in.Revision)
 		if err != nil {

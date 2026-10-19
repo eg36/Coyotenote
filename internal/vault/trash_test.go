@@ -134,3 +134,47 @@ func TestTrashKeepsFolders(t *testing.T) {
 	}
 	assertFileBody(t, s.Path(n.ID), "body")
 }
+
+func TestEmptyTrashDeletesTrashedNotesAndTheirHistory(t *testing.T) {
+	s := testStore(t)
+	trashNote := func(id, body string) {
+		t.Helper()
+		writeNote(t, s, id, body)
+		if _, err := s.Trash(Note{ID: id, Body: body}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, id := range []string{"Work/Old", "Gone", "Kept"} {
+		if err := s.Snapshot(id, "earlier "+id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trashNote("Work/Old", "old")
+	trashNote("Gone", "first")
+	trashNote("Gone", "second") // trashed as "Gone 2"
+	trashNote("Kept", "trashed copy")
+	writeNote(t, s, "Kept", "a new note with the same name")
+	other := filepath.Join(s.Dir, ".trash", "obsidian-file.txt")
+	os.WriteFile(other, []byte("not ours"), 0600)
+
+	live, _, _ := s.Load()
+	deleted, err := s.EmptyTrash(live)
+	if err != nil || deleted != 4 {
+		t.Fatalf("deleted %d, %v", deleted, err)
+	}
+	if list, _ := s.Trashed(); len(list) != 0 {
+		t.Fatalf("trash still lists %v", list)
+	}
+	if _, err := os.Stat(filepath.Join(s.Dir, ".trash", "Work")); !os.IsNotExist(err) {
+		t.Fatal("empty trash folder left behind")
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Fatal("removed a file that is not a trashed note")
+	}
+	for id, want := range map[string]int{"Work/Old": 0, "Gone": 0, "Kept": 1} {
+		if versions, _ := s.History(id); len(versions) != want {
+			t.Errorf("%s: %d versions, want %d", id, len(versions), want)
+		}
+	}
+	assertFileBody(t, s.Path("Kept"), "a new note with the same name")
+}

@@ -1757,6 +1757,24 @@ dialog.palette {
 .link-list button:hover {
   background: color-mix(in srgb, var(--accent) 18%, var(--chrome));
 }
+.link-list .trash-empty {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  font-size: 13px;
+}
+.link-list .trash-empty:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+dialog.danger #modal-submit {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--surface);
+}
 .trash-row {
   display: flex;
   align-items: center;

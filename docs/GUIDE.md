@@ -211,7 +211,10 @@ an unsaved draft.
 Deletion moves files into `.trash/` with folder paths preserved. The **Undo** toast
 restores the latest deletion during this session; it refuses to replace an
 existing file. The **Trash** button lists every note in `.trash/` with its last edit
-and an excerpt, and restores any of them. Trash is never purged automatically.
+and an excerpt, and restores any of them. Trash is never purged automatically;
+**Delete all…** in the Trash dialog permanently deletes every trashed note and
+the history kept of it, after a confirmation. Other files in `.trash/` are left
+alone.
 
 The app accepts notes up to **10,000 lines and 4 MiB**, with a **1 MiB** rich-editor
 paste limit. Invalid UTF-8, control characters, unsafe names and symlinks are

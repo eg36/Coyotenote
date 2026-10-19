@@ -47,7 +47,8 @@ its safety rules.
   ignored, so the same folder opens in Obsidian.
 - Links use Obsidian syntax: `[[Note]]`, `[[Folder/Note]]`, `[[Note#Heading]]`,
   `[[Note|text]]`. Typing `[[` suggests notes.
-- Deleted notes go to `.trash/` in the vault and are never emptied automatically.
+- Deleted notes go to `.trash/` in the vault and are never emptied automatically;
+  the Trash dialog can delete them for good.
 
 ## Safety
 

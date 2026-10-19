@@ -657,3 +657,21 @@ func TestRenameLeavesWikiSyntaxInCodeAlone(t *testing.T) {
 		t.Fatalf("got %q", body)
 	}
 }
+
+func TestEmptyTrashDeletesForGood(t *testing.T) {
+	a := testApp(t)
+	for _, id := range []string{"One", "Two"} {
+		n := request(t, a, "POST", "/api/note", mutation{ID: id, Body: id}, 201)
+		request(t, a, "DELETE", "/api/note", mutation{ID: id, Revision: n["revision"].(string)}, 200)
+	}
+	if got := request(t, a, "POST", "/api/trash/empty", struct{}{}, 200)["deleted"]; got != float64(2) {
+		t.Fatalf("deleted %v", got)
+	}
+	if notes := request(t, a, "GET", "/api/trash", nil, 200)["notes"].([]any); len(notes) != 0 {
+		t.Fatalf("trash %v", notes)
+	}
+	request(t, a, "POST", "/api/restore", mutation{ID: "One"}, 409)
+	if w := raw(t, a, "POST", "/api/trash/empty", []byte("{}"), map[string]string{"X-Coyote-Token": "wrong"}); w.Code != 403 {
+		t.Fatalf("emptied without the token: %d", w.Code)
+	}
+}

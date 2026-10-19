@@ -1631,3 +1631,30 @@ test("Chromium reads the manifest that makes the app installable", async ({ page
   expect(manifest.errors).toEqual([]);
   expect(JSON.parse(manifest.data)).toMatchObject({ name: "coyotenote", display: "standalone" });
 });
+
+test("the trash can be emptied for good after a confirmation", async ({ page }) => {
+  const stamp = Date.now();
+  for (const id of [`Doomed one ${stamp}`, `Doomed two ${stamp}`]) {
+    await openSeed(page, "Gone soon.", id);
+    await page.getByRole("button", { name: "Move note to trash", exact: true }).click();
+    await page.getByRole("button", { name: "Move to trash", exact: true }).click();
+    await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+  }
+  const count = (await (await page.request.get("/api/trash")).json()).notes.length;
+  await page.locator("#trash-button").click();
+  await page.getByRole("button", { name: "Delete all…" }).click();
+  const confirm = page.getByRole("dialog", { name: "Delete all notes in the trash?" });
+  await expect(confirm).toContainText("It can't be undone.");
+  // Cancelling keeps everything.
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  expect((await (await page.request.get("/api/trash")).json()).notes.length).toBe(count);
+  await page.locator("#trash-button").click();
+  await page.getByRole("button", { name: "Delete all…" }).click();
+  await page.getByRole("button", { name: `Delete ${count} notes` }).click();
+  await expect(page.locator("#toast")).toContainText(`Deleted ${count} notes for good.`);
+  await expect(page.locator("#undo-trash")).toBeHidden();
+  expect((await (await page.request.get("/api/trash")).json()).notes).toEqual([]);
+  await page.locator("#trash-button").click();
+  await expect(page.locator(".trash-list")).toContainText("The trash is empty.");
+  await expect(page.getByRole("button", { name: "Delete all…" })).toHaveCount(0);
+});

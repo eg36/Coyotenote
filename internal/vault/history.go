@@ -132,3 +132,14 @@ func (s *Store) moveHistory(oldID, newID string) {
 	_ = os.Remove(from)
 	pruneEmpty(filepath.Join(s.Dir, historyDir), filepath.Dir(from))
 }
+
+// dropHistory deletes the versions kept of note id.
+func (s *Store) dropHistory(id string) {
+	dir, err := s.historyFolder(id, false)
+	if err != nil {
+		return
+	}
+	if err := os.RemoveAll(dir); err == nil {
+		pruneEmpty(filepath.Join(s.Dir, historyDir), filepath.Dir(dir))
+	}
+}

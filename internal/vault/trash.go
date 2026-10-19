@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -221,4 +222,50 @@ func (s *Store) Trashed() ([]TrashedNote, error) {
 	})
 	sort.SliceStable(list, func(i, j int) bool { return list[i].Modified.After(list[j].Modified) })
 	return list, err
+}
+
+// trashSuffix is the " N" a repeated name gets in the trash.
+var trashSuffix = regexp.MustCompile(` \d+$`)
+
+// EmptyTrash permanently deletes every note in the trash, along with the
+// versions kept of them, unless a note in live still has that name. Other
+// files someone keeps in .trash are left alone. It reports how many notes
+// it deleted.
+func (s *Store) EmptyTrash(live []Note) (int, error) {
+	trash, err := s.trashDirectory(false)
+	if os.IsNotExist(err) {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+	notes, err := s.Trashed()
+	if err != nil {
+		return 0, err
+	}
+	alive := make(map[string]bool, len(live))
+	for _, n := range live {
+		alive[strings.ToLower(n.ID)] = true
+	}
+	deleted := 0
+	for _, n := range notes {
+		dir, err := noteDir(trash, n.ID, false)
+		if err != nil {
+			return deleted, err
+		}
+		file := filepath.Join(dir, path.Base(n.ID)+".md")
+		if info, err := os.Lstat(file); err != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		if err := os.Remove(file); err != nil {
+			return deleted, err
+		}
+		deleted++
+		pruneEmpty(trash, dir)
+		for _, id := range []string{n.ID, trashSuffix.ReplaceAllString(n.ID, "")} {
+			if !alive[strings.ToLower(id)] {
+				s.dropHistory(id)
+			}
+		}
+	}
+	return deleted, MoveSync(trash)
 }
