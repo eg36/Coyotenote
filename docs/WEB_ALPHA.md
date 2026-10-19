@@ -66,8 +66,9 @@ and verifies the committed output before browser tests.
 4. Reload and confirm saved content; try changing the theme and reload again.
 5. Create a second note, insert a wiki link, follow it, inspect backlinks and go back.
 6. Search note contents, rename/move a note, trash it and use Undo.
-7. Open the same note in two tabs. Edit one, then the other; the second must report
-   a conflict while keeping the first version on disk.
+7. Open the same note in two tabs. Edit one, then return to the other: it reloads
+   the newer text. A tab that still holds unsaved edits keeps them instead, and
+   saving reports a conflict while keeping the first version on disk.
 8. Stop the server, type a draft, restart the server, and reload. Restore the draft,
    then save; no draft should silently replace a newer disk revision.
 9. Narrow the browser: notes become a drawer and Split stacks vertically.

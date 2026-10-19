@@ -1268,8 +1268,45 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     storeDraft();
     save().catch(showError);
-  }
+  } else syncFromDisk();
 });
+// Notes may change in other editors while this tab is in the background.
+// On return, refresh the list and reload the open note only when it has no
+// local edits, so a background change never replaces unsaved work.
+let syncing = false;
+async function syncFromDisk() {
+  if (!state.ready || syncing || document.hidden) return;
+  syncing = true;
+  try {
+    const id = state.current?.id,
+      before = state.current?.revision;
+    await refresh();
+    if (
+      !id ||
+      state.current?.id !== id ||
+      state.current.revision !== before ||
+      state.dirty ||
+      state.saving ||
+      state.pendingDraft
+    )
+      return;
+    const summary = state.notes.find((note) => note.id === id);
+    if (!summary) {
+      const next = visibleNotes()[0] || state.notes[0];
+      if (next) await openNote(next.id, { skipSave: true, pushBack: false });
+      else emptyNotebook();
+      showToast(`“${id}” was moved or deleted outside coyotenote.`);
+    } else if (summary.revision !== before) {
+      await openNote(id, { skipSave: true, pushBack: false });
+      showToast("Reloaded changes made outside coyotenote.");
+    }
+  } catch {
+    // An unreachable server is reported by the next save instead.
+  } finally {
+    syncing = false;
+  }
+}
+window.addEventListener("focus", syncFromDisk);
 window.addEventListener("online", () => {
   if (state.dirty) save().catch(showError);
 });

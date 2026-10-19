@@ -686,3 +686,44 @@ test("autosave renews a stale token after a restart but never across vaults", as
   await expect(page.locator("#error-banner")).toBeVisible();
   expect(await diskBody(page, id)).toContain("After restart.");
 });
+
+test("returning to the tab picks up notes changed outside the app", async ({
+  page,
+}) => {
+  const id = await openSeed(page, "Original text.");
+  const bootstrap = await (await page.request.get("/api/state")).json();
+  const note = await (
+    await page.request.get("/api/note?id=" + encodeURIComponent(id))
+  ).json();
+  await page.request.put("/api/note", {
+    headers: { "X-Coyote-Token": bootstrap.token },
+    data: { id, body: "Edited elsewhere.", revision: note.revision },
+  });
+  const outside = `Outside ${Date.now()}`;
+  await seed(page, outside, "Made by another program.");
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  await expect(editor).toContainText("Edited elsewhere.");
+  await expect(page.locator("#toast")).toContainText("Reloaded changes");
+  await expect(page.locator("#note-list")).toContainText(outside);
+
+  await editor.fill("Local edit in progress.");
+  await expect.poll(() => diskBody(page, id)).toBe("Local edit in progress.");
+  await page.route("**/api/note", (route) =>
+    route.request().method() === "PUT"
+      ? route.fulfill({ status: 503, json: { error: "offline" } })
+      : route.continue(),
+  );
+  await editor.fill("Unsaved local words.");
+  await expect(page.locator("#error-banner")).toBeVisible();
+  const latest = await (
+    await page.request.get("/api/note?id=" + encodeURIComponent(id))
+  ).json();
+  await page.request.put("/api/note", {
+    headers: { "X-Coyote-Token": bootstrap.token },
+    data: { id, body: "Second outside edit.", revision: latest.revision },
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.locator("#note-list")).toContainText("Second outside edit");
+  await expect(editor).toContainText("Unsaved local words.");
+});
