@@ -71,12 +71,29 @@ terminal's own paste always works, including over SSH.
   control characters) are skipped with a warning and left untouched.
 - Line endings (LF or CRLF) and tabs are preserved.
 
+## Web alpha
+
+`coyotenote-web` is an experimental browser version that runs a local server and
+uses the same vault format, links, trash and themes. It is an alpha for testing,
+with no release yet; its default vault (`~/.local/share/coyotenote-web`) is
+separate from the terminal app's.
+
+```sh
+go build -o bin/coyotenote-web ./cmd/coyotenote-web
+./bin/coyotenote-web            # then open http://127.0.0.1:4280
+```
+
+See [docs/WEB_ALPHA.md](docs/WEB_ALPHA.md) for features, safety and development.
+
 ## Development
 
 ```sh
 go vet ./... && go test -race ./...
 go build -o bin/coyotenote ./cmd/coyotenote && python3 scripts/smoke_terminal.py
+go build -o bin/coyotenote-web ./cmd/coyotenote-web && python3 scripts/smoke_web.py
 ```
+
+Browser tests for the web alpha need Node 24+: `npm ci && npm run build && npm test`.
 
 Linux amd64 is the only supported platform.
 
