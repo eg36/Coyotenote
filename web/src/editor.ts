@@ -170,6 +170,7 @@ async function openNote(
   $("document-head").hidden = false;
   $("document-actions").hidden = false;
   $("find-replace").disabled = false;
+  $("app").classList.remove("at-home");
   $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
@@ -211,6 +212,7 @@ function emptyNotebook() {
   $("document-head").hidden = true;
   $("document-actions").hidden = true;
   $("find-replace").disabled = true;
+  $("app").classList.add("at-home");
   $("editor-frame").hidden = true;
   $("editor-area").hidden = true;
   $("editor-toolbar").hidden = true;

@@ -650,13 +650,6 @@ input[type="search"]::-webkit-search-cancel-button {
   margin: 5px 6px;
   background: color-mix(in srgb, var(--line) 70%, transparent);
 }
-.bar-divider {
-  width: 1px;
-  height: 20px;
-  margin: 0 6px 0 4px;
-  flex-shrink: 0;
-  background: color-mix(in srgb, var(--line) 70%, transparent);
-}
 .note-heading {
   flex: 1;
   min-width: 0;
@@ -780,6 +773,18 @@ input[type="search"]::-webkit-search-cancel-button {
   flex: 1 1 0;
   min-width: 0;
   padding-left: 10px;
+}
+/* Showing the notes and going back sit beside the note's title. */
+.nav-buttons {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+/* The start page has no note to edit, so the writing tools leave. */
+.app.at-home .header-tools,
+.app.at-home .editor-bar {
+  display: none;
 }
 /* Wide headers group the tools in one rounded pill, as in Google Docs,
    centered between the title and the note actions; from 1840 px it is
@@ -2444,8 +2449,11 @@ dialog.danger #modal-submit {
     border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
   }
   .title-block {
-    flex: 1 1 0;
+    flex: 0 1 auto;
     max-width: none;
+  }
+  .nav-buttons {
+    margin-right: auto;
   }
 }
 @media (max-width: 980px) {
@@ -2550,11 +2558,21 @@ dialog.danger #modal-submit {
     grid-row: 2;
     justify-self: end;
   }
+  /* Phones start the toolbar row with showing the notes and going back. */
+  .topbar .nav-buttons {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: start;
+    align-self: start;
+    position: relative;
+    z-index: 1;
+    margin: 4px 0 0 -6px;
+  }
   .topbar .editor-bar {
     grid-column: 1 / -1;
     grid-row: 3;
     margin: 0 -6px;
-    padding: 4px 6px 0;
+    padding: 4px 6px 0 72px;
   }
   .title-block {
     display: contents;
