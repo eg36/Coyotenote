@@ -17,6 +17,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -797,7 +798,7 @@ func snippet(body, q string) string {
 	}
 	at := -1
 	for i := 0; i+len(query) <= len(lower) && at < 0; i++ {
-		if string(lower[i:i+len(query)]) == string(query) {
+		if slices.Equal(lower[i:i+len(query)], query) {
 			at = i
 		}
 	}
