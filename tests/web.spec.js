@@ -754,7 +754,7 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeVisible();
     await page.locator('[data-menu="view"]').click();
-    await page.getByRole("menuitem", { name: "Focus mode", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Focus mode" }).click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
     expect((await frame.boundingBox()).width).toBeCloseTo(width, 0);
