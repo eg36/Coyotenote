@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,13 +22,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/eg36/coyotenote/web"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 )
-
-//go:embed web/index.html web/assets/* logo.png
-var assets embed.FS
 
 const maxBodyBytes = 4 << 20
 
@@ -126,20 +122,19 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "/" {
-		data, _ := assets.ReadFile("web/index.html")
+		data, _ := web.Files.ReadFile("index.html")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(data)
 		return
 	}
 	if r.URL.Path == "/assets/logo.png" {
-		data, _ := assets.ReadFile("logo.png")
+		data, _ := web.Files.ReadFile("logo.png")
 		w.Header().Set("Content-Type", "image/png")
 		_, _ = w.Write(data)
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
-		sub, _ := fs.Sub(assets, "web")
-		http.FileServer(http.FS(sub)).ServeHTTP(w, r)
+		http.FileServer(http.FS(web.Files)).ServeHTTP(w, r)
 		return
 	}
 	http.NotFound(w, r)

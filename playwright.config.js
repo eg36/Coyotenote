@@ -24,7 +24,7 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: `./bin/coyotenote -listen 127.0.0.1:4289 -data-dir "${vault}"`,
+    command: `./bin/coyotenote-web -listen 127.0.0.1:4289 -data-dir "${vault}"`,
     url: "http://127.0.0.1:4289/healthz",
     reuseExistingServer: false,
     timeout: 15000,

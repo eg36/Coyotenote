@@ -9,7 +9,7 @@ import tempfile
 import urllib.error
 import urllib.request
 
-BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'coyotenote')
+BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'coyotenote-web')
 
 def start(vault):
     process = subprocess.Popen([BINARY, '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

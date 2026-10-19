@@ -60,7 +60,7 @@ and verifies the committed output before browser tests.
 
 ## Morning test checklist
 
-1. Check out web_alpha, build `bin/coyotenote`, run it with a temporary vault.
+1. Check out web_alpha, build `bin/coyotenote-web` from `./cmd/coyotenote-web`, run it with a temporary vault.
 2. Open the printed localhost URL and create a note in Write mode.
 3. Use headings, bold, a checklist and a table. Switch to Markdown, Preview and Split.
 4. Reload and confirm saved content; try changing the theme and reload again.

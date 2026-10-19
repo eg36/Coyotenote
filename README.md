@@ -21,8 +21,8 @@ needed to run the app, and there are no CDNs or runtime third-party requests.
 ```sh
 git clone --branch web_alpha https://github.com/eg36/Coyotenote.git
 cd Coyotenote
-go build -o bin/coyotenote .
-./bin/coyotenote
+go build -o bin/coyotenote-web ./cmd/coyotenote-web
+./bin/coyotenote-web
 ```
 
 Open **http://127.0.0.1:4280** in a current Chrome/Chromium, Firefox or Safari. The
@@ -37,22 +37,22 @@ If the repository is already on your computer:
 git fetch origin
 git switch web_alpha
 git pull --ff-only
-go build -o bin/coyotenote .
-./bin/coyotenote -version
-./bin/coyotenote
+go build -o bin/coyotenote-web ./cmd/coyotenote-web
+./bin/coyotenote-web -version
+./bin/coyotenote-web
 ```
 
 **Run the same binary you rebuilt:** these commands build and launch
-`./bin/coyotenote`. An older `./coyotenote` in the repository root is a different
+`./bin/coyotenote-web`. An older `./coyotenote` in the repository root is a different
 file and may still be the terminal application.
 
 ### Choose a vault
 
 ```sh
-./bin/coyotenote ~/Notes                  # open an existing Markdown vault
-./bin/coyotenote -data-dir /tmp/web-test  # isolated notes AND theme settings
-./bin/coyotenote -listen 127.0.0.1:4390  # choose another local port
-./bin/coyotenote -version
+./bin/coyotenote-web ~/Notes                  # open an existing Markdown vault
+./bin/coyotenote-web -data-dir /tmp/web-test  # isolated notes AND theme settings
+./bin/coyotenote-web -listen 127.0.0.1:4390  # choose another local port
+./bin/coyotenote-web -version
 ```
 
 Flags go **before** the optional vault path. The alpha only accepts loopback
@@ -196,8 +196,8 @@ npm run build                       # refresh committed, embedded assets
 
 go test -race ./...
 go vet ./...
-go build -o bin/coyotenote .
-python3 scripts/smoke.py             # Python 3, standard library only
+go build -o bin/coyotenote-web ./cmd/coyotenote-web
+python3 scripts/smoke_web.py             # Python 3, standard library only
 
 npx playwright install --with-deps chromium
 npm test                            # real Chromium browser tests
