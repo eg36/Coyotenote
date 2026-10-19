@@ -11,6 +11,7 @@ import {
 } from "./dialogs.js";
 import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
+import { dailyNote } from "./daily.js";
 
 async function navigate(delta) {
   const notes = visibleNotes();
@@ -39,6 +40,7 @@ function toggleFocus() {
 // "mod" for Ctrl or ⌘; rows without chords are handled by the editors.
 const shortcuts = [
   ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
+  ["Alt J", "Open today's note", ["alt+j"], () => dailyNote().catch(showError)],
   ["Alt K / Ctrl / ⌘ K", "Quick open a note, heading or command", ["alt+k", "mod+k"], () => paletteDialog()],
   ["Alt S / Ctrl / ⌘ Shift E", "Search note contents", ["alt+s", "mod+shift+e"], findNotes],
   ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],

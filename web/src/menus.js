@@ -16,6 +16,7 @@ import {
 import { findNotes, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
+import { dailyNote } from "./daily.js";
 
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
 const keys = (text) => (mac ? text.replace(/^Ctrl /, "⌘").replace(/^Alt /, "⌥") : text);
@@ -27,6 +28,7 @@ const rich = (name) => () => state.rich?.command(name);
 const menus = {
   file: [
     ["New note", "Ctrl N", newNoteDialog],
+    ["Today's note", "Alt J", () => dailyNote().catch(showError)],
     ["Quick open", "Ctrl K", () => paletteDialog()],
     "-",
     ["Rename or move…", "Ctrl Shift R", renameDialog, note],

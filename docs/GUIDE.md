@@ -112,6 +112,9 @@ are at least 12 px.
   Start with `#` to jump to a heading of the open note, or `>` to run a command
   such as a view change, rename or theme. Anything typed can also become a
   content search or a new note.
+- **Today's note** (File menu, Quick open command, or Alt+J) opens
+  `Journal/YYYY-MM-DD` using your computer's local date, creating an empty note
+  when it does not exist. Repeating the command keeps the same note and its text.
 - The **outline** button (Alt+O) lists the note's headings beside the text,
   indented by level. Click one to bring it into view in any view; the outline
   marks the section you are reading as you scroll. It stays open across reloads
@@ -159,6 +162,7 @@ editing are not supported.
 | Shortcut | Action |
 | --- | --- |
 | Alt+N or Ctrl/⌘+N | Create a note |
+| Alt+J | Open or create today's journal note |
 | Alt+K or Ctrl/⌘+K | Quick open a note, heading or command |
 | Alt+S or Ctrl/⌘+Shift+E | Search note contents |
 | Ctrl/⌘+S | Save immediately |

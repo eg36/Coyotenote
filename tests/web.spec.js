@@ -1173,7 +1173,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText(
     "Keyboard shortcuts",
   );
-  await expect(page.locator(".help-grid kbd")).toHaveCount(17);
+  await expect(page.locator(".help-grid kbd")).toHaveCount(18);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
   await page.keyboard.press("Escape");
   await page.locator("body").click({ position: { x: 5, y: 5 } });
@@ -1718,4 +1718,42 @@ test("the app starts on a page with a New note button, and a reload keeps the op
   await expect(page.locator("#note-stats")).toBeVisible();
   await page.reload();
   await expect(page.locator("#document-title")).toHaveText(id);
+});
+
+test.describe("daily notes", () => {
+  test.use({ timezoneId: "Pacific/Honolulu" });
+  test("uses the local date and reopens the same text from every entry point", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#save-label")).toHaveText("Ready when you are");
+    // UTC is already November 4; the writer's date is still November 3.
+    await page.clock.setFixedTime(new Date("2026-11-04T03:00:00Z"));
+    await page.locator('[data-menu="file"]').click();
+    await page.getByRole("menuitem", { name: "Today's note" }).click();
+    await expect(page.locator("#document-title")).toHaveText("2026-11-03");
+    await mode(page, "Markdown");
+    await page.locator(".cm-content").fill("Keep today's thoughts.");
+    await page.keyboard.press("Alt+j");
+    await expect.poll(() => diskBody(page, "Journal/2026-11-03")).toBe("Keep today's thoughts.");
+    await page.keyboard.press("Control+k");
+    await page.getByLabel("Search notes, headings and commands").fill(">today");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#modal")).not.toBeVisible();
+    await expect(page.locator(".cm-content")).toHaveText("Keep today's thoughts.");
+    const data = await (await page.request.get("/api/state")).json();
+    expect(data.notes.filter((n) => n.id === "Journal/2026-11-03")).toHaveLength(1);
+  });
+
+  test("a failed save keeps the current note and its recoverable draft", async ({ page }) => {
+    const id = await openSeed(page, "Before journal navigation.");
+    await mode(page, "Markdown");
+    await page.route("**/api/note", (route) => route.request().method() === "PUT"
+      ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({error: "Save unavailable"}) })
+      : route.continue());
+    await page.locator(".cm-content").fill("Unsaved before journal navigation.");
+    await page.keyboard.press("Alt+j");
+    await expect(page.locator("#error-banner")).toContainText("Save unavailable");
+    await expect(page.locator("#document-title")).toHaveText(id);
+    await expect(page.locator(".cm-content")).toContainText("Unsaved before journal navigation.");
+    expect(await page.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith("coyote-draft:") && localStorage[k].includes("Unsaved before journal navigation.")))).toBeTruthy();
+  });
 });

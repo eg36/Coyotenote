@@ -28,6 +28,7 @@ import {
 } from "./dialogs.js";
 import { headings, jumpToHeading, toggleOutline } from "./outline.js";
 import { findNotes, toggleFocus } from "./shortcuts.js";
+import { dailyNote } from "./daily.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
 // match: word starts and runs of consecutive letters count for more, and
@@ -91,6 +92,7 @@ function addProperties() {
 // Commands name what they do; those needing an open note hide without one.
 const commands = [
   ["New note", "Ctrl N", newNoteDialog],
+  ["Open today's note", "Alt J", () => dailyNote().catch(showError)],
   ["Rename or move note", "Ctrl Shift R", renameDialog, true],
   ["Move note to trash", "Ctrl Shift D", deleteDialog, true],
   ["Save now", "Ctrl S", () => save().catch(showError), true],
