@@ -12,7 +12,7 @@ import {
 } from "./core.js";
 import { api } from "./api.js";
 import { findDraft, storeDraft, updateOrphans } from "./drafts.js";
-import { renderList, updateBacklinks } from "./list.js";
+import { renderList, revealNote, updateBacklinks } from "./list.js";
 import { applyTheme, followWiki } from "./dialogs.js";
 import { renderOutline } from "./outline.js";
 
@@ -133,6 +133,7 @@ async function openNote(
   }
   if (pushBack && state.current?.id && state.current.id !== id)
     state.back.push(state.current.id);
+  revealNote(note.id);
   $("history-back").disabled = state.back.length === 0;
   clearTimeout(state.saveTimer);
   state.current = note;
@@ -246,7 +247,7 @@ async function setMode(mode, { focus = true } = {}) {
   renderOutline(true);
 }
 function applyEditability() {
-  const editable = !state.pendingDraft;
+  const editable = !state.pendingDraft && !state.busy;
   state.source.readOnly(!editable);
   state.rich?.editor?.setEditable(editable, false);
   for (const button of document.querySelectorAll("[data-format], #block-type"))

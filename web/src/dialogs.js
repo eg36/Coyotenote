@@ -5,6 +5,7 @@ import { api } from "./api.js";
 import { draftKey } from "./drafts.js";
 import { excerpt, shortDate, visibleNotes } from "./list.js";
 import {
+  applyEditability,
   createNote,
   emptyNotebook,
   focusEditor,
@@ -141,6 +142,37 @@ function renameDialog() {
         "Use a folder path to move this note. Wiki links pointing here are updated.",
     },
   );
+}
+// moveNote moves note id into folder ("" is the vault's top level), keeping
+// its name. Editing pauses meanwhile, as links in other notes, perhaps the
+// open one, are rewritten to follow it.
+async function moveNote(id, folder) {
+  const name = (folder ? folder + "/" : "") + id.split("/").pop();
+  const entry = state.notes.find((note) => note.id === id);
+  if (!entry || name === id) return;
+  await save();
+  state.busy = true;
+  applyEditability();
+  try {
+    const moving = state.current?.id === id;
+    const result = await api("/api/rename", "POST", {
+      id,
+      name,
+      revision: moving ? state.current.revision : entry.revision,
+    });
+    await refresh();
+    const open = state.current && state.notes.find((n) => n.id === state.current.id);
+    if (moving) await openNote(result.note.id, { skipSave: true, pushBack: false });
+    else if (open && open.revision !== state.current.revision && !state.dirty)
+      await openNote(open.id, { skipSave: true, pushBack: false });
+    showToast(
+      [`Moved “${name.split("/").pop()}” to ${folder || "the top of the vault"}.`, ...result.warnings].join(" · "),
+      { persistent: result.warnings.length > 0 },
+    );
+  } finally {
+    state.busy = false;
+    applyEditability();
+  }
 }
 function deleteDialog() {
   if (!state.current) return;
@@ -500,6 +532,7 @@ export {
   helpDialog,
   linkDialog,
   modalIsBusy,
+  moveNote,
   newNoteDialog,
   openModal,
   renameDialog,

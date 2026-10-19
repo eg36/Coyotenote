@@ -31,6 +31,7 @@ const state = {
   lastError: null,
   ready: false,
   restoring: false,
+  busy: false,
 };
 let toastTimer = null;
 const storage = {

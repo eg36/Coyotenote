@@ -1,7 +1,8 @@
 // The sidebar note list: ordering, excerpts and search highlights.
 import { icon } from "./icons.js";
-import { $, showError, state } from "./core.js";
+import { $, showError, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
+import { moveNote } from "./dialogs.js";
 
 // excerpt cleans a note's opening text for the list, leaving out a leading
 // heading that only repeats the note's title.
@@ -70,6 +71,28 @@ function highlight(element, text, query) {
   }
   element.append(text.slice(from));
 }
+// Collapsed folders are remembered per vault in this browser. Searching
+// shows every match, collapsed or not.
+const collapsedKey = () => "coyote-collapsed:" + state.vaultId;
+function collapsedFolders() {
+  try {
+    return new Set(JSON.parse(storage.get(collapsedKey()) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+function setCollapsed(folder, collapsed) {
+  const folders = collapsedFolders();
+  if (collapsed === folders.has(folder)) return;
+  if (collapsed) folders.add(folder);
+  else folders.delete(folder);
+  storage.set(collapsedKey(), JSON.stringify([...folders]));
+}
+// revealNote expands the folder holding id, so the open note is listed.
+function revealNote(id) {
+  setCollapsed(id.split("/").slice(0, -1).join("/"), false);
+}
+const noteType = "application/x-coyote-note";
 function renderList() {
   const notes = visibleNotes();
   const list = $("note-list");
@@ -85,21 +108,31 @@ function renderList() {
     return;
   }
   list.classList.toggle("searching", Boolean(state.filteredIds));
+  const collapsed = state.filteredIds ? new Set() : collapsedFolders();
+  const folderOf = (note) => note.id.split("/").slice(0, -1).join("/");
   let lastFolder = null;
   for (const note of notes) {
-    const parts = note.id.split("/");
-    parts.pop();
-    const folder = parts.join("/");
+    const folder = folderOf(note);
     if (folder !== lastFolder) {
-      const label = document.createElement("div");
+      const label = document.createElement("button");
+      label.type = "button";
       label.className = "folder-group";
-      label.innerHTML = icon("folder");
+      label.dataset.folder = folder;
+      label.setAttribute("aria-expanded", String(!collapsed.has(folder)));
+      label.innerHTML = icon("chevronDown") + icon("folder");
       const name = document.createElement("span");
       name.textContent = folder || "Notebook";
-      label.append(name);
+      const count = document.createElement("small");
+      count.textContent = notes.filter((n) => folderOf(n) === folder).length;
+      label.append(name, count);
+      label.onclick = () => {
+        setCollapsed(folder, !collapsed.has(folder));
+        renderList();
+      };
       list.append(label);
       lastFolder = folder;
     }
+    if (collapsed.has(folder)) continue;
     const button = document.createElement("button");
     button.className =
       "note-row" + (state.current?.id === note.id ? " selected" : "");
@@ -128,8 +161,58 @@ function renderList() {
         excerpt(note.excerpt, label.textContent) || "Empty note";
     button.append(text);
     button.onclick = () => openNote(note.id).catch(showError);
+    button.dataset.folder = folder;
+    button.draggable = true;
+    button.ondragstart = (event) => {
+      event.dataTransfer.setData(noteType, note.id);
+      event.dataTransfer.effectAllowed = "move";
+      // Without notes at the top level, offer it as a place to drop, at
+      // the end so nothing moves under the pointer.
+      if (!list.querySelector('.folder-group[data-folder=""]')) {
+        const zone = document.createElement("div");
+        zone.className = "folder-group drop-zone";
+        zone.dataset.folder = "";
+        zone.innerHTML = icon("folder");
+        const name = document.createElement("span");
+        name.textContent = "Top level, outside folders";
+        zone.append(name);
+        list.append(zone);
+      }
+    };
     list.append(button);
   }
+}
+// Dropping a note on a folder, or on a note in it, moves it there.
+function setupDragging() {
+  const list = $("note-list");
+  const target = (event) =>
+    event.dataTransfer?.types.includes(noteType) &&
+    event.target.closest("[data-folder]");
+  const clear = () =>
+    list.querySelectorAll(".drop-target").forEach((el) => el.classList.remove("drop-target"));
+  const end = () => {
+    clear();
+    list.querySelector(".drop-zone")?.remove();
+  };
+  list.addEventListener("dragover", (event) => {
+    const over = target(event);
+    if (!over) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    clear();
+    list.querySelector(`.folder-group[data-folder="${CSS.escape(over.dataset.folder)}"]`)?.classList.add("drop-target");
+  });
+  list.addEventListener("dragleave", (event) => {
+    if (!list.contains(event.relatedTarget)) clear();
+  });
+  list.addEventListener("dragend", end);
+  list.addEventListener("drop", (event) => {
+    const over = target(event);
+    end();
+    if (!over) return;
+    event.preventDefault();
+    moveNote(event.dataTransfer.getData(noteType), over.dataset.folder).catch(showError);
+  });
 }
 function updateBacklinks() {
   const note = state.notes.find((n) => n.id === state.current?.id);
@@ -140,4 +223,12 @@ function updateBacklinks() {
   $("backlinks-button").disabled = !state.current;
 }
 
-export { excerpt, renderList, shortDate, updateBacklinks, visibleNotes };
+export {
+  excerpt,
+  renderList,
+  revealNote,
+  setupDragging,
+  shortDate,
+  updateBacklinks,
+  visibleNotes,
+};

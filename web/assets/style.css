@@ -284,18 +284,49 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 14px 8px 4px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px 4px 4px;
+  border-radius: 6px;
+  background: transparent;
   color: var(--muted);
   font-size: var(--font-small);
   font-weight: 600;
+  text-align: left;
   overflow-wrap: anywhere;
 }
 .folder-group:first-child {
-  padding-top: 6px;
+  margin-top: 0;
+}
+.folder-group:hover {
+  color: var(--text);
+}
+.folder-group span {
+  flex: 1;
+  min-width: 0;
+}
+.folder-group small {
+  font-weight: 450;
+  font-variant-numeric: tabular-nums;
 }
 .folder-group svg {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
+}
+.folder-group svg:first-child {
+  transition: transform 0.15s;
+}
+.folder-group[aria-expanded="false"] svg:first-child {
+  transform: rotate(-90deg);
+}
+.folder-group.drop-zone {
+  border: 1px dashed var(--line);
+}
+.folder-group.drop-target {
+  background: var(--selected);
+  color: var(--text);
+  outline: 1px dashed var(--accent);
 }
 .note-row {
   width: 100%;

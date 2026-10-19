@@ -19,7 +19,7 @@ import {
   releaseDraft,
   storeDraft,
 } from "./drafts.js";
-import { renderList, visibleNotes } from "./list.js";
+import { renderList, setupDragging, visibleNotes } from "./list.js";
 import {
   applyEditability,
   buildBlockMenu,
@@ -72,6 +72,7 @@ async function initialize() {
     onWarning: (message) => showToast(message, { persistent: true }),
   });
   setupOutline();
+  setupDragging();
   const data = await refresh();
   state.version = data.version;
   const requested =

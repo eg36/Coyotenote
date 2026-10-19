@@ -1393,3 +1393,58 @@ test("the outline lists headings, jumps to them, follows scrolling and stays ope
   await expect(outline).toContainText("No headings yet");
   await page.keyboard.press("Alt+o");
 });
+
+test("folders collapse, stay collapsed, and take notes dragged onto them", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  const inbox = `Inbox ${stamp}`,
+    archive = `Archive ${stamp}`;
+  await seed(page, `${archive}/Old plan`, "Archived.");
+  const idea = `Loose idea ${stamp}`;
+  await seed(page, `${inbox}/${idea}`, "An idea.");
+  // Outside its own folder, a short link prefers this namesake by name order.
+  await seed(page, `Aardvark ${stamp}/${idea}`, "A namesake elsewhere.");
+  await seed(page, `${inbox}/Linker`, `See [[${idea}]].`);
+  await openSeed(page, "Open while moving.", `${inbox}/Draft`);
+  const folder = (name) => page.locator(`.folder-group[data-folder="${name}"]`);
+  const row = (id) => page.locator(`.note-row[data-note="${id}"]`);
+
+  // Collapsing hides a folder's notes but keeps its count, across reloads.
+  await folder(archive).click();
+  await expect(folder(archive)).toHaveAttribute("aria-expanded", "false");
+  await expect(folder(archive)).toContainText("1");
+  await expect(row(`${archive}/Old plan`)).toHaveCount(0);
+  await page.reload();
+  await expect(row(`${archive}/Old plan`)).toHaveCount(0);
+  // Searching still lists matches inside collapsed folders.
+  await page.locator("#search").fill(`Archived`);
+  await expect(row(`${archive}/Old plan`)).toBeVisible();
+  await page.locator("#search").fill("");
+  await expect(row(`${archive}/Old plan`)).toHaveCount(0);
+
+  // Dragging a note onto a folder moves it, and links follow it rather
+  // than falling to the namesake.
+  await row(`${inbox}/${idea}`).dragTo(folder(archive));
+  await expect(page.locator("#toast")).toContainText(`Moved “${idea}” to ${archive}.`);
+  expect(await diskBody(page, `${archive}/${idea}`)).toBe("An idea.");
+  await expect.poll(() => diskBody(page, `${inbox}/Linker`)).toBe(`See [[${archive}/${idea}]].`);
+
+  // The open note can be moved too, onto a note's folder or the top level.
+  await row(`${inbox}/Draft`).dragTo(row(`${inbox}/Linker`));
+  await expect(page.locator("#document-title")).toHaveText("Draft");
+  // The top level appears as a drop zone once dragging starts.
+  await row(`${inbox}/Draft`).hover();
+  await page.mouse.down();
+  await page.mouse.move(40, 400, { steps: 4 });
+  await folder("").last().hover();
+  await page.mouse.up();
+  await expect(page.locator("#note-folder")).toHaveText("");
+  await expect(page.locator("#document-title")).toHaveText("Draft");
+  expect(await diskBody(page, "Draft")).toBe("Open while moving.");
+
+  // Opening a note inside a collapsed folder expands it.
+  await page.goto("/?note=" + encodeURIComponent(`${archive}/Old plan`));
+  await expect(folder(archive)).toHaveAttribute("aria-expanded", "true");
+  await expect(row(`${archive}/Old plan`)).toBeVisible();
+});

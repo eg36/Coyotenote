@@ -69,8 +69,13 @@ are at least 12 px.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
+  You can also **drag a note** onto a folder, or onto a note in it, to move it
+  there; while dragging, a zone at the end of the list moves it out of folders.
   Resolved wiki links in other notes are rewritten to keep pointing at it;
   externally changed files are left alone and reported.
+- Click a folder's name in the sidebar to **collapse** it. Collapsed folders show
+  how many notes they hold and stay collapsed in this browser; searching still
+  lists their matches, and opening a note inside one expands it.
 - **Quick open** (Ctrl/⌘+K, or the footer hint) jumps to a note by a few letters of
   its path, such as `qp` for *Quarterly plan*; matched letters are highlighted.
   Start with `#` to jump to a heading of the open note, or `>` to run a command
