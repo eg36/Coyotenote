@@ -19,7 +19,7 @@ are **not** needed to run the app, and there are no CDNs or runtime third-party
 requests.
 
 ```sh
-git clone https://github.com/eg36/Coyotenote.git
+git clone git@github.com:eg36/Coyotenote.git
 cd Coyotenote
 go build -o bin/coyotenote-web ./cmd/coyotenote-web
 ./bin/coyotenote-web
@@ -115,8 +115,8 @@ custom Markdown node. Click a rendered wiki link to follow it; use the toolbar t
 insert one, or finish typing `[[a note]]`. The source editor suggests existing notes
 while typing `[[`. Missing notes can be created from a link.
 
-Write deliberately falls back to Markdown for front matter, footnotes, raw HTML
-and image references. This keeps syntax that the rich editor cannot
+Write deliberately falls back to Markdown for front matter (YAML or TOML),
+footnotes, reference-style link definitions, raw HTML and image references. This keeps syntax that the rich editor cannot
 round-trip intact. Use source mode for exact whitespace or Markdown dialects beyond
 GFM. File attachments, embedded media, math rendering and collaborative editing are
 not supported.
@@ -226,7 +226,9 @@ The functional reference is `main` at
 [`dcb6a51`](https://github.com/eg36/Coyotenote/commit/dcb6a51c5dbf79efd6859cb506dd736bdc061996).
 The vault store, path validation, locking, atomic writes, trash and link
 resolution live in `internal/vault`, shared with the terminal app, so both apps
-read and write the same files by the same rules.
+read and write the same files by the same rules. The web app was developed on the
+`web_alpha` branch, from an empty initial commit, and later merged with the
+terminal app into this repository.
 Theme IDs and names are preserved. The 12 named upstream palettes retain their
 original color values; Coyote Light/Dark have neutral web surfaces with blue accents.
 
@@ -239,12 +241,6 @@ runtime Node process.
 
 [MIT](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the generated
 browser dependency license bundle for upstream attributions.
-
-## Implementation notes
-
-Reference: terminal `main` at dcb6a51c5dbf79efd6859cb506dd736bdc061996.
-The web app was developed on the `web_alpha` branch, from an empty initial
-commit, and later merged with the terminal app into this repository.
 
 ## Functional mapping
 
@@ -265,12 +261,13 @@ commit, and later merged with the terminal app into this repository.
 | Terminal resizing | Sidebar drawer and vertical split below 530 px |
 
 The rich editor is an enhancement, not a lossless Markdown formatter: it normalizes
-source formatting after actual rich edits. Unsupported front matter, footnotes,
-raw HTML and image references keep a note in source mode. Simply opening a note
+source formatting after actual rich edits. Front matter, footnotes, link
+definitions, raw HTML and image references keep a note in source mode, including
+when a browser draft is restored. Simply opening a note
 or switching modes never normalizes its file.
 
 The app does not add hosted access, authentication, sync, attachments, tags,
-collaboration, PDF export, a background daemon or an application release. It does
+collaboration, PDF export or a background daemon. It does
 not start a browser automatically or install desktop integration.
 
 ## Architecture
@@ -293,10 +290,11 @@ draft blocks editing until restored/discarded and survives additional reloads.
 Restoring a draft keeps its original base revision: an old draft cannot overwrite
 newer disk content. A server restart changes the request token; a rejected request
 renews it once from `/api/session` and retries, but only while the server still
-serves the same vault.
+serves the same vault. Refreshing the note list checks the vault too: a tab opened
+for another vault stops saving, keeps its edits for download and asks for a reload.
 
 The Linux CI job covers both apps, with an added Chromium job. The release
-workflow does not ship the web app. The Go/API checks and a
+workflow builds both apps into one archive. The Go/API checks and a
 standard-library Python smoke test run without npm; frontend CI rebuilds assets
 and verifies the committed output before browser tests.
 
