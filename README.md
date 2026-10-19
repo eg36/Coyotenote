@@ -91,9 +91,11 @@ needed when running the app.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
   Resolved wiki links in other notes are rewritten using the terminal app's rules;
   externally changed files are left alone and reported.
-- The sidebar searches **paths and note contents**. **Alt+Up / Alt+Down** cycles
-  notes; the back arrow returns from linked-note navigation. A link button in the
-  footer lists backlinks. Hidden folders and symlinks are skipped just as on `main`.
+- The sidebar searches **paths and note contents**. **Sort by** orders notes within
+  each folder by recently edited (default), title A–Z or title Z–A, and remembers
+  the choice in this browser. **Alt+Up / Alt+Down** cycles the visible sorted notes;
+  the back arrow returns from linked-note navigation. A link button in the footer
+  lists backlinks. Hidden folders and symlinks are skipped just as on `main`.
 - Click the theme name for all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Coyote Light/Dark use neutral
   white/charcoal surfaces and blue accents for the web. Hover/focus previews a theme;

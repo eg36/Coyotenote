@@ -37,6 +37,14 @@
         <div class="list-heading">
           <span>YOUR NOTES</span><span id="note-count">0</span>
         </div>
+        <div class="note-sort">
+          <label for="note-sort">Sort by</label>
+          <select id="note-sort" aria-label="Sort notes">
+            <option value="modified">Recently edited</option>
+            <option value="title-asc">Title A–Z</option>
+            <option value="title-desc">Title Z–A</option>
+          </select>
+        </div>
         <nav class="note-list" id="note-list" aria-label="Notebook notes"></nav>
         <div class="sidebar-bottom">
           <button id="theme-button" class="theme-button">

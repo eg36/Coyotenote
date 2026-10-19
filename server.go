@@ -198,7 +198,7 @@ func views(s *store, notes []note, includeBody bool) []noteView {
 		}
 		modified := ""
 		if info, err := os.Stat(s.path(n.ID)); err == nil {
-			modified = info.ModTime().UTC().Format(time.RFC3339)
+			modified = info.ModTime().UTC().Format(time.RFC3339Nano)
 		}
 		v := noteView{ID: n.ID, Title: displayName(n.ID, n.Body), Excerpt: excerpt, Revision: revision(n.Body), Modified: modified, Words: len(strings.Fields(text)), Backlinks: []string{}}
 		if includeBody {

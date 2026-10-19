@@ -258,6 +258,24 @@ input[type="search"]::-webkit-search-cancel-button {
   letter-spacing: 0;
   opacity: 0.7;
 }
+.note-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 9px 10px;
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.note-sort label {
+  flex-shrink: 0;
+}
+.note-sort select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 6px;
+  background: var(--surface);
+  font-size: var(--font-small);
+}
 .note-list {
   overflow-y: auto;
   flex: 1;

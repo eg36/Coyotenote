@@ -23,6 +23,7 @@ const state = {
   rich: null,
   source: null,
   search: "",
+  sort: "modified",
   searchGeneration: 0,
   trash: [],
   back: [],
@@ -271,10 +272,36 @@ function excerpt(text) {
     .replace(/\[\[([^\]]+)\]\]/g, "$1")
     .replace(/[*`_]/g, "");
 }
-function renderList() {
+const noteCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+function visibleNotes() {
   const notes = state.filteredIds
-    ? state.notes.filter((n) => state.filteredIds.has(n.id))
-    : state.notes;
+    ? state.notes.filter((note) => state.filteredIds.has(note.id))
+    : [...state.notes];
+  const folder = (note) => note.id.slice(0, Math.max(0, note.id.lastIndexOf("/")));
+  const title = (note) => note.title.split("/").pop();
+  return notes.sort((a, b) => {
+    // Group folders consistently, then order the notes inside each group.
+    const groupOrder =
+      noteCollator.compare(folder(a), folder(b)) ||
+      folder(a).localeCompare(folder(b));
+    if (groupOrder) return groupOrder;
+    if (state.sort === "modified") {
+      const modifiedOrder =
+        (Date.parse(b.modified) || 0) - (Date.parse(a.modified) || 0);
+      if (modifiedOrder) return modifiedOrder;
+    }
+    const titleOrder = noteCollator.compare(title(a), title(b));
+    return (
+      (state.sort === "title-desc" ? -titleOrder : titleOrder) ||
+      a.id.localeCompare(b.id)
+    );
+  });
+}
+function renderList() {
+  const notes = visibleNotes();
   const list = $("note-list");
   list.replaceChildren();
   $("note-count").textContent = notes.length;
@@ -657,7 +684,7 @@ function deleteDialog() {
       storage.remove(draftKey());
       await refresh();
       if (state.notes.length)
-        await openNote(state.notes[0].id, { skipSave: true });
+        await openNote(visibleNotes()[0].id, { skipSave: true });
       else emptyNotebook();
       showToast("Note moved to trash.", { undo: true });
     },
@@ -931,6 +958,9 @@ function downloadDraft() {
 async function initialize() {
   hydrateIcons();
   state.mode = storage.get("coyote-view") || "write";
+  const sort = storage.get("coyote-sort");
+  if (["modified", "title-asc", "title-desc"].includes(sort)) state.sort = sort;
+  $("note-sort").value = state.sort;
   if (!["write", "source", "preview", "split"].includes(state.mode))
     state.mode = "write";
   state.source = createSource($("source-editor"), {
@@ -946,7 +976,7 @@ async function initialize() {
   if (requested && state.notes.some((n) => n.id === requested))
     await openNote(requested, { skipSave: true });
   else if (state.notes.length)
-    await openNote(state.notes[0].id, { skipSave: true });
+    await openNote(visibleNotes()[0].id, { skipSave: true });
   else emptyNotebook();
   if (new URL(location.href).searchParams.has("new")) newNoteDialog();
 }
@@ -970,12 +1000,19 @@ $("history-back").onclick = async () => {
 $("previous-note").onclick = () => navigate(-1);
 $("next-note").onclick = () => navigate(1);
 async function navigate(delta) {
-  if (!state.notes.length) return;
-  const index = state.notes.findIndex((n) => n.id === state.current?.id);
-  openNote(
-    state.notes[(index + delta + state.notes.length) % state.notes.length].id,
-  ).catch(showError);
+  const notes = visibleNotes();
+  if (!notes.length) return;
+  const index = notes.findIndex((n) => n.id === state.current?.id);
+  const next = index < 0
+    ? (delta > 0 ? 0 : notes.length - 1)
+    : (index + delta + notes.length) % notes.length;
+  openNote(notes[next].id).catch(showError);
 }
+$("note-sort").onchange = () => {
+  state.sort = $("note-sort").value;
+  storage.set("coyote-sort", state.sort);
+  renderList();
+};
 let searchTimer;
 $("search").oninput = () => {
   state.search = $("search").value;

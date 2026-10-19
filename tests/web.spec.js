@@ -195,6 +195,50 @@ test("empty theme search and failed selection preserve the previous theme", asyn
   expect((await (await page.request.get("/api/state")).json()).theme).toBe(original);
 });
 
+test("note sorting remembers titles, uses edit times and follows search navigation", async ({ page }) => {
+  const folder = `Sorting ${Date.now()}`;
+  const ids = [folder + "/Beta", folder + "/alpha10", folder + "/Alpha2"];
+  for (const id of ids) await seed(page, id, "sorting needle");
+  const dates = ["2022-01-01T00:00:00Z", "2020-01-01T00:00:00Z", "2021-01-01T00:00:00Z"];
+  await page.route("**/api/state*", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    for (const note of data.notes) {
+      const index = ids.indexOf(note.id);
+      if (index >= 0) note.modified = dates[index];
+    }
+    await route.fulfill({ response, json: data });
+  });
+  await page.goto("/?note=" + encodeURIComponent(ids[0]));
+  const sort = page.getByRole("combobox", { name: "Sort notes" });
+  const rows = page.locator(".note-row").filter({ hasText: "sorting needle" });
+  const order = () => rows.evaluateAll((els) => els.map((el) => el.dataset.note));
+  await expect(sort).toHaveValue("modified");
+  await expect.poll(order).toEqual([ids[0], ids[2], ids[1]]);
+  await sort.selectOption("title-asc");
+  await expect.poll(order).toEqual([ids[2], ids[1], ids[0]]);
+  await sort.selectOption("title-desc");
+  await expect.poll(order).toEqual([ids[0], ids[1], ids[2]]);
+  await page.reload();
+  await expect(sort).toHaveValue("title-desc");
+  await page.getByLabel("Search notes").fill(folder);
+  await expect(page.locator("#note-count")).toHaveText("3");
+  await page.locator("#next-note").click();
+  await expect(page.locator("#document-title")).toHaveText("alpha10");
+  await sort.selectOption("modified");
+  await mode(page, "Markdown");
+  await page.locator(".cm-content").fill("sorting needle edited");
+  await expect.poll(() => diskBody(page, ids[1])).toBe("sorting needle edited");
+  await expect.poll(order).toEqual([ids[1], ids[0], ids[2]]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#sidebar-toggle").click();
+  await expect(sort).toBeVisible();
+  await expect(page.locator("#sidebar")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  const box = await sort.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+});
+
 test("create in folders, body search, rename, trash and undo", async ({
   page,
 }) => {
