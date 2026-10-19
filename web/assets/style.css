@@ -2176,16 +2176,16 @@ dialog.danger #modal-submit {
   .title-row {
     grid-column: 2;
     grid-row: 1;
-    padding-top: 4px;
+    padding-top: 0;
   }
   .menu-bar {
     grid-column: 2 / 4;
     grid-row: 2;
     margin-left: 0;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
   .menu-bar button {
-    height: 30px;
+    height: 24px;
   }
   .note-heading {
     margin-left: 4px;
