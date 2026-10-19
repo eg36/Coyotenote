@@ -1390,6 +1390,7 @@ input[type="search"]::-webkit-search-cancel-button {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 .statusbar button {
@@ -1416,7 +1417,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .footer-version {
   margin-left: auto;
-  flex-shrink: 0;
+  min-width: 3ch;
   max-width: 30%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2271,13 +2272,14 @@ dialog.danger #modal-submit {
   }
   .statusbar {
     padding: 0 6px 0 12px;
+    gap: 4px;
+  }
+  .footer-left {
+    gap: 6px;
   }
   .footer-left #character-count,
   .footer-left #character-count + .footer-separator,
   #hint-open {
-    display: none;
-  }
-  .footer-left:not([hidden]) + .footer-hints {
     display: none;
   }
   .help-grid {
