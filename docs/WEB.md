@@ -157,6 +157,9 @@ request, reload or server disconnect, a banner offers **Restore draft** or
 **Discard draft**. Editing is paused until you choose, so opening the disk version
 cannot accidentally erase a pending draft. If browser storage is unavailable/full,
 a persistent message tells you to keep the tab open until its file is saved.
+When a note with an unsaved draft is renamed or deleted outside the app, a banner
+says so and **Review drafts** lists such drafts: save one as a note under its old
+name, download it, or discard it.
 
 Saves include a hash of the disk revision originally loaded. Another tab or an
 external program changing the file produces a **conflict**, with no overwrite.
@@ -285,8 +288,12 @@ bundle chunk. All dependency assets and licenses are embedded; no runtime CDN,
 external font requests or telemetry are used. Lexend is bundled locally under
 the SIL Open Font License.
 
-Each browser tab has its own draft key under a vault-specific prefix. A pending
-draft blocks editing until restored/discarded and survives additional reloads.
+Each browser tab has its own draft key under a vault-specific prefix. A tab holds
+a Web Lock named after its key, so a duplicated tab or a window opened from it
+picks its own key, and a draft written by another open tab is never removed by
+discarding or restoring it here. A pending draft blocks editing until
+restored/discarded and survives additional reloads. A dialog stays open while its
+action runs, so nothing can be edited between the request and its result.
 Restoring a draft keeps its original base revision: an old draft cannot overwrite
 newer disk content. A server restart changes the request token; a rejected request
 renews it once from `/api/session` and retries, but only while the server still

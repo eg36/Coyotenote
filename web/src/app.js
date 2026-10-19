@@ -256,6 +256,40 @@ function findDraft(note) {
   } catch {}
   return candidates.sort((a, b) => b.time - a.time)[0] || null;
 }
+// orphanDrafts lists stored drafts whose note is gone, renamed or deleted
+// outside the app, which opening a note would never find. Drafts written by
+// another open tab are left to that tab.
+async function orphanDrafts() {
+  const ids = new Set(state.notes.map((note) => note.id));
+  if (state.current) ids.add(state.current.id);
+  const live = await liveTabs();
+  const drafts = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith(draftPrefix())) continue;
+      const owner = key.slice(draftPrefix().length).split(":")[0];
+      if (owner !== tabId && live.has(owner)) continue;
+      try {
+        const value = JSON.parse(localStorage.getItem(key));
+        if (!ids.has(value.id)) drafts.push({ ...value, key });
+      } catch {}
+    }
+  } catch {}
+  return drafts.sort((a, b) => b.time - a.time);
+}
+let orphanCheck = 0;
+async function updateOrphans() {
+  const check = ++orphanCheck;
+  const drafts = await orphanDrafts();
+  if (check !== orphanCheck) return;
+  state.orphans = drafts;
+  $("orphan-banner").hidden = !drafts.length;
+  $("orphan-title").textContent =
+    drafts.length === 1
+      ? "An unsaved draft belongs to a note that was moved or deleted."
+      : `${drafts.length} unsaved drafts belong to notes that were moved or deleted.`;
+}
 function changed(body, from) {
   if (state.restoring || !state.current || state.body === body) return;
   state.edits++;
@@ -351,6 +385,7 @@ async function refresh({ query = state.search } = {}) {
     state.current.backlinks = currentSummary.backlinks;
   renderList();
   updateBacklinks();
+  updateOrphans();
   return data;
 }
 // excerpt cleans a note's opening text for the list, leaving out a leading
@@ -524,6 +559,7 @@ async function openNote(
   updateCounts();
   renderList();
   updateBacklinks();
+  updateOrphans();
   const url = new URL(location.href);
   url.searchParams.set("note", note.id);
   url.searchParams.delete("new");
@@ -551,6 +587,7 @@ function emptyNotebook() {
   updateCounts();
   updateBacklinks();
   renderList();
+  updateOrphans();
 }
 async function createNote(name, body = "") {
   await save();
@@ -1260,14 +1297,84 @@ function compareDialog() {
     { submit: "Keep my edits", className: "compare" },
   );
 }
-function downloadDraft() {
-  if (!state.current) return;
-  const blob = new Blob([state.body], { type: "text/markdown;charset=utf-8" });
+function downloadDraft(id = state.current?.id, body = state.body) {
+  if (!id) return;
+  const blob = new Blob([body], { type: "text/markdown;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = state.current.id.split("/").pop() + ".md";
+  a.download = id.split("/").pop() + ".md";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+// draftsDialog offers each stranded draft back: as a note under its old
+// name, as a downloaded file, or discarded.
+function draftsDialog() {
+  const container = document.createElement("div");
+  container.className = "link-list trash-list";
+  const description = document.createElement("p");
+  description.className = "dialog-description";
+  description.textContent =
+    "These edits were never saved, and their note is no longer in the vault. Save one as a note to keep it in the vault.";
+  container.append(description);
+  for (const draft of state.orphans || []) {
+    const row = document.createElement("div");
+    row.className = "trash-row draft-row";
+    const label = document.createElement("span");
+    const name = document.createElement("strong");
+    name.textContent = draft.id;
+    const detail = document.createElement("small");
+    detail.textContent = [
+      "Edited " +
+        new Date(draft.time).toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }),
+      excerpt(draft.body),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    label.append(name, detail);
+    const actions = document.createElement("div");
+    actions.className = "draft-actions";
+    const button = (text, run) => {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.textContent = text;
+      element.setAttribute("aria-label", `${text} ${draft.id}`);
+      element.onclick = run;
+      actions.append(element);
+    };
+    button("Save as note", async () => {
+      busyModal(true);
+      try {
+        await save();
+        const note = await api("/api/note", "POST", {
+          id: draft.id,
+          body: draft.body,
+        });
+        storage.remove(draft.key);
+        await refresh();
+        busyModal(false);
+        closeModal();
+        await openNote(note.id);
+        showToast("Draft saved as a note.");
+      } catch (error) {
+        if (modalBusy) busyModal(false);
+        if ($("modal").open) $("modal-error").textContent = error.message;
+        else showError(error);
+      }
+    });
+    button("Download", () => downloadDraft(draft.id, draft.body));
+    button("Discard", async () => {
+      storage.remove(draft.key);
+      row.remove();
+      await updateOrphans();
+      if (!state.orphans.length) closeModal();
+    });
+    row.append(label, actions);
+    container.append(row);
+  }
+  openModal("Unsaved drafts", container, null, { hideFooter: true });
 }
 
 async function initialize() {
@@ -1441,7 +1548,8 @@ $("retry-save").onclick = async () => {
     showError(error);
   }
 };
-$("download-draft").onclick = downloadDraft;
+$("download-draft").onclick = () => downloadDraft();
+$("review-drafts").onclick = draftsDialog;
 $("compare-versions").onclick = compareDialog;
 $("recovery-copy").onclick = async () => {
   try {

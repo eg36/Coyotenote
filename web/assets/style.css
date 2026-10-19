@@ -1476,6 +1476,14 @@ dialog.theme-picker::backdrop {
   padding: 7px 12px;
   background: color-mix(in srgb, var(--accent) 14%, var(--chrome));
 }
+.draft-row {
+  flex-wrap: wrap;
+}
+.draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .help-grid {
   display: grid;
   grid-template-columns: auto 1fr;

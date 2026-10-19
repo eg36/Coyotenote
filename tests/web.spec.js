@@ -508,6 +508,78 @@ test("a window opened from a tab cannot discard that tab's only draft", async ({
   await context.unroute("**/api/note");
 });
 
+test("drafts of notes renamed or deleted elsewhere can still be recovered", async ({
+  page,
+  context,
+}) => {
+  const stamp = Date.now();
+  const renamed = `Orphan ${stamp}`,
+    deleted = `Doomed ${stamp}`;
+  const token = (await (await page.request.get("/api/state")).json()).token;
+  const headers = { "X-Coyote-Token": token };
+  page.on("dialog", (dialog) => dialog.accept());
+  await seed(page, deleted, "Saved doomed base.");
+  await openSeed(page, "Saved orphan base.", renamed);
+  await mode(page, "Markdown");
+  await context.route("**/api/note", (route) =>
+    route.request().method() === "PUT" ? route.abort() : route.fallback(),
+  );
+  await page.locator(".cm-content").fill("Only in browser draft.");
+  await expect(page.locator("#error-banner")).toBeVisible();
+  // Leave the first note with its unsaved draft, then edit the second.
+  await page.goto("/?note=" + encodeURIComponent(deleted));
+  await expect(page.locator("#document-title")).toHaveText(deleted);
+  await page.locator(".cm-content").fill("Doomed draft text.");
+  await expect(page.locator("#error-banner")).toBeVisible();
+
+  // Both notes change outside this tab.
+  const note = async (id) =>
+    (await page.request.get("/api/note?id=" + encodeURIComponent(id))).json();
+  const before = await note(renamed);
+  expect(
+    (
+      await page.request.post("/api/rename", {
+        headers,
+        data: { id: renamed, name: `Renamed ${stamp}`, revision: before.revision },
+      })
+    ).ok(),
+  ).toBeTruthy();
+  const doomed = await note(deleted);
+  expect(
+    (
+      await page.request.delete("/api/note", {
+        headers,
+        data: { id: deleted, revision: doomed.revision },
+      })
+    ).ok(),
+  ).toBeTruthy();
+  await context.unroute("**/api/note");
+  await page.goto("/");
+  await expect(page.locator("#orphan-banner")).toBeVisible();
+  await expect(page.locator("#orphan-title")).toHaveText(
+    "2 unsaved drafts belong to notes that were moved or deleted.",
+  );
+  await page.getByRole("button", { name: "Review drafts" }).click();
+  const dialog = page.getByRole("dialog", { name: "Unsaved drafts" });
+  await expect(dialog).toContainText("Only in browser draft.");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialog.getByRole("button", { name: `Download ${deleted}` }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe(`${deleted}.md`);
+  await dialog.getByRole("button", { name: `Discard ${deleted}` }).click();
+  await dialog.getByRole("button", { name: `Save as note ${renamed}` }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("#document-title")).toHaveText(renamed);
+  expect(await diskBody(page, renamed)).toBe("Only in browser draft.");
+  expect(await diskBody(page, `Renamed ${stamp}`)).toBe("Saved orphan base.");
+  await expect(page.locator("#orphan-banner")).toBeHidden();
+  const drafts = await page.evaluate(() =>
+    Object.keys(localStorage).filter((key) => key.startsWith("coyote-draft:")),
+  );
+  expect(drafts).toEqual([]);
+});
+
 test("unsupported Markdown is kept in source, without normalization", async ({
   page,
 }) => {
