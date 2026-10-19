@@ -2649,7 +2649,8 @@ dialog.danger #modal-submit {
     margin: 0;
   }
   /* "Saved" is the usual state, so show it as a dot and keep words for changes. */
-  .save-state.saved #save-label {
+  .save-state.saved #save-label,
+  .app.at-home .save-state #save-label {
     position: absolute;
     width: 1px;
     height: 1px;

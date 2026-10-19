@@ -862,6 +862,8 @@ test("start-page navigation stays together and status sits at the right edge", a
     for (let toggle = 0; toggle < 2; toggle++) {
       const status = await page.locator("#save-state").boundingBox();
       expect(width - status.x - status.width).toBeLessThanOrEqual(14);
+      const title = await page.locator("#app-title").boundingBox();
+      expect(title.x + title.width).toBeLessThanOrEqual(status.x);
       const buttons = await page.locator(".nav-buttons").boundingBox();
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
       const logo = await page.locator("#brand").boundingBox();
