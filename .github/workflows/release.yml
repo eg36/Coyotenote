@@ -11,8 +11,8 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-# Linux amd64 is the only supported platform. Each archive holds the app,
-# stamped with the tag as its version. A tag is released only from a commit
+# Archives hold the app for Linux, macOS and Windows on amd64 and arm64,
+# stamped with the tag as its version; CI tests Linux amd64. A tag is released only from a commit
 # on main that passes the same checks as CI, and only with its notes file.
 jobs:
   gate:

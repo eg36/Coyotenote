@@ -11,7 +11,10 @@ Keep important notes backed up and try it on a copy of your vault first.
 ## Run it
 
 Release archives on the [Releases](https://github.com/eg36/Coyotenote/releases)
-page hold the `coyotenote` binary; run it from the unpacked folder. To build it
+page hold the `coyotenote` binary for Linux, macOS and Windows, on amd64 and
+arm64; run it from the unpacked folder. Only Linux amd64 is tested in CI. macOS
+may refuse the unsigned binary until you run `xattr -d com.apple.quarantine
+coyotenote` in its folder. To build it
 instead, Go **1.26+** is the only requirement. Browser assets are bundled and
 committed: Node and npm are **not** needed to run the app, and there are no CDNs
 or runtime third-party requests.

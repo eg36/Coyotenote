@@ -16,9 +16,10 @@ only. No account, cloud service or network access.
 
 ## Install
 
-Download the Linux amd64 archive from
-[Releases](https://github.com/eg36/Coyotenote/releases) and check it against
-`SHA256SUMS`. Or build it with Go 1.26+:
+Download the archive for your system from
+[Releases](https://github.com/eg36/Coyotenote/releases) (Linux, macOS or
+Windows, on amd64 or arm64) and check it against `SHA256SUMS`. Or build it with
+Go 1.26+:
 
 ```sh
 git clone git@github.com:eg36/Coyotenote.git
@@ -66,7 +67,9 @@ go build -o bin/coyotenote ./cmd/coyotenote && python3 scripts/smoke_web.py
 npm ci && npm run build && npm test     # browser tests, Node 24+
 ```
 
-Linux amd64 is the only supported platform.
+CI tests Linux amd64; the other builds are provided but not tested. macOS may
+refuse an unsigned download until you run `xattr -d com.apple.quarantine
+coyotenote` in its folder.
 
 ## License
 
