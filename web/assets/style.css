@@ -1976,9 +1976,9 @@ dialog footer {
 dialog.settings {
   width: min(720px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
-  /* Anchored near the top, so opening the theme list grows it downward
-     instead of moving the field under the pointer. */
   margin-top: min(12dvh, 96px);
+  /* The theme list floats over the window and the page below it. */
+  overflow: visible;
 }
 dialog.settings::backdrop {
   background: transparent;
@@ -2048,8 +2048,23 @@ dialog.settings::backdrop {
 .theme-field[aria-expanded="true"] > svg {
   transform: rotate(180deg);
 }
+/* The theme list floats below its field, like the text style menu,
+   leaving the settings window its size. */
+.theme-chooser {
+  position: relative;
+}
 .theme-panel {
-  margin-top: 8px;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px #0005;
+  animation: block-menu-in 0.12s ease-out;
 }
 .theme-search {
   position: relative;
@@ -2072,7 +2087,7 @@ dialog.settings::backdrop {
 .theme-list {
   display: flex;
   flex-direction: column;
-  max-height: min(360px, calc(100dvh - 240px));
+  max-height: min(360px, calc(100dvh - 320px));
   overflow-y: auto;
   margin-top: 9px;
 }
