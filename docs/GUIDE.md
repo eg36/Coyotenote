@@ -73,8 +73,15 @@ The toolbar row below starts with the notes sidebar toggle and the back button,
 followed by the writing views and formatting controls.
 
 The interface and writing pane use locally bundled **Lexend**. The writing size
-is 18 px, Markdown source is 16 px, and small interface labels and shortcut hints
+defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints
 are at least 12 px.
+
+**Writing settings** (View menu or Quick open command) offers text sizes from
+14–24 px, Narrow/Standard/Wide line widths for Write and Preview, and spellcheck
+in Write. Markdown text stays 2 px smaller than the chosen size. Save settings
+to keep them in this browser; Cancel leaves the current settings in place.
+Spelling uses the browser's own language and dictionary. These preferences do
+not change the Markdown files or follow the vault to another browser.
 
 - **Write** is a Tiptap WYSIWYG editor. Use the toolbar or Markdown input rules for
   headings, bold, italic, strike, lists, tasks, quotes, inline/fenced code, links

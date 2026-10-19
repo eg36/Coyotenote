@@ -30,6 +30,7 @@ import {
 import { headings, jumpToHeading, toggleOutline } from "./outline.js";
 import { findNotes, toggleFocus } from "./shortcuts.js";
 import { dailyNote } from "./daily.js";
+import { settingsDialog } from "./settings.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
 // match: word starts and runs of consecutive letters count for more, and
@@ -110,6 +111,7 @@ const commands = [
   ["Toggle focus mode", "Ctrl Shift F", toggleFocus],
   ["Show or hide outline", "Alt O", () => toggleOutline(), true],
   ["Choose a theme", "Ctrl Shift T", themeDialog],
+  ["Writing settings", "", settingsDialog],
   ["Open the trash", "", () => trashDialog().catch(showError)],
   ["Review unsaved drafts", "", draftsDialog, false, () => state.orphans?.length],
   ["Keyboard shortcuts", "F1", helpDialog],

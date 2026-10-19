@@ -7,6 +7,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
+import { writingSettings } from "./preferences.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -209,7 +210,7 @@ export function createRich(
         imageNode(fileUrl),
       ],
       editorProps: {
-        attributes: { "aria-label": "WYSIWYG editor", spellcheck: "true" },
+        attributes: { "aria-label": "WYSIWYG editor", spellcheck: String(writingSettings.spellcheck) },
         handlePaste(view, event) {
           const files = imageFiles(event.clipboardData);
           if (files.length) {
@@ -331,6 +332,13 @@ export function createRich(
     },
     get editor() {
       return editor;
+    },
+    spellcheck(value) {
+      if (!editor) return;
+      editor.setOptions({editorProps: {
+        ...editor.options.editorProps,
+        attributes: {...editor.options.editorProps.attributes, spellcheck: String(value)},
+      }});
     },
     insertImage(src, alt) {
       editor

@@ -123,7 +123,7 @@ export function createSource(
       },
       ".cm-scroller": {
         fontFamily: "var(--font-mono)",
-        fontSize: "16px",
+        fontSize: "var(--source-font-size, 16px)",
         lineHeight: "1.85",
         overflow: "auto",
       },

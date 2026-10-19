@@ -17,6 +17,7 @@ import { findNotes, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
 import { dailyNote } from "./daily.js";
+import { settingsDialog } from "./settings.js";
 
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
 const keys = (text) => (mac ? text.replace(/^Ctrl /, "⌘").replace(/^Alt /, "⌥") : text);
@@ -57,6 +58,7 @@ const menus = {
     ["Focus mode", "Ctrl Shift F", toggleFocus],
     "-",
     ["Theme…", "Ctrl Shift T", themeDialog],
+    ["Writing settings…", "", settingsDialog],
     ["Keyboard shortcuts", "F1", helpDialog],
   ],
   insert: [

@@ -58,9 +58,11 @@ import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
 import { setupMenus } from "./menus.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
+import { applyWritingSettings } from "./preferences.js";
 
 async function initialize() {
   await claimTab();
+  applyWritingSettings();
   hydrateIcons();
   buildBlockMenu();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);

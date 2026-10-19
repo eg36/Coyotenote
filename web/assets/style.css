@@ -1070,7 +1070,7 @@ input[type="search"]::-webkit-search-cancel-button {
   outline-offset: 2px;
 }
 .properties {
-  max-width: 760px;
+  max-width: var(--writing-width, 760px);
   margin: 24px auto -24px;
   padding: 0 32px;
 }
@@ -1102,7 +1102,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 #rich-editor,
 #preview {
-  max-width: 760px;
+  max-width: var(--writing-width, 760px);
   margin: 0 auto;
   padding: 40px 32px 80px;
 }
@@ -1112,7 +1112,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .prose {
   color: var(--text);
   font-family: var(--font-prose);
-  font-size: 18px;
+  font-size: var(--writing-size, 18px);
   line-height: 1.55;
   overflow-wrap: break-word;
 }
@@ -1333,7 +1333,7 @@ input[type="search"]::-webkit-search-cancel-button {
 #editor-area[data-mode="split"] #preview {
   max-width: none;
   padding: 16px 28px 80px;
-  font-size: 16px;
+  font-size: var(--source-font-size, 16px);
 }
 #editor-area[data-mode="split"] .prose h1 {
   font-size: 26px;
@@ -1698,6 +1698,33 @@ dialog select {
 .field-hint {
   margin-top: 8px;
   margin-bottom: 0;
+}
+dialog.writing-settings {
+  width: min(440px, calc(100% - 32px));
+}
+.settings-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.setting-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.setting-toggle input {
+  margin: 4px 0 0;
+  accent-color: var(--accent);
+}
+.setting-toggle small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .field-label {
   display: block;
@@ -2127,7 +2154,7 @@ dialog.danger #modal-submit {
   }
   #editor-area[data-mode="split"] #preview {
     padding: 12px 20px 40px;
-    font-size: 15px;
+    font-size: var(--source-font-size, 16px);
   }
 }
 @media (max-width: 530px) {

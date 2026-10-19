@@ -1831,3 +1831,49 @@ test("find and replace keeps Split open and fits a narrow screen", async ({ page
   await expect(page.locator('.cm-search button[name="replaceAll"]')).toBeInViewport();
   expect(await page.locator(".cm-search").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
 });
+
+test("writing settings persist across modes, reloads and rich editor recreation", async ({ page }) => {
+  const id = await openSeed(page, "Text made comfortable.");
+  await page.locator('[data-menu="view"]').click();
+  await page.getByRole("menuitem", {name:"Writing settings…"}).click();
+  const dialog = page.getByRole("dialog", {name:"Writing settings"});
+  await dialog.getByLabel("Text size", {exact:true}).selectOption("22");
+  await dialog.getByLabel("Line width", {exact:true}).selectOption("960");
+  await dialog.getByRole("checkbox", {name:/Check spelling/}).uncheck();
+  await dialog.getByRole("button", {name:"Save settings"}).click();
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "22px");
+  await expect(page.locator("#rich-editor")).toHaveCSS("max-width", "960px");
+  await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "false");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview")).toHaveCSS("font-size", "22px");
+  await mode(page, "Markdown");
+  await expect(page.locator(".cm-scroller")).toHaveCSS("font-size", "20px");
+  await page.reload();
+  await expect(page.locator(".cm-scroller")).toHaveCSS("font-size", "20px");
+  await mode(page, "Write");
+  await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "false");
+  await openSeed(page, "A newly opened note.");
+  await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "false");
+  expect(await diskBody(page, id)).toBe("Text made comfortable.");
+  await page.keyboard.press("Control+k");
+  await page.getByLabel("Search notes, headings and commands").fill(">writing settings");
+  await page.keyboard.press("Enter");
+  await dialog.getByLabel("Text size", {exact:true}).selectOption("14");
+  await dialog.getByRole("button", {name:"Cancel", exact:true}).click();
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "22px");
+});
+
+test("invalid saved preferences fall back safely and unavailable storage is explained", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("labradorite-writing", '{"textSize":900,"lineWidth":-1,"spellcheck":"no"}'));
+  await openSeed(page, "Safe writing defaults.");
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "18px");
+  await expect(page.locator("#rich-editor")).toHaveCSS("max-width", "760px");
+  await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "true");
+  await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException("Full", "QuotaExceededError"); }; });
+  await page.locator('[data-menu="view"]').click();
+  await page.getByRole("menuitem", {name:"Writing settings…"}).click();
+  await page.getByLabel("Text size", {exact:true}).selectOption("20");
+  await page.getByRole("button", {name:"Save settings"}).click();
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "20px");
+  await expect(page.locator("#toast")).toContainText("could not remember them");
+});
