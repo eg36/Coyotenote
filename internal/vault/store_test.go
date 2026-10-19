@@ -145,3 +145,35 @@ func mustStat(t *testing.T, p string) os.FileInfo {
 	}
 	return info
 }
+
+func TestOversizedNotesAreSkippedWithoutReadingThem(t *testing.T) {
+	s := testStore(t)
+	writeNote(t, s, "Small", "fine")
+	big := s.Path("Huge")
+	if err := os.WriteFile(big, []byte("start of a huge note"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Truncate(big, MaxNoteBytes+1); err != nil {
+		t.Fatal(err)
+	}
+	notes, report, err := s.Load()
+	if err != nil || ids(notes) != "Small" || len(report.Skipped) != 1 || report.Skipped[0] != "Huge.md (over 4 MiB)" {
+		t.Fatalf("notes %s, skipped %v, %v", ids(notes), report.Skipped, err)
+	}
+	// In the trash it keeps an excerpt but cannot come back.
+	trash := filepath.Join(s.Dir, ".trash")
+	os.MkdirAll(trash, 0700)
+	if err := os.Rename(big, filepath.Join(trash, "Huge.md")); err != nil {
+		t.Fatal(err)
+	}
+	list, err := s.Trashed()
+	if err != nil || len(list) != 1 || list[0].Excerpt != "start of a huge note" {
+		t.Fatalf("trash %v, %v", list, err)
+	}
+	if _, err := s.Restore("Huge", "Huge"); err == nil || !strings.Contains(err.Error(), "over 4 MiB") {
+		t.Fatalf("restore: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(trash, "Huge.md")); err != nil {
+		t.Fatal("oversized note left the trash")
+	}
+}

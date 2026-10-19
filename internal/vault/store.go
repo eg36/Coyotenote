@@ -6,6 +6,7 @@ package vault
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,8 +19,24 @@ import (
 	"unicode/utf8"
 )
 
-// MaxLines is the most lines a note may hold, so the editors stay responsive.
-const MaxLines = 10000
+// A note holds at most MaxLines lines and MaxNoteBytes bytes, so the editors
+// stay responsive. Larger files are left alone, and never read whole.
+const (
+	MaxLines     = 10000
+	MaxNoteBytes = 4 << 20
+)
+
+// readLimited reads the file at p, or reports tooBig without reading past
+// MaxNoteBytes when it is larger.
+func readLimited(p string) (b []byte, tooBig bool, err error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, false, err
+	}
+	defer f.Close()
+	b, err = io.ReadAll(io.LimitReader(f, MaxNoteBytes+1))
+	return b, len(b) > MaxNoteBytes, err
+}
 
 type Note struct {
 	ID, Body string
@@ -210,10 +227,16 @@ func (s *Store) Load() ([]Note, LoadReport, error) {
 		c, ok := s.cache[id]
 		if !ok || !c.current(stamp) {
 			c = cachedNote{stamp: stamp, read: time.Now()}
-			b, err := os.ReadFile(p)
+			var b []byte
+			tooBig := info.Size() > MaxNoteBytes
+			if !tooBig {
+				b, tooBig, err = readLimited(p)
+			}
 			switch {
 			case err != nil:
 				c.skip = rel + " (unreadable)"
+			case tooBig:
+				c.skip = fmt.Sprintf("%s (over %d MiB)", rel, MaxNoteBytes>>20)
 			case !utf8.Valid(b):
 				c.skip = rel + " (not UTF-8)"
 			case LineCount(string(b)) > MaxLines:

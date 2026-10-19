@@ -3,6 +3,7 @@ package vault
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -47,6 +49,15 @@ func readRegularNote(path string) ([]byte, error) {
 		return nil, errors.New("note is no longer a regular file")
 	}
 	return os.ReadFile(path)
+}
+
+func readStart(path string, n int64) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(io.LimitReader(f, n))
 }
 
 func requireAbsent(path string) error {
@@ -124,6 +135,9 @@ func (s *Store) Restore(id, to string) (Note, error) {
 		return Note{}, err
 	}
 	source := filepath.Join(trash, filepath.FromSlash(id)+".md")
+	if info, err := os.Lstat(source); err == nil && info.Size() > MaxNoteBytes {
+		return Note{}, fmt.Errorf("trashed note is over %d MiB, too large to edit; it stays in the trash", MaxNoteBytes>>20)
+	}
 	body, err := readRegularNote(source)
 	if err != nil {
 		return Note{}, err
@@ -189,8 +203,15 @@ func (s *Store) Trashed() ([]TrashedNote, error) {
 			return nil
 		}
 		item := TrashedNote{ID: id, Modified: info.ModTime().UTC()}
-		if b, err := os.ReadFile(p); err == nil && utf8.Valid(b) {
-			item.Excerpt = strings.Join(strings.Fields(string(b)), " ")
+		// The excerpt needs only the start of the file, however large it is.
+		if b, err := readStart(p, 4096); err == nil {
+			text := strings.Map(func(r rune) rune {
+				if unicode.IsControl(r) {
+					return ' '
+				}
+				return r
+			}, strings.ToValidUTF8(string(b), ""))
+			item.Excerpt = strings.Join(strings.Fields(text), " ")
 			if runes := []rune(item.Excerpt); len(runes) > 140 {
 				item.Excerpt = string(runes[:140]) + "…"
 			}

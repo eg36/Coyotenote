@@ -34,7 +34,7 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-const maxBodyBytes = 4 << 20
+const maxBodyBytes = vault.MaxNoteBytes
 
 type webApp struct {
 	store    *vault.Store
@@ -190,20 +190,10 @@ func validateBody(body string) error {
 	return nil
 }
 
+// load reads the vault. Files over the note size limit are skipped by size
+// before they are read, and reported.
 func (a *webApp) load() ([]vault.Note, vault.LoadReport, error) {
-	notes, report, err := a.store.Load()
-	if err != nil {
-		return nil, report, err
-	}
-	allowed := notes[:0]
-	for _, n := range notes {
-		if len(n.Body) > maxBodyBytes {
-			report.Skipped = append(report.Skipped, n.ID+" (over the web app's 4 MiB limit)")
-		} else {
-			allowed = append(allowed, n)
-		}
-	}
-	return allowed, report, nil
+	return a.store.Load()
 }
 
 func view(s *vault.Store, n vault.Note, includeBody bool) noteView {
