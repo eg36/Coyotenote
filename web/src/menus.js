@@ -3,7 +3,7 @@
 import { $, showError, state } from "./core.js";
 import { chooseImages } from "./attachments.js";
 import { historyDialog } from "./history.js";
-import { save, setMode } from "./editor.js";
+import { findInNote, save, setMode } from "./editor.js";
 import {
   deleteDialog,
   helpDialog,
@@ -43,6 +43,7 @@ const menus = {
     ["Redo", "Ctrl Shift Z", rich("redo"), writing],
     "-",
     ["Save now", "Ctrl S", () => save().catch(showError), note],
+    ["Find and replace…", "", () => findInNote().catch(showError), note],
     ["Search all notes", "Ctrl Shift E", findNotes],
   ],
   view: [

@@ -94,6 +94,11 @@ are at least 12 px.
   `![[photo.png]]` show in Preview.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
+- **Find and replace** (Edit menu or Quick open command) searches the open
+  note with case, whole-word and regular-expression options. It opens Markdown
+  view from Write or Preview; Split stays split. Replace one match or all,
+  then Escape to return to writing. Ctrl/⌘+F also opens this panel while the
+  Markdown editor has focus. Replacements autosave and can be undone.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
   You can also **drag a note** onto a folder, or onto a note in it, to move it
   there; while dragging, a zone at the end of the list moves it out of folders.

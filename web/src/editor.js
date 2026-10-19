@@ -219,6 +219,11 @@ async function createNote(name, body = "") {
   focusEditor();
   return note;
 }
+async function findInNote() {
+  if (!state.current || state.pendingDraft || state.busy) return;
+  if (!["source", "split"].includes(state.mode)) await setMode("source");
+  state.source.find();
+}
 async function ensureRich() {
   if (!state.rich) {
     const { createRich } = await import("./rich.js");
@@ -457,6 +462,7 @@ export {
   createNote,
   editProperties,
   emptyNotebook,
+  findInNote,
   focusEditor,
   highlightBlock,
   openBlockMenu,

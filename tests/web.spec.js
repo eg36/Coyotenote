@@ -1796,3 +1796,38 @@ test("an unavailable template keeps the new-note dialog and name for retry", asy
   await expect(page.locator("#document-title")).toHaveText(name);
   expect(await diskBody(page, name)).toBe("");
 });
+
+test("find and replace opens from Write, autosaves replacements and supports undo", async ({ page }) => {
+  const id = await openSeed(page, "alpha alpha beta");
+  await page.getByRole("textbox", { name: "WYSIWYG editor" }).fill("alpha alpha beta with edits");
+  await page.locator('[data-menu="edit"]').click();
+  await page.getByRole("menuitem", { name: "Find and replace…" }).click();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  const find = page.locator('.cm-search input[name="search"]');
+  const replace = page.locator('.cm-search input[name="replace"]');
+  await expect(find).toBeFocused();
+  await find.fill("alpha");
+  await replace.fill("omega");
+  await replace.press("Tab");
+  await page.locator('.cm-search button[name="replaceAll"]').click();
+  await expect.poll(() => diskBody(page, id)).toContain("omega omega beta with edits");
+  await find.focus();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".cm-search")).toHaveCount(0);
+  await page.locator(".cm-content").focus();
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toContain("alpha alpha beta with edits");
+});
+
+test("find and replace keeps Split open and fits a narrow screen", async ({ page }) => {
+  await openSeed(page, "Look for this word.");
+  await mode(page, "Split");
+  await page.keyboard.press("Control+k");
+  await page.getByLabel("Search notes, headings and commands").fill(">find and replace");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".cm-search")).toBeVisible();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
+  await page.setViewportSize({width:390,height:844});
+  await expect(page.locator('.cm-search button[name="replaceAll"]')).toBeInViewport();
+  expect(await page.locator(".cm-search").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+});

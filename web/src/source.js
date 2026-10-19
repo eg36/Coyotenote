@@ -22,7 +22,7 @@ import {
   bracketMatching,
 } from "@codemirror/language";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { searchKeymap, highlightSelectionMatches, openSearchPanel } from "@codemirror/search";
 import { tags } from "@lezer/highlight";
 
 export function createSource(
@@ -187,6 +187,9 @@ export function createSource(
     },
     focus() {
       view.focus();
+    },
+    find() {
+      openSearchPanel(view);
     },
     readOnly(value) {
       view.dispatch({

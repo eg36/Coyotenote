@@ -10,6 +10,7 @@ import { shortDate } from "./list.js";
 import {
   createNote,
   editProperties,
+  findInNote,
   openNote,
   refresh,
   save,
@@ -96,6 +97,7 @@ const commands = [
   ["Rename or move note", "Ctrl Shift R", renameDialog, true],
   ["Move note to trash", "Ctrl Shift D", deleteDialog, true],
   ["Save now", "Ctrl S", () => save().catch(showError), true],
+  ["Find and replace in this note", "", () => findInNote().catch(showError), true],
   ["Show notes linking here", "", backlinksDialog, true],
   ["Insert image", "", chooseImages, true],
   ["Add properties (front matter)", "", addProperties, true, () => !splitFrontMatter(state.body)],
