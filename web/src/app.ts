@@ -26,14 +26,19 @@ import { filterTag, renderList, setupDragging, visibleNotes } from "./list.js";
 import {
   applyEditability,
   buildBlockMenu,
+  buildViewMenu,
   changed,
   chooseBlock,
+  chooseView,
   closeBlockMenu,
+  closeViewMenu,
   editProperties,
   emptyNotebook,
   highlightBlock,
+  highlightView,
   openBlockMenu,
   openNote,
+  openViewMenu,
   refresh,
   save,
   schedulePreview,
@@ -79,6 +84,7 @@ async function initialize() {
   applyWritingSettings();
   hydrateIcons();
   buildBlockMenu();
+  buildViewMenu();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   for (const key of document.querySelectorAll<HTMLElement>("kbd[data-keys]"))
     key.textContent = (mac ? "⌘" : "Ctrl ") + key.dataset.keys;
@@ -168,8 +174,6 @@ $("tag-options").onclick = (event) => {
   if (button) filterTag(button.dataset.tag || "");
 };
 $("properties-text").oninput = () => editProperties($("properties-text").value);
-for (const button of document.querySelectorAll<HTMLElement>("[data-mode]"))
-  button.onclick = () => { if (isMode(button.dataset.mode)) setMode(button.dataset.mode).catch(showError); };
 for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
   button.onmousedown = (e) => e.preventDefault();
   button.onclick = () => {
@@ -217,6 +221,43 @@ $("block-menu").onkeydown = (event) => {
 };
 $("block-menu").addEventListener("focusout", () => closeBlockMenu());
 addEventListener("resize", () => closeBlockMenu());
+$("view-type").onmousedown = (e) => e.preventDefault();
+$("view-type").onclick = () =>
+  $("view-menu").hidden ? openViewMenu() : closeViewMenu(true);
+$("view-type").onkeydown = (event) => {
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  event.preventDefault();
+  openViewMenu();
+};
+$("view-menu").onmousedown = (e) => e.preventDefault();
+$("view-menu").onclick = (event) => {
+  const option = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-view]") : null;
+  if (option) chooseView(option.dataset.view || "write");
+};
+$("view-menu").onmousemove = (event) => {
+  const option = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-view]") : null;
+  if (option && !option.classList.contains("active"))
+    highlightView([...$("view-menu").children].indexOf(option));
+};
+$("view-menu").onkeydown = (event) => {
+  const options = [...$("view-menu").querySelectorAll<HTMLElement>("[data-view]")];
+  const index = options.findIndex((o) => o.classList.contains("active"));
+  const moves: Record<string, number> = {
+    ArrowDown: index + 1,
+    ArrowUp: index - 1,
+    Home: 0,
+    End: options.length - 1,
+  };
+  if (event.key in moves) highlightView(moves[event.key]);
+  else if (event.key === "Enter" || event.key === " ")
+    chooseView(options[index]?.dataset.view || "write");
+  else if (event.key === "Escape" || event.key === "Tab") closeViewMenu(true);
+  else return;
+  event.preventDefault();
+  event.stopPropagation();
+};
+$("view-menu").addEventListener("focusout", () => closeViewMenu());
+addEventListener("resize", () => closeViewMenu());
 $("toast-close").onclick = () => {
   $("toast").hidden = true;
 };

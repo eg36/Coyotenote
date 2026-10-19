@@ -150,11 +150,19 @@
           >
             <span data-icon="back"></span></button
           ><span class="bar-divider"></span>
-        <div class="view-switch" id="view-switch" role="group" aria-label="Editor view">
-          <button data-mode="write" class="active">Write</button
-          ><button data-mode="source">Markdown</button
-          ><button data-mode="preview">Preview</button
-          ><button data-mode="split">Split</button>
+        <div class="view-switch" id="view-switch">
+          <button
+            id="view-type"
+            class="view-type"
+            type="button"
+            title="Editor view · Alt M"
+            aria-haspopup="listbox"
+            aria-controls="view-menu"
+            aria-expanded="false"
+          >
+            <span id="view-type-label">Write</span
+            ><span data-icon="chevronDown"></span>
+          </button>
         </div>
         <section
           class="editor-toolbar"
@@ -381,6 +389,14 @@
       </form>
     </dialog>
     <div id="menu-popup" class="menu-popup" role="menu" tabindex="-1" hidden></div>
+    <div
+      id="view-menu"
+      class="block-menu view-menu"
+      role="listbox"
+      aria-label="Editor view"
+      tabindex="-1"
+      hidden
+    ></div>
     <div
       id="block-menu"
       class="block-menu"

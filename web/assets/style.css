@@ -793,29 +793,54 @@ input[type="search"]::-webkit-search-cancel-button {
 .view-switch {
   display: flex;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-  padding: 2px;
-  border-radius: 8px;
-  gap: 2px;
 }
-.view-switch button {
-  height: 30px;
-  padding: 0 12px;
+/* The editor view dropdown matches the text style control beside it. */
+.view-type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 112px;
+  height: var(--control);
+  padding: 0 6px 0 10px;
+  border-radius: 6px;
+  background: transparent;
   font-size: 13px;
   font-weight: 500;
-  white-space: nowrap;
-  color: var(--muted);
-  background: transparent;
-  border-radius: 6px;
-}
-.view-switch button:hover {
   color: var(--text);
+  white-space: nowrap;
+}
+.view-type:hover,
+.view-type[aria-expanded="true"] {
   background: var(--hover);
 }
-.view-switch button.active {
-  background: var(--selected);
-  color: var(--text);
-  font-weight: 600;
+.view-type svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.view-type[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.view-menu {
+  width: 200px;
+}
+.view-option {
+  grid-template-columns: 18px 1fr;
+  min-height: 40px;
+}
+.view-sample {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.view-option .view-sample svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  visibility: visible;
 }
 .editor-frame {
   display: flex;
@@ -2306,14 +2331,6 @@ dialog.danger #modal-submit {
     flex-wrap: wrap;
     row-gap: 6px;
     padding-bottom: 4px;
-  }
-  .view-switch {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-  .view-switch button {
-    flex: 1;
-    padding: 0 6px;
   }
   .editor-toolbar {
     flex-basis: 100%;

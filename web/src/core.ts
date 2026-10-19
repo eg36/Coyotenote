@@ -20,6 +20,7 @@ interface AppElements {
   "sidebar-toggle": HTMLButtonElement;
   "history-back": HTMLButtonElement;
   "block-type": HTMLButtonElement;
+  "view-type": HTMLButtonElement;
   "compare-versions": HTMLButtonElement;
   "retry-save": HTMLButtonElement;
   "download-draft": HTMLButtonElement;

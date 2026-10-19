@@ -285,10 +285,11 @@ async function setMode(mode: AppState["mode"], { focus = true } = {}) {
   $("preview-pane").hidden = !["preview", "split"].includes(mode);
   $("editor-toolbar").hidden = mode !== "write";
   closeBlockMenu();
-  for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
-    button.classList.toggle("active", button.dataset.mode === mode);
-    button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
-  }
+  const view = views.find(([value]) => value === mode);
+  $("view-type-label").textContent = view?.[1] || "Write";
+  $("view-type").setAttribute("aria-label", `Editor view: ${view?.[1] || "Write"}`);
+  for (const option of $("view-menu").querySelectorAll<HTMLElement>("[data-view]"))
+    option.setAttribute("aria-selected", String(option.dataset.view === mode));
   applyEditability();
   state.source?.refresh();
   if (mode === "preview" || mode === "split") schedulePreview(true);
@@ -464,6 +465,51 @@ function chooseBlock(value: string) {
   closeBlockMenu();
   state.rich?.command("block", value);
 }
+// The editor view is a dropdown like the text style, to save toolbar room.
+const views: [AppState["mode"], string, string][] = [
+  ["write", "Write", "pen"],
+  ["source", "Markdown", "code"],
+  ["preview", "Preview", "eye"],
+  ["split", "Split", "columns"],
+];
+function buildViewMenu() {
+  $("view-menu").innerHTML = views
+    .map(
+      ([value, label, iconName]) =>
+        `<div class="block-option view-option" role="option" id="view-option-${value}" data-view="${value}" aria-selected="${value === state.mode}">${icon("check")}<span class="view-sample">${icon(iconName)}${label}</span></div>`,
+    )
+    .join("");
+}
+function openViewMenu() {
+  const menu = $("view-menu"),
+    trigger = $("view-type");
+  if (trigger.disabled) return;
+  menu.hidden = false;
+  trigger.setAttribute("aria-expanded", "true");
+  const box = trigger.getBoundingClientRect();
+  menu.style.top = box.bottom + 4 + "px";
+  menu.style.left =
+    Math.max(8, Math.min(box.left, innerWidth - menu.offsetWidth - 8)) + "px";
+  highlightView(views.findIndex(([value]) => value === state.mode));
+  menu.focus({ preventScroll: true });
+}
+function closeViewMenu(refocus = false) {
+  if ($("view-menu").hidden) return;
+  $("view-menu").hidden = true;
+  $("view-type").setAttribute("aria-expanded", "false");
+  if (refocus) $("view-type").focus();
+}
+function highlightView(index: number) {
+  const options = [...$("view-menu").children];
+  index = (index + options.length) % options.length;
+  options.forEach((option, i) => option.classList.toggle("active", i === index));
+  $("view-menu").setAttribute("aria-activedescendant", options[index].id);
+}
+function chooseView(value: string) {
+  closeViewMenu();
+  const view = views.find(([mode]) => mode === value);
+  if (view) setMode(view[0]).catch(showError);
+}
 function scrollToHeading(heading: string) {
   const root = state.mode === "write" ? $("rich-editor") : $("preview");
   const target = [...root.querySelectorAll("h1,h2,h3,h4,h5,h6")].find(
@@ -477,17 +523,22 @@ function scrollToHeading(heading: string) {
 export {
   applyEditability,
   buildBlockMenu,
+  buildViewMenu,
   changed,
   chooseBlock,
+  chooseView,
   closeBlockMenu,
+  closeViewMenu,
   createNote,
   editProperties,
   emptyNotebook,
   findInNote,
   focusEditor,
   highlightBlock,
+  highlightView,
   openBlockMenu,
   openNote,
+  openViewMenu,
   refresh,
   save,
   schedulePreview,

@@ -18,7 +18,9 @@ async function openSeed(page, body, name) {
   return id;
 }
 async function mode(page, name) {
-  await page.getByRole("button", { name, exact: true }).click();
+  await page.locator("#view-type").click();
+  await page.getByRole("option", { name, exact: true }).click();
+  await expect(page.locator("#view-menu")).toBeHidden();
 }
 async function diskBody(page, id) {
   return (
