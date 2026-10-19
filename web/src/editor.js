@@ -104,8 +104,8 @@ async function refresh({ query = state.search } = {}) {
   state.filteredIds = query ? new Set(data.matches) : null;
   state.snippets = query ? data.snippets : {};
   state.searched = query;
-  $("vault-name").textContent = data.vault;
-  $("vault-name").title = data.vault;
+  // The sidebar shows only the logo; it names the open folder on hover.
+  $("brand").title = `Labradorite · ${data.vault}`;
   if (!state.ready) {
     applyTheme(data.theme);
     state.ready = true;

@@ -151,28 +151,16 @@ input[type="search"]::-webkit-search-cancel-button {
   text-decoration: none;
   color: var(--text);
   padding: 2px 4px;
+  margin-bottom: 10px;
   border-radius: 8px;
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
 }
 .brand-mark {
   display: block;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   object-fit: contain;
   border-radius: 7px;
-}
-.vault-label {
-  color: var(--muted);
-  font-size: var(--font-small);
-  padding: 0 4px 0 46px;
-  margin-top: -6px;
-  margin-bottom: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .new-button,
 .search {
