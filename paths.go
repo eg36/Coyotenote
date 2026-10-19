@@ -76,6 +76,19 @@ func joinID(folder, name string) string {
 	return folder + "/" + name
 }
 
+// pruneEmpty removes dir and then its parents while they are empty, stopping
+// at root. Notes create folders as needed, so a folder a move or trash left
+// empty would otherwise linger invisibly. Removing a non-empty folder fails,
+// which ends the walk.
+func pruneEmpty(root, dir string) {
+	root = filepath.Clean(root)
+	for dir = filepath.Clean(dir); dir != root && strings.HasPrefix(dir, root+string(filepath.Separator)); dir = filepath.Dir(dir) {
+		if os.Remove(dir) != nil {
+			return
+		}
+	}
+}
+
 // noteDir returns the directory holding id below root. Every existing parent
 // must be a real directory, never a symlink, so writes cannot leave the vault.
 // With create, missing parents are made.

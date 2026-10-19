@@ -369,3 +369,27 @@ func TestLoadCacheNeverServesStaleText(t *testing.T) {
 		t.Fatalf("invalid file was not skipped: %v", state)
 	}
 }
+
+func TestMovesRemoveFoldersTheyLeaveEmpty(t *testing.T) {
+	a := testApp(t)
+	exists := func(rel string) bool {
+		_, err := os.Stat(filepath.Join(a.store.dir, filepath.FromSlash(rel)))
+		return err == nil
+	}
+	n := request(t, a, "POST", "/api/note", mutation{ID: "A/B/Moved"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Keep/Sibling"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Keep/Deep/Leaving"}, 201)
+	request(t, a, "POST", "/api/rename", mutation{ID: "A/B/Moved", Name: "Top", Revision: n["revision"].(string)}, 200)
+	if exists("A") {
+		t.Fatal("renaming left empty folders behind")
+	}
+	leaving := request(t, a, "GET", "/api/note?id=Keep%2FDeep%2FLeaving", nil, 200)
+	request(t, a, "DELETE", "/api/note", mutation{ID: "Keep/Deep/Leaving", Revision: leaving["revision"].(string)}, 200)
+	if exists("Keep/Deep") || !exists("Keep/Sibling.md") {
+		t.Fatal("trash pruned the wrong folders")
+	}
+	request(t, a, "POST", "/api/restore", mutation{ID: "Keep/Deep/Leaving"}, 200)
+	if exists(".trash/Keep") || !exists(".trash") || !exists("Keep/Deep/Leaving.md") {
+		t.Fatal("restore did not tidy the trash folders")
+	}
+}

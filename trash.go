@@ -97,6 +97,7 @@ func (s *store) trash(n note) (string, error) {
 	if err := errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
 		return id, movedSyncError{err}
 	}
+	pruneEmpty(s.dir, sourceDir)
 	return id, nil
 }
 
@@ -135,5 +136,9 @@ func (s *store) restore(id, to string) (note, error) {
 		return note{}, err
 	}
 	n := note{ID: to, Body: string(body)}
-	return n, errors.Join(syncDir(dir), syncDir(sourceDir))
+	if err = errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
+		return n, err
+	}
+	pruneEmpty(trash, sourceDir)
+	return n, nil
 }

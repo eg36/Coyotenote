@@ -401,5 +401,6 @@ func (s *store) rename(n note, newID string) error {
 	if err = errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
 		return movedSyncError{err}
 	}
+	pruneEmpty(s.dir, sourceDir)
 	return nil
 }
