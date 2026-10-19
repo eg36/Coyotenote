@@ -1374,6 +1374,32 @@ dialog.theme-picker::backdrop {
 .link-list button:hover {
   background: color-mix(in srgb, var(--accent) 18%, var(--chrome));
 }
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--chrome);
+  border-radius: 6px;
+}
+.trash-row > span {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.trash-row small {
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.link-list .trash-row button {
+  flex: none;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--chrome));
+}
 .help-grid {
   display: grid;
   grid-template-columns: auto 1fr;

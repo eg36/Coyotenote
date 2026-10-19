@@ -324,6 +324,14 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		}
 		return nil
 	}
+	if route == "GET /api/trash" {
+		list, err := a.store.trashed()
+		if err != nil {
+			return err
+		}
+		writeJSON(w, 200, map[string]any{"notes": list})
+		return nil
+	}
 	in, err := decode(w, r)
 	if err != nil {
 		return err

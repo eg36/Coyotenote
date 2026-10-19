@@ -757,3 +757,32 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await page.keyboard.press("Control+k");
   await expect(page.locator("#search")).toBeFocused();
 });
+
+test("the trash lists trashed notes and restores any of them", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  const first = `Trashed first ${stamp}`,
+    second = `Trashed second ${stamp}`;
+  for (const id of [first, second]) {
+    await openSeed(page, `Body of ${id}.`, id);
+    await page
+      .getByRole("button", { name: "Move note to trash", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Move to trash", exact: true })
+      .click();
+    await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+  }
+  await page.locator("#trash-button").click();
+  await expect(page.locator("#modal-title")).toHaveText("Trash");
+  await expect(page.locator(".trash-list")).toContainText(first);
+  await expect(page.locator(".trash-list")).toContainText(`Body of ${second}.`);
+  await page.getByRole("button", { name: "Restore " + first }).click();
+  await expect(page.locator("#modal")).toBeHidden();
+  await expect(page.locator("#document-title")).toHaveText(first);
+  expect(await diskBody(page, first)).toBe(`Body of ${first}.`);
+  await page.locator("#trash-button").click();
+  await expect(page.locator(".trash-list")).not.toContainText(first);
+  await expect(page.locator(".trash-list")).toContainText(second);
+});

@@ -715,6 +715,58 @@ async function undoTrash() {
   await openNote(note.id, { skipSave: true });
   showToast("Note restored.");
 }
+async function trashDialog() {
+  const { notes } = await api("/api/trash");
+  const container = document.createElement("div");
+  container.className = "link-list trash-list";
+  if (!notes.length) {
+    const text = document.createElement("p");
+    text.className = "dialog-description";
+    text.textContent =
+      "The trash is empty. Notes you move to the trash wait here until you restore them.";
+    container.append(text);
+  }
+  for (const note of notes) {
+    const row = document.createElement("div");
+    row.className = "trash-row";
+    const label = document.createElement("span");
+    const name = document.createElement("strong");
+    name.textContent = note.id;
+    const detail = document.createElement("small");
+    const date = new Date(note.modified);
+    detail.textContent = [
+      Number.isNaN(date.valueOf())
+        ? ""
+        : "Last edited " + date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      excerpt(note.excerpt),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    label.append(name, detail);
+    const restore = document.createElement("button");
+    restore.type = "button";
+    restore.textContent = "Restore";
+    restore.setAttribute("aria-label", "Restore " + note.id);
+    restore.onclick = async () => {
+      restore.disabled = true;
+      try {
+        await save();
+        const restored = await api("/api/restore", "POST", { id: note.id });
+        state.trash = state.trash.filter((item) => item.trashId !== note.id);
+        await refresh();
+        closeModal();
+        await openNote(restored.id, { skipSave: true });
+        showToast("Note restored.");
+      } catch (error) {
+        $("modal-error").textContent = error.message;
+        restore.disabled = false;
+      }
+    };
+    row.append(label, restore);
+    container.append(row);
+  }
+  openModal("Trash", container, null, { eyebrow: "RECOVER", hideFooter: true });
+}
 function themeDialog() {
   themeOriginal = state.theme;
   const container = document.createElement("div");
@@ -1026,6 +1078,7 @@ $("sidebar-scrim").onclick = () => {
   $("app").classList.remove("sidebar-open");
 };
 $("theme-button").onclick = themeDialog;
+$("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-theme").onclick = themeDialog;
 $("hint-help").onclick = helpDialog;
 $("focus-button").onclick = toggleFocus;

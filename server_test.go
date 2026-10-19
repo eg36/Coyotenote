@@ -393,3 +393,29 @@ func TestMovesRemoveFoldersTheyLeaveEmpty(t *testing.T) {
 		t.Fatal("restore did not tidy the trash folders")
 	}
 }
+
+func TestTrashListsNotesForRestore(t *testing.T) {
+	a := testApp(t)
+	if list := request(t, a, "GET", "/api/trash", nil, 200)["notes"].([]any); len(list) != 0 {
+		t.Fatalf("new vault trash %v", list)
+	}
+	for _, id := range []string{"Old/Plan", "Recent"} {
+		n := request(t, a, "POST", "/api/note", mutation{ID: id, Body: "Body of " + id}, 201)
+		request(t, a, "DELETE", "/api/note", mutation{ID: id, Revision: n["revision"].(string)}, 200)
+	}
+	if err := os.Symlink(a.store.path("Elsewhere"), filepath.Join(a.store.dir, ".trash", "Link.md")); err != nil {
+		t.Fatal(err)
+	}
+	list := request(t, a, "GET", "/api/trash", nil, 200)["notes"].([]any)
+	ids := []string{}
+	for _, item := range list {
+		ids = append(ids, item.(map[string]any)["id"].(string))
+	}
+	if len(ids) != 2 || !strings.Contains(strings.Join(ids, ","), "Old/Plan") || list[0].(map[string]any)["excerpt"] == "" {
+		t.Fatalf("trash list %v", list)
+	}
+	request(t, a, "POST", "/api/restore", mutation{ID: "Old/Plan"}, 200)
+	if list := request(t, a, "GET", "/api/trash", nil, 200)["notes"].([]any); len(list) != 1 {
+		t.Fatalf("restored note still listed: %v", list)
+	}
+}

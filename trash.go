@@ -3,9 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
+	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -141,4 +145,55 @@ func (s *store) restore(id, to string) (note, error) {
 	}
 	pruneEmpty(trash, sourceDir)
 	return n, nil
+}
+
+// trashedNote is one note waiting in the trash.
+type trashedNote struct {
+	ID       string    `json:"id"`
+	Modified time.Time `json:"modified"`
+	Excerpt  string    `json:"excerpt"`
+}
+
+// trashed lists the notes in the trash, most recently trashed first. Files
+// that could not be restored, such as symlinks, are left out.
+func (s *store) trashed() ([]trashedNote, error) {
+	trash, err := s.trashDirectory(false)
+	if os.IsNotExist(err) {
+		return []trashedNote{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	list := []trashedNote{}
+	err = filepath.WalkDir(trash, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || p == trash {
+			return err
+		}
+		if e.IsDir() {
+			if strings.HasPrefix(e.Name(), ".") {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		rel, err := filepath.Rel(trash, p)
+		if err != nil || !e.Type().IsRegular() || !strings.HasSuffix(e.Name(), ".md") {
+			return err
+		}
+		id := strings.TrimSuffix(filepath.ToSlash(rel), ".md")
+		info, err := e.Info()
+		if !validID(id) || err != nil {
+			return nil
+		}
+		item := trashedNote{ID: id, Modified: info.ModTime().UTC()}
+		if b, err := os.ReadFile(p); err == nil && utf8.Valid(b) {
+			item.Excerpt = strings.Join(strings.Fields(string(b)), " ")
+			if runes := []rune(item.Excerpt); len(runes) > 140 {
+				item.Excerpt = string(runes[:140]) + "…"
+			}
+		}
+		list = append(list, item)
+		return nil
+	})
+	sort.SliceStable(list, func(i, j int) bool { return list[i].Modified.After(list[j].Modified) })
+	return list, err
 }
