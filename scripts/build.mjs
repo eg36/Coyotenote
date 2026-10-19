@@ -17,7 +17,7 @@ for (const file of await readdir("web/assets"))
   )
     await rm(path.join("web/assets", file));
 const result = await build({
-  entryPoints: ["web/src/app.js"],
+  entryPoints: ["web/src/app.ts"],
   bundle: true,
   splitting: true,
   format: "esm",

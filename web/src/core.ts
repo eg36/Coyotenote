@@ -119,7 +119,8 @@ function showToast(message: string, { undo = false, persistent = false } = {}) {
 }
 // showError explains a failure in the banner. Recovery actions appear only
 // while there are unsaved edits, and a conflict leads with comparing versions.
-function showError(error: AppError) {
+function showError(input: unknown) {
+  const error: AppError = input instanceof Error ? input : new Error(String(input));
   state.lastError = error;
   const conflict =
     error.status === 409 &&

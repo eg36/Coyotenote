@@ -1,3 +1,9 @@
+interface Match { score: number; at: number[] }
+type PaletteResult = { label: string; detail: string; match: Match; current?: boolean } & (
+  { kind: "note"; id: string } | { kind: "heading" | "command"; run: () => unknown }
+);
+type Command = [label: string, keys: string, run: () => unknown, needsNote?: boolean, when?: () => unknown];
+
 // The quick switcher: jump to a note, a heading of the open note or a command
 // by typing a few letters of it.
 import { icon } from "./icons.js";
@@ -35,7 +41,7 @@ import { settingsDialog } from "./settings.js";
 // fuzzyMatch finds the letters of query in text, in order, and scores the
 // match: word starts and runs of consecutive letters count for more, and
 // shorter texts win ties. It returns null when a letter is missing.
-function fuzzyMatch(query, text) {
+function fuzzyMatch(query: string, text: string): Match | null {
   const q = query.toLowerCase().replace(/\s+/g, "");
   if (!q) return { score: 0, at: [] };
   const lower = text.toLowerCase();
@@ -61,10 +67,10 @@ function fuzzyMatch(query, text) {
 }
 
 // marked fills element with text, marking the matched letters.
-function marked(element, text, at) {
+function marked(element: HTMLElement, text: string, at: number[]) {
   const hits = new Set(at);
   let run = "";
-  const flush = (mark) => {
+  const flush = (mark: boolean) => {
     if (!run) return;
     if (mark) {
       const m = document.createElement("mark");
@@ -92,7 +98,7 @@ function addProperties() {
 }
 
 // Commands name what they do; those needing an open note hide without one.
-const commands = [
+const commandDefinitions: Command[] = [
   ["New note", "Ctrl N", newNoteDialog],
   ["Open today's note", "Alt J", () => dailyNote().catch(showError)],
   ["Rename or move note", "Ctrl Shift R", renameDialog, true],
@@ -115,7 +121,8 @@ const commands = [
   ["Open the trash", "", () => trashDialog().catch(showError)],
   ["Review unsaved drafts", "", draftsDialog, false, () => state.orphans?.length],
   ["Keyboard shortcuts", "F1", helpDialog],
-].map(([label, keys, run, needsNote = false, when]) => ({
+];
+const commands = commandDefinitions.map(([label, keys, run, needsNote = false, when]) => ({
   label,
   keys: /Mac|iPhone|iPad/.test(navigator.platform)
     ? keys.replace(/^Ctrl /, "⌘")
@@ -146,14 +153,14 @@ function paletteDialog(prefix = "") {
   const hints = document.createElement("p");
   hints.className = "theme-key-hints";
   hints.textContent = "↑↓ choose · Enter open · # headings · > commands · Esc close";
-  let items = [],
-    active = 0;
+  let items: PaletteResult[] = [];
+  let active = 0;
 
   function results() {
     const raw = input.value;
     const mode = raw.startsWith(">") ? "command" : raw.startsWith("#") ? "heading" : "all";
     const query = mode === "all" ? raw.trim() : raw.slice(1).trim();
-    const found = [];
+    const found: PaletteResult[] = [];
     if (mode === "heading") {
       const list = headings(state.current ? state.body : "");
       for (const [index, heading] of list.entries()) {
@@ -200,7 +207,7 @@ function paletteDialog(prefix = "") {
         kind: "command",
         label: `Search note contents for “${query}”`,
         detail: "",
-        match: { at: [] },
+        match: { at: [], score: 0 },
         run: () => {
           $("search").value = query;
           state.search = query;
@@ -213,14 +220,14 @@ function paletteDialog(prefix = "") {
           kind: "command",
           label: `Create note “${query}”`,
           detail: "",
-          match: { at: [] },
+          match: { at: [], score: 0 },
           run: () => createNote(query).catch(showError),
         });
     }
     return ranked;
   }
 
-  function activate(index, scroll = true) {
+  function activate(index: number, scroll = true) {
     active = index;
     for (const [i, option] of [...list.children].entries()) {
       option.classList.toggle("chosen", i === active);
@@ -233,7 +240,7 @@ function paletteDialog(prefix = "") {
     } else input.removeAttribute("aria-activedescendant");
   }
 
-  function choose(item) {
+  function choose(item: PaletteResult | undefined) {
     if (!item) return;
     closeModal();
     if (item.kind === "note") openNote(item.id).catch(showError);
@@ -270,7 +277,7 @@ function paletteDialog(prefix = "") {
   input.oninput = render;
   input.onkeydown = (event) => {
     if (event.isComposing) return;
-    const moves = { ArrowDown: active + 1, ArrowUp: active - 1, PageDown: active + 8, PageUp: active - 8 };
+    const moves: Record<string, number> = { ArrowDown: active + 1, ArrowUp: active - 1, PageDown: active + 8, PageUp: active - 8 };
     if (event.key in moves) {
       event.preventDefault();
       if (items.length) activate(Math.max(0, Math.min(items.length - 1, moves[event.key])));

@@ -315,16 +315,13 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm test
 ```
 
 Editing `web/src/` requires `npm run build` **then** rebuilding the Go binary.
-Refresh the browser afterwards. The 0.9 frontend migration is incremental:
-shared state, API requests, front matter, icons, attachments, outline and writing
-settings and both editor adapters now use strict TypeScript. The app entry
-point, drafts, dialogs, menus and palette are still JavaScript. Note loading,
-autosave, views, note lists, history, conflict comparison, daily notes and
-shortcuts also use TypeScript.
-`allowJs` keeps both working together; `checkJs` is off for the pending JavaScript
-modules. New and converted `.ts` files must pass `npm run typecheck` in CI.
-Existing `.js` import specifiers resolve to the converted `.ts` sources in both
-TypeScript and esbuild. The browser still receives bundled JavaScript.
+Refresh the browser afterwards. All browser app sources under `web/src/` use
+strict TypeScript, including both editor adapters, API contracts, shared state,
+draft recovery and UI controls. `npm run typecheck` checks every app module in
+CI; JavaScript sources are not enabled in the TypeScript project. esbuild starts
+at `web/src/app.ts` and strips types when producing the committed browser bundle.
+The `.js` import specifiers resolve to `.ts` sources during checking and bundling.
+The browser still receives JavaScript. Go remains the server and vault backend.
 
 Production bundles and npm dependencies are
 version-locked; CI checks that the committed bundle is current. Bundled dependency

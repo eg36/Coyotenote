@@ -20,13 +20,14 @@ import { dailyNote } from "./daily.js";
 import { settingsDialog } from "./settings.js";
 
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
-const keys = (text) => (mac ? text.replace(/^Ctrl /, "⌘").replace(/^Alt /, "⌥") : text);
+const keys = (text: string) => (mac ? text.replace(/^Ctrl /, "⌘").replace(/^Alt /, "⌥") : text);
 const note = () => Boolean(state.current) && !state.pendingDraft;
 const writing = () => note() && state.mode === "write";
-const rich = (name) => () => state.rich?.command(name);
+const rich = (name: string) => () => state.rich?.command(name);
 
 // Each item is [label, shortcut, action, when it is available]; "-" separates.
-const menus = {
+type MenuEntry = "-" | [label: string, shortcut: string, run: () => unknown, when?: () => boolean];
+const menus: Record<string, MenuEntry[]> = {
   file: [
     ["New note", "Ctrl N", newNoteDialog],
     ["Today's note", "Alt J", () => dailyNote().catch(showError)],
@@ -75,16 +76,17 @@ const menus = {
 let openName = "";
 function closeMenu(refocus = false) {
   if (!openName) return;
-  const button = $("menu-bar").querySelector(`[data-menu="${openName}"]`);
-  button.setAttribute("aria-expanded", "false");
+  const button = $("menu-bar").querySelector<HTMLButtonElement>(`[data-menu="${openName}"]`);
+  button?.setAttribute("aria-expanded", "false");
   $("menu-popup").hidden = true;
   openName = "";
-  if (refocus) button.focus();
+  if (refocus) button?.focus();
 }
 
-function openMenu(name, focusItem = 0) {
+function openMenu(name: string, focusItem = 0) {
   closeMenu();
-  const button = $("menu-bar").querySelector(`[data-menu="${name}"]`);
+  const button = $("menu-bar").querySelector<HTMLButtonElement>(`[data-menu="${name}"]`);
+  if (!button || !menus[name]) return;
   const popup = $("menu-popup");
   popup.replaceChildren();
   for (const entry of menus[name]) {
@@ -119,34 +121,34 @@ function openMenu(name, focusItem = 0) {
   popup.hidden = false;
   popup.style.top = box.bottom + 4 + "px";
   popup.style.left = Math.min(box.left, innerWidth - popup.offsetWidth - 8) + "px";
-  popup.setAttribute("aria-label", button.textContent);
+  popup.setAttribute("aria-label", button.textContent || "");
   button.setAttribute("aria-expanded", "true");
   openName = name;
-  const items = [...popup.querySelectorAll(".menu-item:not(:disabled)")];
+  const items = [...popup.querySelectorAll<HTMLButtonElement>(".menu-item:not(:disabled)")];
   items.at(focusItem)?.focus();
 }
 
 function setupMenus() {
   const bar = $("menu-bar");
   const names = Object.keys(menus);
-  for (const button of bar.querySelectorAll("[data-menu]")) {
+  for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-menu]")) {
     button.onclick = () =>
-      openName === button.dataset.menu ? closeMenu() : openMenu(button.dataset.menu);
+      openName === button.dataset.menu ? closeMenu() : openMenu(button.dataset.menu || "");
     // Once a menu is open, pointing at another one switches to it.
     button.onmouseenter = () => {
-      if (openName && openName !== button.dataset.menu) openMenu(button.dataset.menu);
+      if (openName && openName !== button.dataset.menu) openMenu(button.dataset.menu || "");
     };
     button.onkeydown = (event) => {
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        openMenu(button.dataset.menu);
+        openMenu(button.dataset.menu || "");
       }
     };
   }
   $("menu-popup").onkeydown = (event) => {
-    const items = [...$("menu-popup").querySelectorAll(".menu-item:not(:disabled)")];
-    const index = items.indexOf(document.activeElement);
-    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    const items = [...$("menu-popup").querySelectorAll<HTMLButtonElement>(".menu-item:not(:disabled)")];
+    const index = items.findIndex((item) => item === document.activeElement);
+    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
     if (step) items[(index + step + items.length) % items.length]?.focus();
     else if (event.key === "Home") items[0]?.focus();
     else if (event.key === "End") items.at(-1)?.focus();
@@ -160,7 +162,7 @@ function setupMenus() {
     event.stopPropagation();
   };
   document.addEventListener("mousedown", (event) => {
-    if (openName && !event.target.closest("#menu-popup, #menu-bar")) closeMenu();
+    if (openName && !(event.target instanceof Element && event.target.closest("#menu-popup, #menu-bar"))) closeMenu();
   });
   addEventListener("resize", () => closeMenu());
 }

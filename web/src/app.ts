@@ -1,3 +1,4 @@
+import type { AppState } from "./types.js";
 // Entry point: starts the app and connects the page's controls.
 import { createSource } from "./source.js";
 import { hydrateIcons } from "./icons.js";
@@ -60,8 +61,15 @@ import { setupMenus } from "./menus.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
 
+function isMode(value: unknown): value is AppState["mode"] {
+  return typeof value === "string" && ["write", "source", "preview", "split"].includes(value);
+}
+function isSort(value: unknown): value is AppState["sort"] {
+  return typeof value === "string" && ["modified", "title-asc", "title-desc"].includes(value);
+}
 async function initialize() {
   const topbar = document.querySelector(".topbar");
+  if (!topbar) throw new Error("Missing app top bar");
   const measureTopbar = () => $("app").style.setProperty(
     "--topbar-height", `${topbar.getBoundingClientRect().height}px`,
   );
@@ -72,16 +80,18 @@ async function initialize() {
   hydrateIcons();
   buildBlockMenu();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
-  for (const key of document.querySelectorAll("kbd[data-keys]"))
+  for (const key of document.querySelectorAll<HTMLElement>("kbd[data-keys]"))
     key.textContent = (mac ? "⌘" : "Ctrl ") + key.dataset.keys;
   const searchShortcut = $("search-shortcut");
-  searchShortcut.querySelector("[data-modifier]").textContent = mac ? "⌘" : "Ctrl";
+  const modifier = searchShortcut.querySelector("[data-modifier]");
+  if (modifier) modifier.textContent = mac ? "⌘" : "Ctrl";
   searchShortcut.title = `${mac ? "⌘" : "Ctrl"} + Shift + E`;
   searchShortcut.setAttribute("aria-label", `${mac ? "Command" : "Control"} Shift E`);
   $("search").setAttribute("aria-keyshortcuts", `${mac ? "Meta" : "Control"}+Shift+E`);
-  state.mode = storage.get("coyote-view") || "write";
+  const storedMode = storage.get("coyote-view");
+  state.mode = isMode(storedMode) ? storedMode : "write";
   const sort = storage.get("coyote-sort");
-  if (["modified", "title-asc", "title-desc"].includes(sort)) state.sort = sort;
+  if (isSort(sort)) state.sort = sort;
   $("note-sort").value = state.sort;
   if (!["write", "source", "preview", "split"].includes(state.mode))
     state.mode = "write";
@@ -96,6 +106,7 @@ async function initialize() {
   setupDragging();
   setupMenus();
   const data = await refresh();
+  if (!data) return;
   adoptFormerVault(data.formerVaultIds);
   updateOrphans();
   // The app opens on its start page; a reload keeps the open note, which
@@ -124,11 +135,13 @@ $("history-back").onclick = async () => {
 $("previous-note").onclick = () => navigate(-1);
 $("next-note").onclick = () => navigate(1);
 $("note-sort").onchange = () => {
-  state.sort = $("note-sort").value;
+  const sort = $("note-sort").value;
+  if (!isSort(sort)) return;
+  state.sort = sort;
   storage.set("coyote-sort", state.sort);
   renderList();
 };
-let searchTimer;
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
 $("search").onfocus = showNotes;
 $("search").oninput = () => {
   showNotes();
@@ -151,20 +164,20 @@ $("hint-open").onclick = () => paletteDialog();
 $("outline-button").onclick = () => toggleOutline();
 $("history-button").onclick = () => historyDialog().catch(showError);
 $("tag-options").onclick = (event) => {
-  const button = event.target.closest("button[data-tag]");
-  if (button) filterTag(button.dataset.tag);
+  const button = event.target instanceof Element ? event.target.closest<HTMLElement>("button[data-tag]") : null;
+  if (button) filterTag(button.dataset.tag || "");
 };
 $("properties-text").oninput = () => editProperties($("properties-text").value);
-for (const button of document.querySelectorAll("[data-mode]"))
-  button.onclick = () => setMode(button.dataset.mode).catch(showError);
-for (const button of document.querySelectorAll("[data-format]")) {
+for (const button of document.querySelectorAll<HTMLElement>("[data-mode]"))
+  button.onclick = () => { if (isMode(button.dataset.mode)) setMode(button.dataset.mode).catch(showError); };
+for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
   button.onmousedown = (e) => e.preventDefault();
   button.onclick = () => {
     const name = button.dataset.format;
     if (name === "wiki") linkDialog(true);
     else if (name === "link") linkDialog();
     else if (name === "image") chooseImages();
-    else state.rich?.command(name);
+    else state.rich?.command(name || "");
   };
 }
 $("block-type").onmousedown = (e) => e.preventDefault();
@@ -177,18 +190,18 @@ $("block-type").onkeydown = (event) => {
 };
 $("block-menu").onmousedown = (e) => e.preventDefault();
 $("block-menu").onclick = (event) => {
-  const option = event.target.closest("[data-block]");
-  if (option) chooseBlock(option.dataset.block);
+  const option = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-block]") : null;
+  if (option) chooseBlock(option.dataset.block || "p");
 };
 $("block-menu").onmousemove = (event) => {
-  const option = event.target.closest("[data-block]");
+  const option = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-block]") : null;
   if (option && !option.classList.contains("active"))
     highlightBlock([...$("block-menu").children].indexOf(option));
 };
 $("block-menu").onkeydown = (event) => {
-  const options = [...$("block-menu").children];
+  const options = [...$("block-menu").querySelectorAll<HTMLElement>("[data-block]")];
   const index = options.findIndex((o) => o.classList.contains("active"));
-  const moves = {
+  const moves: Record<string, number> = {
     ArrowDown: index + 1,
     ArrowUp: index - 1,
     Home: 0,
@@ -196,7 +209,7 @@ $("block-menu").onkeydown = (event) => {
   };
   if (event.key in moves) highlightBlock(moves[event.key]);
   else if (event.key === "Enter" || event.key === " ")
-    chooseBlock(options[index].dataset.block);
+    chooseBlock(options[index]?.dataset.block || "p");
   else if (event.key === "Escape" || event.key === "Tab") closeBlockMenu(true);
   else return;
   event.preventDefault();
@@ -226,13 +239,14 @@ $("review-drafts").onclick = draftsDialog;
 $("compare-versions").onclick = compareDialog;
 $("recovery-copy").onclick = async () => {
   try {
-    const data = await api("/api/recovery", "POST", {
+    if (!state.current) return;
+    const data = await api<{ path: string }>("/api/recovery", "POST", {
       id: state.current.id,
       body: state.body,
     });
     showToast("Recovery copy saved: " + data.path, { persistent: true });
   } catch (error) {
-    showToast(error.message, { persistent: true });
+    showToast(error instanceof Error ? error.message : String(error), { persistent: true });
   }
 };
 $("reload-note").onclick = () => {
@@ -244,6 +258,7 @@ $("reload-note").onclick = () => {
     "Reload from disk?",
     content,
     async () => {
+      if (!state.current) return;
       storage.remove(draftKey());
       const id = state.current.id;
       state.dirty = false;
@@ -254,12 +269,12 @@ $("reload-note").onclick = () => {
 };
 $("restore-draft").onclick = () => {
   const draft = state.pendingDraft;
-  if (!draft) return;
+  if (!draft || !state.current) return;
   const conflict = draft.base !== state.current.revision;
   state.body = draft.body;
   state.dirty = state.body !== state.savedBody;
   if (conflict) state.current.revision = draft.base;
-  state.source.replace(state.body, { reset: true });
+  state.source?.replace(state.body, { reset: true });
   state.pendingDraft = null;
   releaseDraft(draft.key);
   $("draft-banner").hidden = true;
@@ -288,6 +303,7 @@ $("export-note").onclick = async () => {
   try {
     await save();
     const a = document.createElement("a");
+    if (!state.current) return;
     a.href = "/api/export?id=" + encodeURIComponent(state.current.id);
     a.click();
   } catch (error) {
@@ -296,22 +312,22 @@ $("export-note").onclick = async () => {
 };
 $("backlinks-button").onclick = backlinksDialog;
 $("preview").addEventListener("click", (event) => {
-  const tag = event.target.closest("button.tag");
-  if (tag) filterTag(tag.dataset.tag);
+  const tag = event.target instanceof Element ? event.target.closest<HTMLElement>("button.tag") : null;
+  if (tag) filterTag(tag.dataset.tag || "");
 });
 $("preview").onclick = (event) => {
-  const anchor = event.target.closest("a[href]");
+  const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
   if (!anchor) return;
   const u = new URL(anchor.href, location.href);
   if (u.origin === location.origin) {
     if (u.searchParams.has("note")) {
       event.preventDefault();
-      openNote(u.searchParams.get("note"), {
+      openNote(u.searchParams.get("note") || "", {
         heading: decodeURIComponent(u.hash.slice(1)),
       }).catch(showError);
     } else if (u.searchParams.has("new")) {
       event.preventDefault();
-      followWiki(u.searchParams.get("new")).catch(showError);
+      followWiki(u.searchParams.get("new") || "").catch(showError);
     }
   }
 };
@@ -328,7 +344,7 @@ document.addEventListener("keydown", (event) => {
   const shortcut = shortcutChords.get(chord);
   if (!shortcut) return;
   if (!shortcut.options.keepDefault) event.preventDefault();
-  shortcut.run(chord);
+  shortcut.run?.(chord);
 });
 window.addEventListener("beforeunload", (event) => {
   storeDraft();
@@ -385,6 +401,7 @@ window.addEventListener("online", () => {
 });
 initialize().catch((error) => {
   showError(error);
-  $("empty-state").querySelector("p").textContent =
+  const description = $("empty-state").querySelector("p");
+  if (description) description.textContent =
     "The local notebook could not be opened. Check the message above, then reload.";
 });
