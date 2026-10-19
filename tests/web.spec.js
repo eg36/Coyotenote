@@ -473,6 +473,42 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
   await expect.poll(() => diskBody(page, id)).toBe(draft);
 });
 
+test("typing while another note loads keeps those edits", async ({ page }) => {
+  const stamp = Date.now();
+  const other = `Loading target ${stamp}`;
+  await seed(page, other, "The other note.");
+  const id = await openSeed(page, "Typed before.", `Loading source ${stamp}`);
+  let release;
+  const hold = (route) =>
+    new Promise((resolve) => (release = resolve)).then(() => route.continue());
+  const isOther = (url) =>
+    url.pathname === "/api/note" && url.searchParams.get("id") === other;
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+
+  await page.route(isOther, hold);
+  await page.locator(".note-title", { hasText: other }).click();
+  await expect.poll(() => typeof release).toBe("function");
+  await editor.fill("Typed while loading.");
+  release();
+  await expect(page.locator("#document-title")).toHaveText(other);
+  await expect.poll(() => diskBody(page, id)).toBe("Typed while loading.");
+
+  // When those edits cannot be saved, the note stays open with them.
+  await page.goto("/?note=" + encodeURIComponent(id));
+  await expect(editor).toHaveText("Typed while loading.");
+  release = undefined;
+  await page.route("**/api/note", (route) =>
+    route.request().method() === "PUT" ? route.abort() : route.fallback(),
+  );
+  await page.locator(".note-title", { hasText: other }).click();
+  await expect.poll(() => typeof release).toBe("function");
+  await editor.fill("Kept although saving fails.");
+  release();
+  await expect(page.locator("#error-banner")).toBeVisible();
+  await expect(page.locator("#document-title")).toHaveText(id);
+  await expect(editor).toHaveText("Kept although saving fails.");
+});
+
 test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openSeed(page, "# Small screen\n\nA responsive thought.");

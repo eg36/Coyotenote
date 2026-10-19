@@ -29,6 +29,7 @@ const state = {
   back: [],
   pendingDraft: null,
   block: "p",
+  edits: 0,
   lastError: null,
   ready: false,
   restoring: false,
@@ -211,6 +212,7 @@ function findDraft(note) {
 }
 function changed(body, from) {
   if (state.restoring || !state.current || state.body === body) return;
+  state.edits++;
   state.body = body;
   state.dirty = body !== state.savedBody;
   storeDraft();
@@ -434,8 +436,16 @@ async function openNote(
 ) {
   const generation = ++state.openGeneration;
   if (!skipSave) await save();
+  const edits = state.edits;
   const note = await api("/api/note?id=" + encodeURIComponent(id));
   if (generation !== state.openGeneration) return;
+  // Typing while the note loaded changed the note still open. Save it
+  // first, and stay on it if that fails or if it is the note being loaded,
+  // so the response never replaces those edits.
+  if (state.edits !== edits) {
+    await save();
+    if (generation !== state.openGeneration || state.current?.id === id) return;
+  }
   if (pushBack && state.current?.id && state.current.id !== id)
     state.back.push(state.current.id);
   $("history-back").disabled = state.back.length === 0;
