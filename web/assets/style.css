@@ -1413,6 +1413,28 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   gap: 2px;
 }
+.footer-version {
+  margin-left: auto;
+  flex-shrink: 0;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  border-radius: 3px;
+}
+.footer-version:hover,
+.footer-version:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+.footer-left:not([hidden]) + .footer-hints {
+  margin-left: auto;
+}
+.footer-left:not([hidden]) ~ .footer-version {
+  margin-left: 0;
+}
 .hint-help kbd {
   font-size: var(--font-small);
   border: 1px solid var(--line);
@@ -2252,6 +2274,9 @@ dialog.danger #modal-submit {
   .footer-left #character-count,
   .footer-left #character-count + .footer-separator,
   #hint-open {
+    display: none;
+  }
+  .footer-left:not([hidden]) + .footer-hints {
     display: none;
   }
   .help-grid {

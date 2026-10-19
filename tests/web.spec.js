@@ -1720,6 +1720,27 @@ test("the app starts on a page with a New note button, and a reload keeps the op
   await expect(page.locator("#document-title")).toHaveText(id);
 });
 
+test("the footer shows the running version and links to the latest release on every screen", async ({ page }) => {
+  const id = await openSeed(page, "Version stays visible while writing.");
+  const { version } = await (await page.request.get("/api/state")).json();
+  const link = page.locator("#app-version");
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const path of ["/", "/?note=" + encodeURIComponent(id)]) {
+      await page.goto(path);
+      await expect(link).toHaveText(version);
+      await expect(link).toBeInViewport();
+      await expect(link).toHaveAttribute("href", "https://github.com/eg36/Labradorite/releases/latest");
+      await expect(link).toHaveAttribute("target", "_blank");
+      const footer = page.locator(".statusbar");
+      expect(await footer.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+      const box = await link.boundingBox();
+      const bar = await footer.boundingBox();
+      expect(box.x + box.width).toBeGreaterThan(bar.x + bar.width - 20);
+    }
+  }
+});
+
 test.describe("daily notes", () => {
   test.use({ timezoneId: "Pacific/Honolulu" });
   test("uses the local date and reopens the same text from every entry point", async ({ page }) => {

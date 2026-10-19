@@ -100,6 +100,12 @@ async function refresh({ query = state.search } = {}) {
   state.token = data.token;
   state.vaultId = data.vaultId;
   state.themes = data.themes;
+  state.version = data.version;
+  const versionLink = $("app-version");
+  versionLink.textContent = data.version;
+  versionLink.title = `Labradorite ${data.version} · Latest release on GitHub`;
+  versionLink.setAttribute("aria-label", versionLink.title);
+  versionLink.hidden = false;
   state.notes = data.notes;
   state.filteredIds = query ? new Set(data.matches) : null;
   state.snippets = query ? data.snippets : {};

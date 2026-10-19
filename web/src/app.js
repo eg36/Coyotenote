@@ -87,7 +87,6 @@ async function initialize() {
   const data = await refresh();
   adoptFormerVault(data.formerVaultIds);
   updateOrphans();
-  state.version = data.version;
   // The app opens on its start page; a reload keeps the open note, which
   // the address names.
   const requested = new URL(location.href).searchParams.get("note");
