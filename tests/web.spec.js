@@ -17,6 +17,12 @@ async function openSeed(page, body, name) {
   await expect(page.locator("#document-title")).toHaveText(id.split("/").pop());
   return id;
 }
+// openThemes shows the theme list in Settings, opening the window first.
+async function openThemes(page) {
+  if (!(await page.locator("#modal").evaluate((d) => d.open))) await page.locator("#settings-button").click();
+  if (await page.locator("#theme-panel").isHidden()) await page.getByRole("button", { name: /^Theme:/ }).click();
+  await expect(page.getByRole("combobox", { name: "Find a theme" })).toBeFocused();
+}
 async function mode(page, name) {
   await page.locator("#view-type").click();
   await page.getByRole("option", { name, exact: true }).click();
@@ -157,7 +163,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
   page,
 }) => {
   await openSeed(page, "# Theme test\n\nHello.");
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   await expect(page.locator(".theme-option")).toHaveCount(14);
   await page.locator('[data-theme-id="catppuccin-mocha"]').click();
   await expect(page.locator("html")).toHaveAttribute(
@@ -169,7 +175,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "data-theme",
     "catppuccin-mocha",
   );
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   await page.locator('[data-theme-id="light"]').hover();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.keyboard.press("Escape");
@@ -177,7 +183,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "data-theme",
     "catppuccin-mocha",
   );
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   await page.locator('[data-theme-id="light"]').click();
   await expect(page.locator("#rich-pane")).toHaveCSS(
     "background-color",
@@ -187,7 +193,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
 
 test("every theme draws text, accents, pills and focus rings at AA contrast", async ({ page }) => {
   await openSeed(page, "Contrast.");
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   const ids = await page.locator(".theme-option").evaluateAll((options) => options.map((o) => o.dataset.themeId));
   expect(ids).toHaveLength(14);
   for (const id of ids) {
@@ -230,15 +236,23 @@ test("settings hold the themes and writing preferences over an unobscured page",
   await expect(picker).toBeVisible();
   await expect(picker.getByRole("heading", { name: "Appearance" })).toBeVisible();
   await expect(picker.getByLabel("Text size", { exact: true })).toBeVisible();
+  // The theme list stays closed until the theme field is clicked.
+  await expect(picker.locator(".theme-list")).toBeHidden();
+  await expect(picker.getByRole("button", { name: /^Theme: / })).toBeVisible();
+  await openThemes(page);
   expect((await picker.boundingBox()).width).toBeLessThanOrEqual(720);
   expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backdropFilter)).toBe("none");
   expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
   await expect(picker.locator(".theme-option")).toHaveCount(14);
-  await expect(picker.locator(".theme-swatch i")).toHaveCount(56);
+  await expect(picker.locator(".theme-list .theme-swatch i")).toHaveCount(56);
   const rows = await picker.locator(".theme-option").evaluateAll((els) => els.map((el) => el.getBoundingClientRect().x));
   expect(new Set(rows).size).toBe(1);
   await page.getByLabel("Find a theme").fill("catppuccin");
   await expect(picker.locator(".theme-option")).toHaveCount(4);
+  // Escape closes the list first, then the window.
+  await page.keyboard.press("Escape");
+  await expect(picker.locator(".theme-list")).toBeHidden();
+  await expect(picker).toBeVisible();
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 375, height: 667 });
   await page.locator("#sidebar-toggle").click();
@@ -252,15 +266,16 @@ test("settings hold the themes and writing preferences over an unobscured page",
 
 test("theme keyboard preview wraps, cancels and commits a filtered selection", async ({ page }) => {
   await openSeed(page, "# Keyboard themes");
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   const search = page.getByRole("combobox", { name: "Find a theme" });
   await search.fill("Labradorite Dark");
   await search.press("Enter");
+  // Choosing closes the list and keeps the settings window open.
+  await expect(page.locator("#theme-panel")).toBeHidden();
   await expect(page.locator("#modal")).toBeVisible();
-  await search.press("Escape");
+  await page.keyboard.press("Escape");
   await expect(page.locator("#modal")).not.toBeVisible();
-  await page.locator("#settings-button").click();
-  await expect(search).toBeFocused();
+  await openThemes(page);
   await search.press("ArrowUp");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "gruvbox-light");
   await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option", { selected: true })).toHaveAttribute("data-theme-id", "gruvbox-light");
@@ -273,7 +288,7 @@ test("theme keyboard preview wraps, cancels and commits a filtered selection", a
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await search.press("Escape");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   await search.fill("catppuccin");
   await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(4);
   await search.press("ArrowDown");
@@ -292,7 +307,7 @@ test("theme keyboard preview wraps, cancels and commits a filtered selection", a
 test("empty theme search and failed selection preserve the previous theme", async ({ page }) => {
   await openSeed(page, "# Theme recovery");
   const original = await page.locator("html").getAttribute("data-theme");
-  await page.locator("#settings-button").click();
+  await openThemes(page);
   const search = page.getByRole("combobox", { name: "Find a theme" });
   await search.fill("no such palette");
   await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(0);

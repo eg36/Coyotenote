@@ -1,4 +1,4 @@
-import type { Note } from "./types.js";
+import type { Note, Theme } from "./types.js";
 interface ModalOptions { submit?: string; hideFooter?: boolean; className?: string }
 interface InputOptions extends ModalOptions { required?: boolean; description?: string }
 interface RenameResponse { note: Note; warnings: string[] }
@@ -330,13 +330,56 @@ function emptyTrashDialog(count: number) {
     { submit: `Delete ${notes}`, className: "danger" },
   );
 }
-// themeChooser is the settings window's theme section: hovering or ↑/↓
-// previews a theme, Enter or a click keeps it, and closing the window
-// returns to the kept theme.
+// themeChooser is the settings window's theme section: a field naming the
+// current theme opens the list, where hovering or ↑/↓ previews a theme,
+// Enter or a click keeps it, and Escape or closing returns to the kept one.
+function swatchOf(theme: Theme) {
+  const swatch = document.createElement("span");
+  swatch.className = "theme-swatch";
+  swatch.setAttribute("aria-hidden", "true");
+  for (const color of [theme.colors.accent, theme.colors.pink, theme.colors.cyan, theme.colors.good]) {
+    const dot = document.createElement("i");
+    dot.style.background = color || "";
+    swatch.append(dot);
+  }
+  return swatch;
+}
 function themeChooser() {
   themeOriginal = state.theme;
   const container = document.createElement("div");
   container.className = "theme-chooser";
+  const field = document.createElement("button");
+  field.type = "button";
+  field.className = "theme-field";
+  field.setAttribute("aria-expanded", "false");
+  field.setAttribute("aria-controls", "theme-panel");
+  const panel = document.createElement("div");
+  panel.id = "theme-panel";
+  panel.className = "theme-panel";
+  panel.hidden = true;
+  function showField() {
+    const theme = state.themes.find((t) => t.id === themeOriginal) || state.themes[0];
+    if (!theme) return;
+    const name = document.createElement("strong");
+    name.textContent = theme.name;
+    field.replaceChildren(swatchOf(theme), name);
+    field.insertAdjacentHTML("beforeend", icon("chevronDown"));
+    field.setAttribute("aria-label", `Theme: ${theme.name}`);
+  }
+  function expand(open: boolean) {
+    panel.hidden = !open;
+    field.setAttribute("aria-expanded", String(open));
+    if (open) {
+      search.value = "";
+      render();
+      search.focus();
+      options[active]?.scrollIntoView({ block: "nearest" });
+    } else {
+      if (themeOriginal && state.theme !== themeOriginal) applyTheme(themeOriginal);
+      field.focus();
+    }
+  }
+  field.onclick = () => expand(panel.hidden);
   const search = document.createElement("input");
   search.placeholder = "Find a theme…";
   search.setAttribute("aria-label", "Find a theme");
@@ -383,32 +426,25 @@ function themeChooser() {
       button.dataset.themeId = theme.id;
       button.tabIndex = -1;
       button.setAttribute("role", "option");
-      const swatch = document.createElement("span");
-      swatch.className = "theme-swatch";
-      swatch.setAttribute("aria-hidden", "true");
-      for (const color of [
-        theme.colors.accent,
-        theme.colors.pink,
-        theme.colors.cyan,
-        theme.colors.good,
-      ]) {
-        const dot = document.createElement("i");
-        dot.style.background = color;
-        swatch.append(dot);
-      }
+      const swatch = swatchOf(theme);
       const name = document.createElement("strong");
       name.textContent = theme.name;
       const type = document.createElement("small");
       type.textContent = theme.light ? "Light" : "Dark";
       button.append(swatch, name, type);
       const index = options.length;
-      button.onmouseenter = () => activate(index, true, false);
+      // Only a moving pointer previews, not one the list opened under.
+      button.onmousemove = () => {
+        if (active !== index) activate(index, true, false);
+      };
       button.onfocus = () => activate(index);
       button.onclick = async () => {
         try {
           await chooseTheme(theme.id);
           themeOriginal = theme.id;
           $("modal-error").textContent = "";
+          showField();
+          expand(false);
         } catch (error) {
           $("modal-error").textContent = error instanceof Error ? error.message : String(error);
         }
@@ -421,9 +457,14 @@ function themeChooser() {
     activate(options.length ? Math.max(0, selected) : -1, preview);
   }
   search.oninput = () => render(true);
-  container.onkeydown = (event) => {
+  panel.onkeydown = (event) => {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    if (event.key === "Escape") {
+      // Close the list, not the whole settings window.
+      event.preventDefault();
+      event.stopPropagation();
+      expand(false);
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       if (options.length) {
         const step = event.key === "ArrowDown" ? 1 : -1;
@@ -440,10 +481,15 @@ function themeChooser() {
   searchRow.prepend(search);
   const hints = document.createElement("p");
   hints.className = "theme-key-hints";
-  hints.textContent = "↑↓ preview · Enter choose";
-  container.append(searchRow, list, empty, hints);
-  render();
-  return container;
+  hints.textContent = "↑↓ preview · Enter choose · Esc close";
+  panel.append(searchRow, list, empty, hints);
+  const label = document.createElement("span");
+  label.className = "field-label";
+  label.setAttribute("aria-hidden", "true");
+  label.textContent = "Theme";
+  container.append(label, field, panel);
+  showField();
+  return { element: container, open: () => expand(true) };
 }
 function linkDialog(wiki = false) {
   if (!state.current) return;

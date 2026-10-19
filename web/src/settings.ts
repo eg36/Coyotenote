@@ -58,7 +58,8 @@ function writingFields() {
   return container;
 }
 
-function settingsDialog() {
+// settingsDialog opens the window; themes opens its theme list at once.
+function settingsDialog({ themes = false } = {}) {
   const container = document.createElement("div");
   container.className = "settings-layout";
   const done = document.createElement("button");
@@ -66,14 +67,14 @@ function settingsDialog() {
   done.className = "primary-button settings-done";
   done.textContent = "Done";
   done.onclick = () => closeModal();
+  const theme = themeChooser();
   container.append(
-    section("Appearance", themeChooser()),
+    section("Appearance", theme.element),
     section("Writing", writingFields()),
     done,
   );
   openModal("Settings", container, null, {className:"settings", hideFooter:true});
-  // The list could only scroll to the current theme once it is shown.
-  container.querySelector(".theme-option.chosen")?.scrollIntoView({block:"nearest"});
+  if (themes) setTimeout(theme.open, 40);
 }
 
 export { settingsDialog };

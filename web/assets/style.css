@@ -1948,6 +1948,9 @@ dialog footer {
 dialog.settings {
   width: min(720px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
+  /* Anchored near the top, so opening the theme list grows it downward
+     instead of moving the field under the pointer. */
+  margin-top: min(12dvh, 96px);
 }
 dialog.settings::backdrop {
   background: transparent;
@@ -1982,6 +1985,43 @@ dialog.settings::backdrop {
   .settings-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+/* The current theme, shown like the select fields beside it; it opens
+   the theme list. */
+.theme-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.theme-field:hover {
+  background: var(--hover);
+}
+.theme-field strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 450;
+}
+.theme-field > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.theme-field[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.theme-panel {
+  margin-top: 8px;
 }
 .theme-search {
   position: relative;

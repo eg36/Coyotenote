@@ -163,7 +163,7 @@ $("sidebar-toggle").onclick = () => {
 $("sidebar-scrim").onclick = () => {
   $("app").classList.remove("sidebar-open");
 };
-$("settings-button").onclick = settingsDialog;
+$("settings-button").onclick = () => settingsDialog();
 $("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();

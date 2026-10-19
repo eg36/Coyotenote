@@ -57,7 +57,7 @@ const menus: Record<string, MenuEntry[]> = {
     ["Outline", "Alt O", () => toggleOutline(), note],
     ["Focus mode", "Ctrl Shift F", toggleFocus],
     "-",
-    ["Settings…", "Ctrl Shift T", settingsDialog],
+    ["Settings…", "Ctrl Shift T", () => settingsDialog()],
     ["Keyboard shortcuts", "F1", helpDialog],
   ],
   insert: [
