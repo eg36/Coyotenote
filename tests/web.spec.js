@@ -782,10 +782,11 @@ test("readable footer shortcuts stay available across screen sizes and focus mod
 
 test("keyboard hints, source editing, selection undo and no runtime remote requests", async ({
   page,
+  baseURL,
 }) => {
   const external = [];
   page.on("request", (request) => {
-    if (!request.url().startsWith("http://127.0.0.1:4289"))
+    if (!request.url().startsWith(baseURL))
       external.push(request.url());
   });
   const id = await openSeed(page, "# Browser shortcuts\n\nText.");
@@ -1399,6 +1400,7 @@ test("folders collapse, stay collapsed, and take notes dragged onto them", async
   page,
 }) => {
   const stamp = Date.now();
+  const draft = `Draft ${stamp}`;
   const inbox = `Inbox ${stamp}`,
     archive = `Archive ${stamp}`;
   await seed(page, `${archive}/Old plan`, "Archived.");
@@ -1407,7 +1409,7 @@ test("folders collapse, stay collapsed, and take notes dragged onto them", async
   // Outside its own folder, a short link prefers this namesake by name order.
   await seed(page, `Aardvark ${stamp}/${idea}`, "A namesake elsewhere.");
   await seed(page, `${inbox}/Linker`, `See [[${idea}]].`);
-  await openSeed(page, "Open while moving.", `${inbox}/Draft`);
+  await openSeed(page, "Open while moving.", `${inbox}/${draft}`);
   const folder = (name) => page.locator(`.folder-group[data-folder="${name}"]`);
   const row = (id) => page.locator(`.note-row[data-note="${id}"]`);
 
@@ -1432,17 +1434,21 @@ test("folders collapse, stay collapsed, and take notes dragged onto them", async
   await expect.poll(() => diskBody(page, `${inbox}/Linker`)).toBe(`See [[${archive}/${idea}]].`);
 
   // The open note can be moved too, onto a note's folder or the top level.
-  await row(`${inbox}/Draft`).dragTo(row(`${inbox}/Linker`));
-  await expect(page.locator("#document-title")).toHaveText("Draft");
-  // The top level appears as a drop zone once dragging starts.
-  await row(`${inbox}/Draft`).hover();
+  await row(`${inbox}/${draft}`).dragTo(row(`${inbox}/Linker`));
+  await expect(page.locator("#document-title")).toHaveText(draft);
+  // Without top-level notes, the top level appears as a drop zone once
+  // dragging starts. Searching keeps the source and target both in view.
+  await page.locator("#search").fill(String(stamp));
+  await expect(page.locator("#note-list")).toHaveClass(/searching/);
+  await expect(row(`${inbox}/${draft}`)).toBeVisible();
+  await row(`${inbox}/${draft}`).hover();
   await page.mouse.down();
   await page.mouse.move(40, 400, { steps: 4 });
   await folder("").last().hover();
   await page.mouse.up();
   await expect(page.locator("#note-folder")).toHaveText("");
-  await expect(page.locator("#document-title")).toHaveText("Draft");
-  expect(await diskBody(page, "Draft")).toBe("Open while moving.");
+  await expect(page.locator("#document-title")).toHaveText(draft);
+  expect(await diskBody(page, draft)).toBe("Open while moving.");
 
   // Opening a note inside a collapsed folder expands it.
   await page.goto("/?note=" + encodeURIComponent(`${archive}/Old plan`));
