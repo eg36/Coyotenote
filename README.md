@@ -34,8 +34,8 @@ coyotenote ~/Notes      # any folder as a vault
 coyotenote -version
 ```
 
-Open the printed address in a current browser. Keep the process running while
-you write; Ctrl+C stops it. See [docs/GUIDE.md](docs/GUIDE.md) for everything
+The app opens in your default browser (pass `-no-browser` to only print the
+address). Keep the process running while you write; Ctrl+C stops it. See [docs/GUIDE.md](docs/GUIDE.md) for everything
 the app does, its shortcuts and its safety rules.
 
 ## Notes and links

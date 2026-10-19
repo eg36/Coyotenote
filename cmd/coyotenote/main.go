@@ -26,6 +26,7 @@ func run() error {
 	listen := flag.String("listen", "127.0.0.1:4280", "loopback address for the local web app")
 	dir := flag.String("data-dir", "", "isolated notes/settings directory (default: coyotenote-web in application data)")
 	showVersion := flag.Bool("version", false, "print version and exit")
+	noBrowser := flag.Bool("no-browser", false, "do not open the app in a browser on start")
 	flag.Usage = func() {
 		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote [flags] [vault]\n\nOpens a folder of Markdown notes in your browser, served only to this computer.")
 		flag.PrintDefaults()
@@ -77,7 +78,7 @@ func run() error {
 	}
 	listener, err := net.Listen("tcp", *listen)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w; is coyotenote already running? Choose another address with -listen", err)
 	}
 	app.port = listener.Addr().(*net.TCPAddr).Port
 	server := &http.Server{Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
@@ -99,6 +100,9 @@ func run() error {
 		}
 	}()
 	fmt.Printf("coyotenote %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", version.String(), listener.Addr(), s.Dir)
+	if !*noBrowser {
+		openBrowser("http://" + listener.Addr().String())
+	}
 	err = server.Serve(listener)
 	close(done)
 	<-shutdownDone

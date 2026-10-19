@@ -23,8 +23,9 @@ go build -o bin/coyotenote ./cmd/coyotenote
 ./bin/coyotenote
 ```
 
-Open **http://127.0.0.1:4280** in a current Chrome/Chromium, Firefox or Safari.
-The terminal prints the address and vault path. Keep that process running while
+The app opens **http://127.0.0.1:4280** in your default browser; a current
+Chrome/Chromium, Firefox or Safari works. The terminal prints the address and
+vault path too. Keep that process running while
 using the app; Ctrl+C stops it. There is no account, cloud sync, telemetry,
 database or remote access mode.
 
@@ -34,6 +35,7 @@ database or remote access mode.
 ./bin/coyotenote ~/Notes                  # open an existing Markdown vault
 ./bin/coyotenote -data-dir /tmp/test      # isolated notes AND theme settings
 ./bin/coyotenote -listen 127.0.0.1:4390   # choose another local port
+./bin/coyotenote -no-browser              # print the address without opening it
 ./bin/coyotenote -version
 ```
 

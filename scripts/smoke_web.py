@@ -12,7 +12,7 @@ import urllib.request
 BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'coyotenote')
 
 def start(vault):
-    process = subprocess.Popen([BINARY, '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen([BINARY, '-no-browser', '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     first = process.stdout.readline()
     address = process.stdout.readline()
     assert first.startswith('coyotenote '), first
