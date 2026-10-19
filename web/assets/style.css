@@ -881,6 +881,16 @@ input[type="search"]::-webkit-search-cancel-button {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
 }
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+.prose img.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 #rich-editor,
 #preview {
   max-width: 760px;

@@ -40,6 +40,7 @@ const paths = {
   note: '<path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h6"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
   outline: '<path d="M4 6h16M8 12h12M8 18h12M4 12h.01M4 18h.01"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>',
   hash: '<path d="M5 9h15M4 15h15M10 3 8 21m8-18-2 18"/>',
   command: '<path d="m4 17 6-5-6-5m8 12h8"/>',
 };

@@ -1,6 +1,7 @@
 import { marked } from "marked";
 import { Editor, Node, InputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -73,6 +74,69 @@ const WikiLink = Node.create({
   },
 });
 
+// imageNode shows a picture through fileUrl while keeping the address the
+// Markdown gives it, so saving writes back exactly what was there. Remote
+// images, which fileUrl refuses, show as their description.
+function imageNode(fileUrl) {
+  return Node.create({
+    name: "image",
+    group: "inline",
+    inline: true,
+    atom: true,
+    draggable: true,
+    addAttributes() {
+      return { src: { default: "" }, alt: { default: "" }, title: { default: null } };
+    },
+    parseHTML() {
+      return [
+        {
+          tag: "[data-image-src]",
+          getAttrs: (el) => ({
+            src: el.getAttribute("data-image-src"),
+            alt: el.getAttribute("data-image-alt") || "",
+            title: el.getAttribute("title"),
+          }),
+        },
+      ];
+    },
+    renderHTML({ node }) {
+      const { src, alt, title } = node.attrs;
+      const url = fileUrl(src);
+      const data = { "data-image-src": src, "data-image-alt": alt, title };
+      if (!url)
+        return ["span", { ...data, class: "image-placeholder" }, `[image: ${alt || src}]`];
+      return ["img", { ...data, src: url, alt, loading: "lazy" }];
+    },
+    renderText({ node }) {
+      return node.attrs.alt;
+    },
+    markdownTokenName: "image",
+    parseMarkdown(token) {
+      return {
+        type: "image",
+        attrs: { src: token.href || "", alt: token.text || "", title: token.title || null },
+      };
+    },
+    renderMarkdown(node) {
+      const { src, alt, title } = node.attrs;
+      const destination = /[\s()<>]/.test(src) ? `<${src}>` : src;
+      const caption = title ? ` "${title.replace(/"/g, '\\"')}"` : "";
+      return `![${alt.replace(/([\\[\]])/g, "\\$1")}](${destination}${caption})`;
+    },
+  });
+}
+
+// The stock paragraph lifts a lone image out of its paragraph, expecting a
+// block image; this image is inline, so it stays inside.
+const ImageParagraph = Paragraph.extend({
+  parseMarkdown(token, helpers) {
+    const tokens = token.tokens || [];
+    if (tokens.length === 1 && tokens[0].type === "image")
+      return helpers.createNode("paragraph", undefined, helpers.parseInline(tokens));
+    return this.parent(token, helpers);
+  },
+});
+
 export function supportsRich(body) {
   // YAML (---) or TOML (+++) front matter, possibly after a byte order mark.
   if (/^\uFEFF?(---|\+\+\+)\r?\n/.test(body))
@@ -84,9 +148,8 @@ export function supportsRich(body) {
     if (token.type === "def")
       reason =
         "This note has reference-style links. Use Markdown to keep their definitions intact.";
-    if (token.type === "image")
-      reason =
-        "This note references an image. Use Markdown to keep its reference intact; images are not fetched.";
+    if (token.type === "text" && !token.tokens && /!\[\[[^\]\n]+\]\]/.test(token.raw))
+      reason = "This note embeds files with ![[…]]. Use Markdown to keep them intact.";
     if (token.type === "text" && /\[\^[^\]]+\]/.test(token.raw))
       reason = "This note has footnotes. Use Markdown to keep them intact.";
     // Write keeps &amp;, &lt;, &gt; and &quot; but would show other named
@@ -106,7 +169,7 @@ export function supportsRich(body) {
 
 export function createRich(
   element,
-  { onChange, onSelection, onWarning, onWiki },
+  { onChange, onSelection, onWarning, onWiki, onFiles, fileUrl, imageFiles },
 ) {
   let editor = null,
     loading = false,
@@ -124,6 +187,7 @@ export function createRich(
       contentType: "markdown",
       extensions: [
         StarterKit.configure({
+          paragraph: false,
           link: {
             openOnClick: false,
             autolink: false,
@@ -140,11 +204,18 @@ export function createRich(
         Placeholder.configure({
           placeholder: "A thought, a list, the beginning of something…",
         }),
+        ImageParagraph,
         WikiLink,
+        imageNode(fileUrl),
       ],
       editorProps: {
         attributes: { "aria-label": "WYSIWYG editor", spellcheck: "true" },
         handlePaste(view, event) {
+          const files = imageFiles(event.clipboardData);
+          if (files.length) {
+            onFiles(files);
+            return true;
+          }
           const text = event.clipboardData?.getData("text/plain") || "";
           if (
             new TextEncoder().encode(text).length > 1048576 ||
@@ -156,6 +227,14 @@ export function createRich(
             return true;
           }
           return false;
+        },
+        handleDrop(view, event, slice, moved) {
+          const files = moved ? [] : imageFiles(event.dataTransfer);
+          if (!files.length) return false;
+          const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          if (at) editor.commands.setTextSelection(at.pos);
+          onFiles(files);
+          return true;
         },
         handleClick(view, pos, event) {
           const link = event.target.closest("[data-wiki]");
@@ -229,6 +308,13 @@ export function createRich(
     },
     get editor() {
       return editor;
+    },
+    insertImage(src, alt) {
+      editor
+        ?.chain()
+        .focus()
+        .insertContent({ type: "image", attrs: { src, alt } })
+        .run();
     },
     insertWiki(raw) {
       editor

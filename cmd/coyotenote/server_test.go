@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -487,5 +489,69 @@ func TestSearchSnippetsShowTheMatchingPassage(t *testing.T) {
 	}
 	if got := snippet("Straße İstanbul", "i̇stanbul"); got != "" && !strings.Contains(got, "İstanbul") {
 		t.Fatalf("unicode snippet %q", got)
+	}
+}
+
+func raw(t *testing.T, a *webApp, method, path string, body []byte, headers map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+	r := httptest.NewRequest(method, "http://127.0.0.1:4280"+path, bytes.NewReader(body))
+	r.Header.Set("X-Coyote-Token", a.token)
+	r.Header.Set("Origin", "http://127.0.0.1:4280")
+	for k, v := range headers {
+		r.Header.Set(k, v)
+	}
+	w := httptest.NewRecorder()
+	a.ServeHTTP(w, r)
+	return w
+}
+
+var tinyPNG = []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89")
+
+func TestAttachmentsUploadServeAndRender(t *testing.T) {
+	a := testApp(t)
+	w := raw(t, a, "POST", "/api/attachment?name=Trip%20photo.png", tinyPNG, nil)
+	if w.Code != 201 || !strings.Contains(w.Body.String(), `"path":"attachments/Trip-photo.png"`) {
+		t.Fatalf("upload: %d %s", w.Code, w.Body.String())
+	}
+	for name, body := range map[string][]byte{"fake.png": []byte("not an image"), "notes.txt": []byte("x"), "x.svg": []byte("<html>")} {
+		if w := raw(t, a, "POST", "/api/attachment?name="+name, body, nil); w.Code != 415 {
+			t.Errorf("%s accepted: %d", name, w.Code)
+		}
+	}
+	if w := raw(t, a, "POST", "/api/attachment?name=a.png", tinyPNG, map[string]string{"X-Coyote-Token": "wrong"}); w.Code != 403 {
+		t.Errorf("upload without the token: %d", w.Code)
+	}
+
+	// The file is served to this app's pages only, and may not run scripts.
+	w = raw(t, a, "GET", "/vault-file?from=Trip%2FLisbon&src=..%2Fattachments%2FTrip-photo.png", nil, map[string]string{"Sec-Fetch-Site": "same-origin"})
+	if w.Code != 200 || w.Header().Get("Content-Type") != "image/png" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "sandbox") || !bytes.Equal(w.Body.Bytes(), tinyPNG) {
+		t.Fatalf("serve: %d %v", w.Code, w.Header())
+	}
+	if w := raw(t, a, "GET", "/vault-file?src=attachments%2FTrip-photo.png", nil, map[string]string{"Sec-Fetch-Site": "cross-site"}); w.Code != 403 {
+		t.Errorf("cross-site embed: %d", w.Code)
+	}
+	os.MkdirAll(filepath.Join(a.store.Dir, ".trash"), 0700)
+	os.WriteFile(filepath.Join(a.store.Dir, ".trash", "x.png"), tinyPNG, 0600)
+	request(t, a, "POST", "/api/note", mutation{ID: "Readme", Body: "text"}, 201)
+	for _, src := range []string{".trash/x.png", "../x.png", "Readme.md", "missing.png"} {
+		if w := raw(t, a, "GET", "/vault-file?src="+url.QueryEscape(src), nil, nil); w.Code != 404 {
+			t.Errorf("%s served: %d", src, w.Code)
+		}
+	}
+
+	body := "![Trip](attachments/Trip-photo.png) ![[Trip-photo.png|Embedded]] ![gone](nothing.png) ![remote](https://example.com/x.png)"
+	html := request(t, a, "POST", "/api/render", mutation{ID: "Readme", Body: body}, 200)["html"].(string)
+	for _, want := range []string{
+		`<img loading="lazy" src="/vault-file?from=&amp;src=attachments%2FTrip-photo.png" alt="Trip">`,
+		`<img loading="lazy" src="/vault-file?from=&amp;src=attachments%2FTrip-photo.png" alt="Embedded">`,
+		"[missing image: gone]",
+		"[image: remote]",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("render lacks %s:\n%s", want, html)
+		}
+	}
+	if state := request(t, a, "GET", "/api/state", nil, 200); len(state["notes"].([]any)) != 1 {
+		t.Fatalf("attachments listed as notes: %v", state["notes"])
 	}
 }

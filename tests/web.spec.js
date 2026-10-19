@@ -1448,3 +1448,72 @@ test("folders collapse, stay collapsed, and take notes dragged onto them", async
   await expect(folder(archive)).toHaveAttribute("aria-expanded", "true");
   await expect(row(`${archive}/Old plan`)).toBeVisible();
 });
+
+const pixel = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+test("images show in Write and Preview, keep their Markdown, and can be pasted, dropped or picked", async ({
+  page,
+}) => {
+  const bootstrap = await (await page.request.get("/api/state")).json();
+  const upload = await page.request.post("/api/attachment?name=diagram.png", {
+    headers: { "X-Coyote-Token": bootstrap.token, "Content-Type": "image/png" },
+    data: pixel,
+  });
+  const { path } = await upload.json();
+  const body = `Before.\n\n![A diagram](${path})\n\n![tracker](https://example.com/t.png)`;
+  const id = await openSeed(page, body, `Images/Pictures ${Date.now()}`);
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  const picture = page.locator(".tiptap img[data-image-src]").first();
+  await expect(picture).toHaveAttribute("alt", "A diagram");
+  await expect.poll(() => picture.evaluate((img) => img.naturalWidth)).toBe(1);
+  await expect(page.locator(".tiptap .image-placeholder")).toHaveText("[image: tracker]");
+  await page.locator(".tiptap p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Edited.");
+  await expect.poll(() => diskBody(page, id)).toContain("Before. Edited.");
+  expect(await diskBody(page, id)).toContain(`![A diagram](${path})`);
+  expect(await diskBody(page, id)).toContain("![tracker](https://example.com/t.png)");
+  await mode(page, "Preview");
+  await expect.poll(() => page.locator("#preview img").evaluate((img) => img.naturalWidth)).toBe(1);
+
+  // A pasted screenshot is saved in the vault and linked where the cursor is.
+  await mode(page, "Write");
+  await page.locator(".tiptap p").first().click();
+  await page.evaluate((bytes) => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(bytes)], "image.png", { type: "image/png" }));
+    document.querySelector(".tiptap").dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  }, [...pixel]);
+  await expect.poll(() => diskBody(page, id)).toMatch(/!\[pasted \d+\]\(attachments\/pasted-\d+\.png\)/);
+  await expect(page.locator(".tiptap img[data-image-src]")).toHaveCount(2);
+
+  // Dropping a file into the Markdown source inserts its link there.
+  await mode(page, "Markdown");
+  await page.evaluate((bytes) => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(bytes)], "Holiday photo.png", { type: "image/png" }));
+    const target = document.querySelector(".cm-content");
+    const box = target.getBoundingClientRect();
+    target.dispatchEvent(
+      new DragEvent("drop", { dataTransfer: data, bubbles: true, cancelable: true, clientX: box.left + 5, clientY: box.top + 5 }),
+    );
+  }, [...pixel]);
+  await expect.poll(() => diskBody(page, id)).toContain("![Holiday photo](attachments/Holiday-photo.png)");
+
+  // The toolbar button picks files.
+  await mode(page, "Write");
+  await page.locator(".tiptap p").first().click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: "Insert image" }).click(),
+  ]);
+  await chooser.setFiles({ name: "chart.png", mimeType: "image/png", buffer: pixel });
+  await expect.poll(() => diskBody(page, id)).toContain("![chart](attachments/chart.png)");
+  const notes = (await (await page.request.get("/api/state")).json()).notes.map((n) => n.id);
+  expect(notes.some((note) => note.startsWith("attachments/"))).toBe(false);
+});

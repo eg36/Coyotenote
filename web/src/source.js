@@ -25,7 +25,10 @@ import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { tags } from "@lezer/highlight";
 
-export function createSource(element, { onChange, getNotes, onWarning }) {
+export function createSource(
+  element,
+  { onChange, getNotes, onWarning, onFiles, imageFiles },
+) {
   let updating = false;
   const readOnly = new Compartment();
   const colors = HighlightStyle.define([
@@ -66,6 +69,25 @@ export function createSource(element, { onChange, getNotes, onWarning }) {
     syntaxHighlighting(colors),
     placeholder("A thought, a list, the beginning of something…"),
     EditorView.lineWrapping,
+    // Pasted or dropped images are saved in the vault and linked here.
+    EditorView.domEventHandlers({
+      paste(event) {
+        const files = imageFiles(event.clipboardData);
+        if (!files.length) return false;
+        event.preventDefault();
+        onFiles(files);
+        return true;
+      },
+      drop(event, view) {
+        const files = imageFiles(event.dataTransfer);
+        if (!files.length) return false;
+        event.preventDefault();
+        const at = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        if (at !== null) view.dispatch({ selection: { anchor: at } });
+        onFiles(files);
+        return true;
+      },
+    }),
     autocompletion({ override: [completion] }),
     keymap.of([
       ...completionKeymap,

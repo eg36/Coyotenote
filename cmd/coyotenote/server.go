@@ -26,8 +26,10 @@ import (
 	"github.com/eg36/coyotenote/internal/version"
 	"github.com/eg36/coyotenote/web"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/text"
 )
 
 const maxBodyBytes = 4 << 20
@@ -98,6 +100,10 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	if !a.trustedHost(r.Host) {
 		http.Error(w, "This local app only accepts loopback hosts.", http.StatusForbidden)
+		return
+	}
+	if r.URL.Path == "/vault-file" {
+		a.serveFile(w, r)
 		return
 	}
 	if r.URL.Path == "/healthz" {
@@ -335,6 +341,9 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, 200, map[string]any{"notes": list})
 		return nil
 	}
+	if route == "POST /api/attachment" {
+		return a.attach(w, r)
+	}
 	in, err := decode(w, r)
 	if err != nil {
 		return err
@@ -514,11 +523,136 @@ func (a *webApp) rewriteLinks(before []vault.Note, oldID, newID string) []string
 	return warnings
 }
 
+// fileURL is where the browser fetches the vault file src links to from
+// note from.
+func fileURL(from, src string) string {
+	return "/vault-file?" + url.Values{"from": {from}, "src": {src}}.Encode()
+}
+
+// serveFile sends an image from the vault to this app's own pages. Other
+// sites cannot embed it, and it may not run scripts even when opened.
+func (a *webApp) serveFile(w http.ResponseWriter, r *http.Request) {
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
+		http.Error(w, "Vault files are only shown in this app.", http.StatusForbidden)
+		return
+	}
+	if r.Method != "GET" && r.Method != "HEAD" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	query := r.URL.Query()
+	rel, ok := a.store.ResolveFile(query.Get("src"), query.Get("from"))
+	if decoded, err := url.PathUnescape(query.Get("src")); !ok && err == nil {
+		rel, ok = a.store.ResolveFile(decoded, query.Get("from"))
+	}
+	kind := vault.ImageType(rel)
+	if !ok || kind == "" {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := a.store.OpenFile(rel)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", kind)
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeContent(w, r, "", info.ModTime(), f)
+}
+
+// attach saves an uploaded image in the vault's attachment folder. The body
+// is the file itself, named by the name query parameter.
+func (a *webApp) attach(w http.ResponseWriter, r *http.Request) error {
+	name := r.URL.Query().Get("name")
+	kind := vault.ImageType(name)
+	if kind == "" {
+		return &apiError{status: 415, message: "Only PNG, JPEG, GIF, WebP, AVIF and SVG images can be attached."}
+	}
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, vault.MaxAttachmentBytes+1))
+	if err != nil || len(data) > vault.MaxAttachmentBytes {
+		return &apiError{status: 413, message: "An image can be up to 20 MiB."}
+	}
+	sniffed := http.DetectContentType(data)
+	if kind == "image/svg+xml" {
+		if !bytes.Contains(bytes.ToLower(data[:min(len(data), 4096)]), []byte("<svg")) {
+			return &apiError{status: 415, message: "That file is not an SVG image."}
+		}
+	} else if sniffed != kind && !(kind == "image/avif" && sniffed == "application/octet-stream") {
+		return &apiError{status: 415, message: "That file's contents do not match its image type."}
+	}
+	rel, err := a.store.SaveAttachment(name, data)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, 201, map[string]string{"path": rel})
+	return nil
+}
+
+// embedImage is the Markdown image for an Obsidian embed such as
+// ![[photo.png|caption]], or "" when l does not embed an image.
+func embedImage(body string, l vault.Link) string {
+	if l.Start == 0 || body[l.Start-1] != '!' || vault.ImageType(l.Target) == "" {
+		return ""
+	}
+	alt := l.Alias
+	if alt == "" {
+		alt = path.Base(l.Target)
+	}
+	alt = strings.NewReplacer("\\", "\\\\", "[", "\\[", "]", "\\]").Replace(alt)
+	return "![" + alt + "](<" + l.Target + embedMark + ">)"
+}
+
+// embedMark ends the destination of an image made from an embed, which is
+// found by file name anywhere in the vault rather than by path.
+const embedMark = "#embed"
+
+// localImages points images in document at the vault files they name, so
+// the preview can show them. Remote images keep their address and are
+// removed by suppressImages.
+func (a *webApp) localImages(document ast.Node, from string) {
+	_ = ast.Walk(document, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		image, ok := n.(*ast.Image)
+		if !ok || !entering {
+			return ast.WalkContinue, nil
+		}
+		dest := string(image.Destination)
+		embed := strings.HasSuffix(dest, embedMark)
+		dest = strings.TrimSuffix(dest, embedMark)
+		if strings.Contains(dest, ":") || strings.HasPrefix(dest, "//") {
+			return ast.WalkContinue, nil
+		}
+		if decoded, err := url.PathUnescape(dest); err == nil {
+			dest = decoded
+		}
+		rel, found := a.store.ResolveFile(dest, from)
+		if !found && embed {
+			rel, found = a.store.FindFile(dest)
+		}
+		if found && vault.ImageType(rel) != "" {
+			image.Destination = []byte(fileURL("", rel))
+		} else {
+			image.Destination = []byte("missing:")
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
 func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	resolver := vault.NewResolver(notes)
 	links := vault.ParseLinks(body)
 	for i := len(links) - 1; i >= 0; i-- {
 		l := links[i]
+		if image := embedImage(body, l); image != "" {
+			body = body[:l.Start-1] + image + body[l.End:]
+			continue
+		}
 		label := l.Alias
 		if label == "" {
 			label = l.Target
@@ -538,10 +672,12 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	}
 	var output bytes.Buffer
 	context := parser.NewContext(parser.WithIDs(newHeadingIDs()))
-	if err := a.renderer.Convert([]byte(body), &output, parser.WithContext(context)); err != nil {
+	document := a.renderer.Parser().Parse(text.NewReader([]byte(body)), parser.WithContext(context))
+	a.localImages(document, from)
+	if err := a.renderer.Renderer().Render(&output, []byte(body), document); err != nil {
 		return "", err
 	}
-	// No remote images in a local notebook: replace generated image tags with
+	// No remote images in a local notebook: replace other image tags with
 	// their alt text so opening a note cannot make a tracking request.
 	return suppressImages(output.String()), nil
 }

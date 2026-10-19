@@ -52,6 +52,7 @@ import { compareDialog } from "./compare.js";
 import { navigate, shortcutChords, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
+import { addImages, chooseImages, imageFiles } from "./attachments.js";
 
 async function initialize() {
   await claimTab();
@@ -70,6 +71,8 @@ async function initialize() {
     onChange: (body) => changed(body, "source"),
     getNotes: () => state.notes,
     onWarning: (message) => showToast(message, { persistent: true }),
+    onFiles: addImages,
+    imageFiles,
   });
   setupOutline();
   setupDragging();
@@ -135,6 +138,7 @@ for (const button of document.querySelectorAll("[data-format]")) {
     const name = button.dataset.format;
     if (name === "wiki") linkDialog(true);
     else if (name === "link") linkDialog();
+    else if (name === "image") chooseImages();
     else state.rich?.command(name);
   };
 }

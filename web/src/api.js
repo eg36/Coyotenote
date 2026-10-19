@@ -14,7 +14,9 @@ async function renewToken() {
     return false;
   }
 }
+// api sends data as JSON, or a file (a Blob) as it is.
 async function api(path, method = "GET", data, retried = false) {
+  const file = data instanceof Blob;
   let response;
   try {
     response = await fetch(path, {
@@ -24,10 +26,12 @@ async function api(path, method = "GET", data, retried = false) {
         method === "GET"
           ? {}
           : {
-              "Content-Type": "application/json",
+              "Content-Type": file
+                ? data.type || "application/octet-stream"
+                : "application/json",
               "X-Coyote-Token": state.token,
             },
-      body: data === undefined ? undefined : JSON.stringify(data),
+      body: data === undefined || file ? data : JSON.stringify(data),
     });
   } catch {
     throw new Error(

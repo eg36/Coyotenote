@@ -64,8 +64,15 @@ are at least 12 px.
   find, indentation and `[[` note completion. It preserves exact source text,
   including tabs; saving preserves the file's LF or CRLF convention.
 - **Preview** is read-only Markdown rendered by Go/Goldmark. External links open
-  separately with no referrer; images are represented by alt-text placeholders
-  and never fetched. Raw HTML is not executed.
+  separately with no referrer. Images from the vault are shown; remote images are
+  replaced by their description and never fetched. Raw HTML is not executed.
+- **Images:** paste or drop an image into Write or Markdown, or use the toolbar's
+  image button, and it is saved in the vault's `attachments/` folder and linked
+  with ordinary Markdown, such as `![photo](attachments/photo.png)`. PNG, JPEG,
+  GIF, WebP, AVIF and SVG images up to 20 MiB are accepted; a pasted screenshot is
+  named after the moment it was pasted. Image paths are read relative to the note
+  first, then to the vault root, as Obsidian does, and Obsidian embeds such as
+  `![[photo.png]]` show in Preview.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
@@ -110,7 +117,7 @@ insert one, or finish typing `[[a note]]`. The source editor suggests existing n
 while typing `[[`. Missing notes can be created from a link.
 
 Write deliberately falls back to Markdown for front matter (YAML or TOML),
-footnotes, reference-style link definitions, raw HTML, image references and named
+footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
 round-trip intact, including when a browser draft is restored. Use source mode for
 exact whitespace or Markdown dialects beyond GFM. Math rendering and collaborative
@@ -188,7 +195,10 @@ unsaved edits is never replaced. Files are not watched live.
 ## How it works
 
 The server is Go's standard `net/http` with an `embed.FS` holding
-`web/index.html` and `web/assets/`. Loopback host checks, same-origin enforcement,
+`web/index.html` and `web/assets/`. Vault images are served from `/vault-file`
+only to the app's own pages (other sites cannot embed them), only from outside
+hidden folders and never through symlinks, with a sandboxing Content Security
+Policy so an SVG cannot run scripts. Loopback host checks, same-origin enforcement,
 a per-process mutation token and a Content Security Policy protect the local API
 from unrelated web pages. Note paths are validated by `internal/vault`, which
 reads the current disk content before checking a SHA-256 revision; an HTTP

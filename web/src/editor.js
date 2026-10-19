@@ -15,6 +15,7 @@ import { findDraft, storeDraft, updateOrphans } from "./drafts.js";
 import { renderList, revealNote, updateBacklinks } from "./list.js";
 import { applyTheme, followWiki } from "./dialogs.js";
 import { renderOutline } from "./outline.js";
+import { addImages, fileUrl, imageFiles } from "./attachments.js";
 
 function changed(body, from) {
   if (state.restoring || !state.current || state.body === body) return;
@@ -207,6 +208,9 @@ async function ensureRich() {
       onSelection: updateToolbar,
       onWarning: showToast,
       onWiki: (raw) => followWiki(raw).catch(showError),
+      onFiles: addImages,
+      fileUrl,
+      imageFiles,
     });
   }
   return state.rich;
