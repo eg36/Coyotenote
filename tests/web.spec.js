@@ -745,7 +745,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await openSeed(page, "Shortcut practice.");
   await page.keyboard.press("F1");
   await expect(page.locator("#modal-title")).toHaveText(
-    "A few familiar shortcuts",
+    "Keyboard shortcuts",
   );
   await expect(page.locator(".help-grid kbd")).toHaveCount(14);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");

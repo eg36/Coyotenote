@@ -637,11 +637,10 @@ function openModal(
   title,
   content,
   action,
-  { submit = "Continue", eyebrow = "COYOTENOTE", hideFooter = false, className = "" } = {},
+  { submit = "Continue", hideFooter = false, className = "" } = {},
 ) {
   $("modal").className = className;
   $("modal-title").textContent = title;
-  $("modal-eyebrow").textContent = eyebrow;
   $("modal-content").replaceChildren(content);
   $("modal-error").textContent = "";
   $("modal-submit").textContent = submit;
@@ -691,7 +690,7 @@ function inputDialog(title, label, value, action, options = {}) {
 }
 function newNoteDialog() {
   inputDialog(
-    "A new beginning",
+    "New note",
     "Name your note",
     "",
     (name) => createNote(name),
@@ -706,7 +705,7 @@ function newNoteDialog() {
 function renameDialog() {
   if (!state.current) return;
   inputDialog(
-    "Give it a name",
+    "Rename note",
     "Note path",
     state.current.id,
     async (name) => {
@@ -734,7 +733,7 @@ function deleteDialog() {
   content.className = "dialog-description";
   content.textContent = `Move “${state.current.id}” to the vault’s trash? You can undo this during the current session.`;
   openModal(
-    "Let this one go?",
+    "Move note to trash?",
     content,
     async () => {
       await save();
@@ -815,7 +814,7 @@ async function trashDialog() {
     row.append(label, restore);
     container.append(row);
   }
-  openModal("Trash", container, null, { eyebrow: "RECOVER", hideFooter: true });
+  openModal("Trash", container, null, { hideFooter: true });
 }
 function themeDialog() {
   themeOriginal = state.theme;
@@ -936,7 +935,7 @@ function linkDialog(wiki = false) {
   if (wiki) {
     const container = document.createElement("div");
     const input = document.createElement("input");
-    input.placeholder = "Find a note…";
+    input.placeholder = "Search notes";
     input.setAttribute("aria-label", "Find a note to link");
     const list = document.createElement("div");
     list.className = "link-list";
@@ -958,12 +957,12 @@ function linkDialog(wiki = false) {
     }
     input.oninput = render;
     container.append(input, list);
-    openModal("Connect a thought", container, null, { hideFooter: true });
+    openModal("Link another note", container, null, { hideFooter: true });
     render();
     return;
   }
   inputDialog(
-    "Add a link",
+    "Insert link",
     "Web address",
     "https://",
     (url) => {
@@ -992,8 +991,8 @@ async function followWiki(raw) {
     return;
   }
   inputDialog(
-    "A thought waiting to happen",
-    "Create the linked note",
+    "This note doesn’t exist yet",
+    "Note name",
     result.target,
     (name) => createNote(name),
     { submit: "Create linked note" },
@@ -1019,10 +1018,7 @@ function backlinksDialog() {
     };
     container.append(button);
   }
-  openModal("Connected thoughts", container, null, {
-    eyebrow: "BACKLINKS",
-    hideFooter: true,
-  });
+  openModal("Notes linking here", container, null, { hideFooter: true });
 }
 function helpDialog() {
   const container = document.createElement("div");
@@ -1040,10 +1036,7 @@ function helpDialog() {
     "Browser shortcuts such as Ctrl+T, Ctrl+P, Ctrl+R and Ctrl+W stay with your browser. Use the Shift combinations above for the web app. Local app: " +
     (state.version || "dev");
   container.append(note);
-  openModal("A few familiar shortcuts", container, null, {
-    eyebrow: "STAY IN THE FLOW",
-    hideFooter: true,
-  });
+  openModal("Keyboard shortcuts", container, null, { hideFooter: true });
 }
 // changedLines marks the lines of each text that the other lacks, using a
 // longest common subsequence. Very long notes are compared without marks.
@@ -1111,14 +1104,14 @@ function compareDialog() {
   };
   container.append(description, columns, useDisk);
   openModal(
-    "Two versions of this note",
+    "Compare versions",
     container,
     async () => {
       state.current = { ...state.current, revision: disk.revision };
       await save();
       showToast("Your edits replaced the disk version.");
     },
-    { submit: "Keep my edits", eyebrow: "CONFLICT", className: "compare" },
+    { submit: "Keep my edits", className: "compare" },
   );
 }
 function downloadDraft() {

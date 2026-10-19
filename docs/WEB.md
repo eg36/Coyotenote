@@ -89,11 +89,11 @@ needed when running the app.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
   Resolved wiki links in other notes are rewritten using the terminal app's rules;
   externally changed files are left alone and reported.
-- The sidebar searches **paths and note contents**. **Sort by** orders notes within
+- **Search notes** in the sidebar matches **paths and note contents**. The sort menu beside the note count orders notes within
   each folder by recently edited (default), title A–Z or title Z–A, and remembers
   the choice in this browser. **Alt+Up / Alt+Down** cycles the visible sorted notes;
-  the back arrow returns from linked-note navigation. A link button in the footer
-  lists backlinks. Hidden folders and symlinks are skipped just as on `main`.
+  the back arrow returns from linked-note navigation. The backlink count in the
+  footer lists notes linking here. Hidden folders and symlinks are skipped just as on `main`.
 - Click the theme name for all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Coyote Light/Dark use neutral
   white/charcoal surfaces and blue accents for the web. Hover/focus previews a theme;
@@ -136,7 +136,7 @@ not supported.
 | Alt+Up / Alt+Down | Previous / next note |
 | Ctrl/⌘+B / I | Bold / italic in Write |
 | Ctrl/⌘+Z / Shift+Z | Undo / redo edits |
-| F1 or bottom “all keys” button | All shortcuts |
+| F1 or the footer “Shortcuts” button | All shortcuts |
 | Escape | Close a dialog or drawer |
 
 Browsers and operating systems reserve some combinations. Ctrl+T/P/R/W and the
@@ -163,7 +163,7 @@ external program changing the file produces a **conflict**, with no overwrite.
 Restoring an old browser draft keeps its original revision, so it also cannot
 silently overwrite a newer file. **Compare versions** shows your edits and the disk
 version side by side with changed lines marked; keep either one. **Download edits**
-and **Recovery copy** preserve your edits first, and reloading the disk version
+and **Save recovery copy** preserve your edits first, and **Reload from disk**
 requires confirmation. There is no automatic merge.
 
 Recovery copies use `.recovery-*.md` in the vault, with a temporary-directory
