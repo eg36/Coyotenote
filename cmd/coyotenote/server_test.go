@@ -157,6 +157,12 @@ func TestRenameRewritesLinksAndBacklinks(t *testing.T) {
 	if updated["body"] != "[[Work/New plan#Details|project]] and `[[Work/Plan]]`" {
 		t.Fatalf("wrong link rewrite: %v", updated["body"])
 	}
+	// A note linking to itself is rewritten at its new path without a conflict.
+	self := request(t, a, "POST", "/api/note", mutation{ID: "Loop", Body: "Back to [[Loop#Top]]."}, 201)
+	renamed := request(t, a, "POST", "/api/rename", mutation{ID: "Loop", Name: "Spiral", Revision: self["revision"].(string)}, 200)
+	if len(renamed["warnings"].([]any)) != 0 || renamed["note"].(map[string]any)["body"] != "Back to [[Spiral#Top]]." {
+		t.Fatalf("self link: %v", renamed)
+	}
 }
 
 // A move that completes but cannot be synced is reported as done, with a

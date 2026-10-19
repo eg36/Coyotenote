@@ -42,3 +42,32 @@ func TestResolver(t *testing.T) {
 		t.Fatal("short target")
 	}
 }
+
+func TestRenameLinks(t *testing.T) {
+	before := []Note{
+		{ID: "Work/Plan", Body: "See [[Plan]] and [[Plan#Goals|goals]]."},
+		{ID: "Home", Body: "[[Work/Plan]], [[Other]] and `[[Plan]]`."},
+		{ID: "Other", Body: "Nothing to change."},
+		{ID: "Archive/Plan", Body: "[[Archive/Plan]] stays."},
+	}
+	got := map[string]LinkUpdate{}
+	for _, u := range RenameLinks(before, "Work/Plan", "Done/Plan") {
+		got[u.Note.ID] = u
+	}
+	want := map[string]string{
+		"Done/Plan": "See [[Plan]] and [[Plan#Goals|goals]].",
+		"Home":      "[[Done/Plan]], [[Other]] and `[[Plan]]`.",
+	}
+	if len(got) != 1 || got["Home"].Body != want["Home"] || got["Home"].Note.Body != before[1].Body {
+		t.Fatalf("got %+v", got)
+	}
+	// Links that would no longer resolve take the shortest name that does.
+	got = map[string]LinkUpdate{}
+	for _, u := range RenameLinks(before, "Work/Plan", "Done/Project") {
+		got[u.Note.ID] = u
+	}
+	if got["Done/Project"].Body != "See [[Project]] and [[Project#Goals|goals]]." ||
+		got["Done/Project"].Note.Body != before[0].Body || got["Home"].Body != "[[Done/Project]], [[Other]] and `[[Plan]]`." {
+		t.Fatalf("got %+v", got)
+	}
+}

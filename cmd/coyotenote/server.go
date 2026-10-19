@@ -502,40 +502,13 @@ func completedMove(err error) (string, error) {
 	return "", err
 }
 
+// rewriteLinks saves the link updates for renaming oldID to newID. Notes
+// changed since they were read are left alone and reported.
 func (a *webApp) rewriteLinks(before []vault.Note, oldID, newID string) []string {
-	after := append([]vault.Note{}, before...)
-	for i := range after {
-		if after[i].ID == oldID {
-			after[i].ID = newID
-		}
-	}
-	oldR, newR := vault.NewResolver(before), vault.NewResolver(after)
 	warnings := []string{}
-	for i, n := range after {
-		body := n.Body
-		links := vault.ParseLinks(body)
-		for j := len(links) - 1; j >= 0; j-- {
-			l := links[j]
-			destination, ok := oldR.Resolve(l.Target, before[i].ID)
-			if !ok {
-				continue
-			}
-			if destination == oldID {
-				destination = newID
-			}
-			if got, ok := newR.Resolve(l.Target, n.ID); ok && got == destination {
-				continue
-			}
-			target := destination
-			if !strings.Contains(l.Target, "/") {
-				target = newR.ShortTarget(destination, n.ID)
-			}
-			body = body[:l.TargetStart] + target + body[l.TargetEnd:]
-		}
-		if body != n.Body {
-			if err := a.store.Save(n, body); err != nil {
-				warnings = append(warnings, "Could not update links in "+n.ID+": "+err.Error())
-			}
+	for _, u := range vault.RenameLinks(before, oldID, newID) {
+		if err := a.store.Save(u.Note, u.Body); err != nil {
+			warnings = append(warnings, "Could not update links in "+u.Note.ID+": "+err.Error())
 		}
 	}
 	return warnings

@@ -138,3 +138,50 @@ func (r Resolver) ShortTarget(id, from string) string {
 	}
 	return id
 }
+
+// LinkUpdate is a note as it was read, under its ID after a rename, and the
+// body that keeps its links pointing at the same notes.
+type LinkUpdate struct {
+	Note Note
+	Body string
+}
+
+// RenameLinks plans the link updates for renaming oldID to newID: every note
+// with a link that resolved to a note before the rename and would resolve
+// elsewhere afterwards. Notes whose links all still resolve are left out.
+func RenameLinks(before []Note, oldID, newID string) []LinkUpdate {
+	after := append([]Note{}, before...)
+	for i := range after {
+		if after[i].ID == oldID {
+			after[i].ID = newID
+		}
+	}
+	oldR, newR := NewResolver(before), NewResolver(after)
+	var updates []LinkUpdate
+	for i, n := range after {
+		body := n.Body
+		links := ParseLinks(body)
+		for j := len(links) - 1; j >= 0; j-- {
+			l := links[j]
+			destination, ok := oldR.Resolve(l.Target, before[i].ID)
+			if !ok {
+				continue
+			}
+			if destination == oldID {
+				destination = newID
+			}
+			if got, ok := newR.Resolve(l.Target, n.ID); ok && got == destination {
+				continue
+			}
+			target := destination
+			if !strings.Contains(l.Target, "/") {
+				target = newR.ShortTarget(destination, n.ID)
+			}
+			body = body[:l.TargetStart] + target + body[l.TargetEnd:]
+		}
+		if body != n.Body {
+			updates = append(updates, LinkUpdate{Note: n, Body: body})
+		}
+	}
+	return updates
+}
