@@ -693,6 +693,10 @@ test("named HTML entities keep their meaning through edits", async ({ page }) =>
   await mode(page, "Write");
   await expect(page.locator("#source-pane")).toBeVisible();
   await expect(page.locator("#rich-pane")).toBeHidden();
+  // The message says what happened and why, without asking for anything.
+  await expect(page.locator("#toast")).toContainText(
+    "Showing Markdown: Write would show codes such as &copy; as text instead of the symbol",
+  );
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type("\nAppended.");

@@ -181,7 +181,8 @@ block above the text, and note excerpts and word counts leave it out.
 Write deliberately falls back to Markdown for unclosed front matter,
 footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
-round-trip intact, including when a browser draft is restored. Use source mode for
+round-trip intact, including when a browser draft is restored; a short message says
+which syntax kept the note in Markdown. Use source mode for
 exact whitespace or Markdown dialects beyond GFM. Math rendering and collaborative
 editing are not supported.
 

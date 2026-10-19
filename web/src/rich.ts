@@ -157,18 +157,18 @@ const ImageParagraph = Paragraph.extend({
 export function supportsRich(body: string) {
   // YAML (---) or TOML (+++) front matter, possibly after a byte order mark.
   if (/^\uFEFF?(---|\+\+\+)\r?\n/.test(body))
-    return "This note has front matter. Use Markdown to keep it intact.";
+    return "Showing Markdown: Write would change this note's front matter.";
   let reason = "";
   marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
     if (token.type === "html")
-      reason = "This note has raw HTML. Use Markdown to keep it intact.";
+      reason = "Showing Markdown: Write would change the HTML in this note.";
     if (token.type === "def")
       reason =
-        "This note has reference-style links. Use Markdown to keep their definitions intact.";
+        "Showing Markdown: Write would drop this note's reference-style link definitions.";
     if (token.type === "text" && !token.tokens && /!\[\[[^\]\n]+\]\]/.test(token.raw))
-      reason = "This note embeds files with ![[…]]. Use Markdown to keep them intact.";
+      reason = "Showing Markdown: Write would change this note's ![[…]] file embeds.";
     if (token.type === "text" && /\[\^[^\]]+\]/.test(token.raw))
-      reason = "This note has footnotes. Use Markdown to keep them intact.";
+      reason = "Showing Markdown: Write would change this note's footnotes.";
     // Write keeps &amp;, &lt;, &gt; and &quot; but would show other named
     // references such as &copy; as literal text and save them escaped.
     if (
@@ -177,10 +177,10 @@ export function supportsRich(body: string) {
       /&(?!(?:amp|lt|gt|quot);)[A-Za-z][A-Za-z0-9]*;/.test(token.raw)
     )
       reason =
-        "This note has HTML entities such as &copy;. Use Markdown to keep them intact.";
+        "Showing Markdown: Write would show codes such as &copy; as text instead of the symbol (©) and save them that way.";
   });
   if (/^\s*\[\^[^\]]+\]:/m.test(body))
-    reason = "This note has footnotes. Use Markdown to keep them intact.";
+    reason = "Showing Markdown: Write would change this note's footnotes.";
   return reason;
 }
 
