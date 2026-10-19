@@ -1,3 +1,4 @@
+import { showAllNotes } from "./navigation.js";
 import type { AppState } from "./types.js";
 // Keyboard shortcuts and the note navigation they trigger.
 import { $, showError, state } from "./core.js";
@@ -25,6 +26,7 @@ async function navigate(delta: number) {
   openNote(notes[next].id).catch(showError);
 }
 function showNotes() {
+  showAllNotes();
   setSidebar(true);
 }
 function findNotes() {

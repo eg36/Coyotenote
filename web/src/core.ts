@@ -3,6 +3,10 @@ import type { AppError, AppState } from "./types.js";
 
 interface AppElements {
   "brand": HTMLAnchorElement;
+  "recent-notes": HTMLButtonElement;
+  "commands-button": HTMLButtonElement;
+  "pin-note": HTMLButtonElement;
+  "show-all-notes": HTMLButtonElement;
   "document-title": HTMLButtonElement;
   "search": HTMLInputElement;
   "find-replace": HTMLButtonElement;
@@ -86,6 +90,7 @@ const state: AppState = {
   restoring: false,
   busy: false,
   tag: "",
+  folder: null,
 };
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 const storage = {

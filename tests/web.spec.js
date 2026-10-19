@@ -867,7 +867,8 @@ test("start-page navigation stays together and status sits at the right edge", a
       const buttons = await page.locator(".nav-buttons").boundingBox();
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
       const logo = await page.locator("#brand").boundingBox();
-      expect(sidebarToggle.x + sidebarToggle.width).toBeLessThanOrEqual(logo.x);
+      expect(sidebarToggle.y).toBeGreaterThanOrEqual(logo.y + logo.height);
+      expect(sidebarToggle.x).toBeLessThan(60);
       const menus = await page.locator("#menu-bar").boundingBox();
       expect(buttons.x).toBeGreaterThanOrEqual(menus.x + menus.width);
       if (width > 530) expect(buttons.x - menus.x - menus.width).toBeLessThanOrEqual(24);
@@ -916,8 +917,8 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await page.setViewportSize({ width, height: 1000 });
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeHidden();
-    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
-    expect((await frame.boundingBox()).width).toBeCloseTo(width, 0);
+    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 57);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width - 56, 0);
     await expect(page.locator("#source-pane")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.locator("#sidebar-toggle").click();
@@ -925,20 +926,20 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await page.locator('[data-menu="view"]').click();
     await page.getByRole("menuitem", { name: "Focus mode" }).click();
     await expect(page.locator("#sidebar")).toBeHidden();
-    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
-    expect((await frame.boundingBox()).width).toBeCloseTo(width, 0);
+    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 57);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width - 56, 0);
     await page.keyboard.press("Control+Shift+f");
   }
   // Keep the correct column after switching from a collapsed desktop to mobile.
   await page.locator("#sidebar-toggle").click();
   await page.setViewportSize({ width: 390, height: 844 });
-  expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
-  expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
+  expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(341);
+  expect((await frame.boundingBox()).width).toBeCloseTo(342, 0);
   await page.locator("#sidebar-toggle").click();
   await expect(page.locator("#sidebar-search")).toBeVisible();
-  await page.locator("#sidebar-scrim").click();
-  expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
-  expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
+  await page.locator("#sidebar-scrim").click({ position: { x: 378, y: 300 } });
+  expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(341);
+  expect((await frame.boundingBox()).width).toBeCloseTo(342, 0);
 });
 
 test("search opens at the top of the notes list, in the drawer on small screens", async ({ page }) => {
@@ -2306,4 +2307,46 @@ test("phone menus keep journal commands and settings reachable without a keyboar
   expect(await popup.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy();
   await page.getByRole("menuitem", {name:"Settings…"}).click();
   await expect(page.getByRole("dialog", {name:"Settings"})).toBeVisible();
+});
+
+test("the persistent rail keeps navigation reachable and full titles have themed tooltips", async ({ page }) => {
+  const id = await openSeed(page, "Keep this exact Markdown.", "Rail/" + "A long title ".repeat(12).trim());
+  await page.locator("#sidebar-toggle").click();
+  await expect(page.locator("#sidebar")).toBeHidden();
+  const rail = page.getByRole("navigation", { name: "Workspace", exact: true });
+  for (const name of ["Labradorite home", "Toggle notes", "Search all notes", "Recently opened notes", "New note", "Commands", "Settings"])
+    await expect(rail.getByRole(name === "Labradorite home" ? "link" : "button", { name, exact: true })).toBeVisible();
+  await page.locator("#document-title").hover();
+  await expect(page.getByRole("tooltip")).toContainText(id);
+  await page.mouse.move(1000, 500);
+  await page.locator("#commands-button").click();
+  await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toHaveValue(">");
+  await page.keyboard.press("Escape");
+  await expect.poll(() => diskBody(page, id)).toBe("Keep this exact Markdown.");
+});
+
+test("pins and recently opened notes survive reload and follow an app rename", async ({ page }) => {
+  const first = await openSeed(page, "Pinned body stays unchanged.", `Navigation/First ${Date.now()}`);
+  await page.getByRole("button", { name: "Pin note", exact: true }).click();
+  await expect(page.locator("#pinned-list")).toContainText(first.split("/").pop());
+  const second = await openSeed(page, "Another note.");
+  await page.locator("#recent-notes").click();
+  await expect(page.locator("#recent-list .navigation-note").first()).toHaveAttribute("data-note", second);
+  await page.locator(`#recent-list [data-note="${first}"]`).click();
+  await expect(page.locator("#document-title")).toHaveText(first.split("/").pop());
+  await page.locator("#show-all-notes").click();
+  const renamed = first + " renamed";
+  await page.locator("#document-title").click();
+  await page.getByLabel("Note path").fill(renamed);
+  await page.getByRole("button", { name: "Rename note", exact: true }).click();
+  await expect(page.locator("#pinned-list .navigation-note")).toHaveAttribute("data-note", renamed);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Unpin note", exact: true })).toBeVisible();
+  await page.locator("#recent-notes").click();
+  await expect(page.locator("#recent-list .navigation-note").first()).toHaveAttribute("data-note", renamed);
+  await expect(page.locator(`#recent-list [data-note="${first}"]`)).toHaveCount(0);
+  await page.locator("#show-all-notes").click();
+  await page.getByRole("button", { name: "Unpin note", exact: true }).click();
+  await expect(page.locator("#pinned-notes")).toBeHidden();
+  expect(await diskBody(page, renamed)).toBe("Pinned body stays unchanged.");
 });

@@ -1,5 +1,6 @@
 import type { AppState, Note, StateResponse } from "./types.js";
 // The open note: editing, saving, loading, views and the formatting toolbar.
+import { rememberNote, renderNavigation } from "./navigation.js";
 import { icon } from "./icons.js";
 import { setSidebar } from "./sidebar.js";
 import {
@@ -131,6 +132,7 @@ async function refresh({ query = state.search } = {}) {
   if (currentSummary && state.current)
     state.current.backlinks = currentSummary.backlinks;
   renderList();
+  renderNavigation();
   updateBacklinks();
   updateOrphans();
   return data;
@@ -157,6 +159,7 @@ async function openNote(
   $("history-back").disabled = state.back.length === 0;
   clearTimeout(state.saveTimer);
   state.current = note;
+  rememberNote(note.id);
   state.body = note.body || "";
   state.savedBody = state.body;
   state.dirty = false;
@@ -167,6 +170,7 @@ async function openNote(
   state.source?.replace(state.body, { reset: true });
   state.restoring = false;
   $("document-title").textContent = note.title.split("/").pop() || note.title;
+  $("document-title").title = note.id + " · Rename or move note";
   $("note-folder").textContent = note.id.split("/").slice(0, -1).join(" / ");
   $("document-head").hidden = false;
   $("document-actions").hidden = false;
@@ -182,6 +186,7 @@ async function openNote(
   else setSaveState("saved", "All changes saved");
   updateCounts();
   renderList();
+  renderNavigation();
   updateBacklinks();
   updateOrphans();
   const url = new URL(location.href);
@@ -207,6 +212,7 @@ function emptyNotebook() {
   $("view-switch").hidden = true;
   $("app-title").hidden = false;
   state.current = null;
+  renderNavigation();
   state.body = "";
   state.savedBody = "";
   state.dirty = false;

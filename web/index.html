@@ -15,23 +15,25 @@
   </head>
   <body>
     <div class="app" id="app">
+      <nav class="activity-rail" aria-label="Workspace">
+        <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
+        <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
+        <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
+        <button id="recent-notes" class="icon-button" aria-label="Recently opened notes" title="Recently opened notes" aria-pressed="false"><span data-icon="history"></span></button>
+        <button id="new-note" class="icon-button" aria-label="New note" title="New note · Ctrl/⌘ N" ><span data-icon="newNote"></span></button>
+        <button id="commands-button" class="icon-button" aria-label="Commands" title="Commands · Ctrl/⌘ K" ><span data-icon="command"></span></button>
+        <div class="rail-bottom">
+        <button id="trash-button" class="icon-button" aria-label="Trash" title="Trash" ><span data-icon="trash"></span></button>
+        <button id="settings-button" class="icon-button" aria-label="Settings" title="Settings · Ctrl/⌘ Shift T" ><span data-icon="settings"></span></button>
+        </div>
+      </nav>
       <header class="topbar">
-        <button
-          id="sidebar-toggle"
-          class="icon-button"
-          title="Show or hide notes"
-          aria-label="Toggle notes"
-          aria-controls="sidebar"
-        ><span data-icon="sidebar"></span></button>
-        <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite"
-          ><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40"
-        /></a>
         <div class="title-block">
           <div class="title-row">
             <span class="app-title" id="app-title">Labradorite</span>
             <div class="note-heading" id="document-head" hidden>
               <span class="note-folder" id="note-folder"></span
-              ><button id="document-title" class="document-title" title="Rename note">
+              ><button id="document-title" class="document-title" title="Rename note" aria-description="Rename or move this note">
                 Untitled
               </button>
             </div>
@@ -166,6 +168,7 @@
             ><span id="save-label">Ready when you are</span></span
           >
           <div class="document-actions" id="document-actions" hidden>
+            <button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
             <button
               id="outline-button"
               class="icon-button"
@@ -200,16 +203,14 @@
           </div>
       </header>
       <aside class="sidebar" id="sidebar" aria-label="Notes">
+        <section id="recent-panel" class="recent-panel" aria-label="Recently opened notes" hidden>
+          <div class="panel-heading"><h2>Recently opened</h2><button class="text-button" id="show-all-notes">All notes</button></div>
+          <div id="recent-list"></div>
+        </section>
+        <section class="pinned-notes" id="pinned-notes" aria-label="Pinned notes" hidden><h2>Pinned</h2><div id="pinned-list"></div></section>
         <div class="sidebar-actions" role="toolbar" aria-label="Notes">
-          <button class="icon-button" id="new-note" title="New note · Ctrl/⌘ N" aria-label="New note">
-            <span data-icon="newNote"></span></button
-          ><button class="icon-button" id="today-note" title="Today's note · Alt J" aria-label="Today's note">
-            <span data-icon="calendar"></span></button
-          ><button class="icon-button" id="sidebar-search" title="Search all notes · Ctrl/⌘ Shift E" aria-label="Search all notes" aria-expanded="false" aria-controls="search">
-            <span data-icon="search"></span></button
-          ><button class="icon-button" id="fold-folders" title="Collapse all folders" aria-label="Collapse all folders">
-            <span data-icon="collapse"></span>
-          </button>
+        <button id="today-note" class="icon-button" aria-label="Today's note" title="Today's note · Alt J" ><span data-icon="calendar"></span></button>
+        <button id="fold-folders" class="icon-button" aria-label="Collapse all folders" title="Collapse all folders" ><span data-icon="collapse"></span></button>
         </div>
         <div class="search">
           <label class="search-field"
@@ -230,7 +231,7 @@
           <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>
         </details>
         <div class="list-heading">
-          <span class="list-title">Notes <span id="note-count">0</span></span>
+          <span class="list-title"><span id="list-label">Notes</span> <span id="note-count">0</span></span>
           <select id="note-sort" aria-label="Sort notes">
             <option value="modified">Recently edited</option>
             <option value="title-asc">Title A–Z</option>
@@ -238,14 +239,7 @@
           </select>
         </div>
         <nav class="note-list" id="note-list" aria-label="Notebook notes"></nav>
-        <div class="sidebar-bottom">
-          <button id="trash-button" class="icon-button" title="Trash" aria-label="Trash">
-            <span data-icon="trash"></span>
-          </button>
-          <button id="settings-button" class="icon-button" title="Settings · Ctrl/⌘ Shift T" aria-label="Settings">
-            <span data-icon="settings"></span>
-          </button>
-        </div>
+
       </aside>
       <button
         id="sidebar-scrim"

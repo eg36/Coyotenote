@@ -3,6 +3,7 @@ const paths: Record<string, string> = {
     '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M8 5V3h8v2m-4 5v5m-3-2h6"/>',
   notebook:
     '<rect x="5" y="3" width="15" height="18" rx="2"/><path d="M9 3v18M3 7h4m-4 5h4m-4 5h4m6-10h4m-4 4h4"/>',
+  pin: '<path d="m16 3 5 5-4 2-2 5-2 2-3-3-6 6m3-13 2-2 5-2 2-4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   shift: '<path d="m12 3 9 9h-5v8H8v-8H3Z"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',

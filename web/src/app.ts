@@ -69,6 +69,7 @@ import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
 import { dailyNote } from "./daily.js";
 import { setupTooltips } from "./tooltip.js";
+import { showAllNotes, showRecent, togglePin } from "./navigation.js";
 import { restoreSidebar, setSidebar, toggleSidebar } from "./sidebar.js";
 
 function isMode(value: unknown): value is AppState["mode"] {
@@ -204,7 +205,14 @@ $("search").oninput = () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => refresh().catch(showError), 120);
 };
-$("sidebar-toggle").onclick = toggleSidebar;
+$("sidebar-toggle").onclick = () => {
+  if ($("app").classList.contains("show-recents")) { showAllNotes(); setSidebar(true); }
+  else toggleSidebar();
+};
+$("recent-notes").onclick = showRecent;
+$("show-all-notes").onclick = showAllNotes;
+$("pin-note").onclick = togglePin;
+$("commands-button").onclick = () => paletteDialog(">");
 $("sidebar-scrim").onclick = () => {
   setSidebar(false);
 };

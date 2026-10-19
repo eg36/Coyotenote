@@ -1,3 +1,4 @@
+import { renameNavigation } from "./navigation.js";
 import type { Note, Theme } from "./types.js";
 interface ModalOptions { submit?: string; hideFooter?: boolean; className?: string }
 interface InputOptions extends ModalOptions { required?: boolean; description?: string }
@@ -154,11 +155,13 @@ function renameDialog() {
     async (name) => {
       await save();
       if (!state.current) return;
+      const previousId = state.current.id;
       const result = await api<RenameResponse>("/api/rename", "POST", {
         id: state.current.id,
         name,
         revision: state.current.revision,
       });
+      renameNavigation(previousId, result.note.id);
       await refresh();
       await openNote(result.note.id, { skipSave: true });
       if (result.warnings.length)
@@ -188,6 +191,7 @@ async function moveNote(id: string, folder: string) {
       name,
       revision: moving && state.current ? state.current.revision : entry.revision,
     });
+    renameNavigation(id, result.note.id);
     await refresh();
     const open = state.current && state.notes.find((n) => n.id === state.current?.id);
     if (moving) await openNote(result.note.id, { skipSave: true, pushBack: false });

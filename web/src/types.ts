@@ -101,6 +101,7 @@ export interface AppState {
   restoring: boolean;
   busy: boolean;
   tag: string;
+  folder: string | null;
   stamp?: string;
   version?: string;
   snippets?: Record<string, string>;
