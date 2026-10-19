@@ -395,6 +395,12 @@ input[type="search"]::-webkit-search-cancel-button {
   min-height: 0;
   background: var(--surface);
 }
+[data-theme="light"] .workspace {
+  background: var(--chrome);
+}
+[data-theme="light"] .topbar {
+  background: var(--surface);
+}
 .topbar {
   height: 65px;
   min-height: 65px;
