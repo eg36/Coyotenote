@@ -12,7 +12,7 @@ import {
   renameDialog,
   trashDialog,
 } from "./dialogs.js";
-import { findNotes, toggleFocus } from "./shortcuts.js";
+import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
 import { dailyNote } from "./daily.js";
@@ -54,6 +54,8 @@ const menus: Record<string, MenuEntry[]> = {
     ["Split", "", () => setMode("split").catch(showError), note],
     "-",
     ["Notes sidebar", "", () => $("sidebar-toggle").click()],
+    ["Previous note", "Alt ↑", () => navigate(-1), () => state.notes.length > 0],
+    ["Next note", "Alt ↓", () => navigate(1), () => state.notes.length > 0],
     ["Outline", "Alt O", () => toggleOutline(), note],
     ["Focus mode", "Ctrl Shift F", toggleFocus],
     "-",

@@ -58,7 +58,7 @@ import {
   undoTrash,
 } from "./dialogs.js";
 import { compareDialog } from "./compare.js";
-import { findNotes, navigate, shortcutChords, showNotes } from "./shortcuts.js";
+import { findNotes, shortcutChords, showNotes } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
@@ -139,8 +139,6 @@ $("history-back").onclick = async () => {
     showError(error);
   }
 };
-$("previous-note").onclick = () => navigate(-1);
-$("next-note").onclick = () => navigate(1);
 $("note-sort").onchange = () => {
   const sort = $("note-sort").value;
   if (!isSort(sort)) return;

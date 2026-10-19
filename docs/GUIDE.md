@@ -153,7 +153,7 @@ not change the Markdown files or follow the vault to another browser.
   the notes sidebar when you use it. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
-  **Alt+Up / Alt+Down** cycles the visible sorted notes; the back arrow returns
+  **Alt+Up / Alt+Down** (or View → Previous / Next note) cycles the visible sorted notes; the back arrow returns
   from linked-note navigation. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
 - **Settings → Appearance → Theme** opens a list of all **14 palettes**, including the four Catppuccin

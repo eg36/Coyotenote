@@ -361,7 +361,8 @@ test("note sorting remembers titles, uses edit times and follows search navigati
   await expect(sort).toHaveValue("title-desc");
   await (await searchBox(page)).fill(folder);
   await expect(page.locator("#note-count")).toHaveText("3");
-  await page.locator("#next-note").click();
+  await page.locator('[data-menu="view"]').click();
+  await page.getByRole("menuitem", { name: "Next note" }).click();
   await expect(page.locator("#document-title")).toHaveText("alpha10");
   await sort.selectOption("modified");
   await mode(page, "Markdown");

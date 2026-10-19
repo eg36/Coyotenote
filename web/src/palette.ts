@@ -33,7 +33,7 @@ import {
   trashDialog,
 } from "./dialogs.js";
 import { headings, jumpToHeading, toggleOutline } from "./outline.js";
-import { findNotes, toggleFocus } from "./shortcuts.js";
+import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
 import { dailyNote } from "./daily.js";
 import { settingsDialog } from "./settings.js";
 
@@ -113,6 +113,8 @@ const commandDefinitions: Command[] = [
   ["Markdown view", "", () => setMode("source").catch(showError), true],
   ["Preview view", "", () => setMode("preview").catch(showError), true],
   ["Split view", "", () => setMode("split").catch(showError), true],
+  ["Previous note", "Alt ↑", () => navigate(-1)],
+  ["Next note", "Alt ↓", () => navigate(1)],
   ["Toggle focus mode", "Ctrl Shift F", toggleFocus],
   ["Show or hide outline", "Alt O", () => toggleOutline(), true],
   ["Settings", "Ctrl Shift T", () => settingsDialog()],
