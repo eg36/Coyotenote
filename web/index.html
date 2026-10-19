@@ -16,6 +16,13 @@
   <body>
     <div class="app" id="app">
       <header class="topbar">
+        <button
+          id="sidebar-toggle"
+          class="icon-button"
+          title="Show or hide notes"
+          aria-label="Toggle notes"
+          aria-controls="sidebar"
+        ><span data-icon="sidebar"></span></button>
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite"
           ><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40"
         /></a>
@@ -38,14 +45,6 @@
         </div>
         <div class="nav-buttons" role="group" aria-label="Workspace navigation">
           <button
-            id="sidebar-toggle"
-            class="icon-button"
-            title="Show or hide notes"
-            aria-label="Toggle notes"
-            aria-controls="sidebar"
-          >
-            <span data-icon="sidebar"></span></button
-          ><button
             id="history-back"
             class="icon-button"
             title="Go back to previous note"
