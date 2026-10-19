@@ -130,7 +130,16 @@ async function initialize() {
 }
 $("new-note").onclick = newNoteDialog;
 $("today-note").onclick = () => dailyNote().catch(showError);
-$("sidebar-search").onclick = findNotes;
+// The search icon opens the field, and closes it again (clearing it). The
+// field stays open until then, so the list never jumps under the pointer.
+$("sidebar-search").onclick = () => {
+  if (!$("app").classList.contains("search-open")) return findNotes();
+  if ($("search").value) {
+    $("search").value = "";
+    $("search").dispatchEvent(new Event("input"));
+  }
+  closeSearch();
+};
 $("fold-folders").onclick = toggleAllFolders;
 $("first-note").onclick = newNoteDialog;
 $("document-title").onclick = renameDialog;
@@ -169,14 +178,12 @@ $("note-sort").onchange = () => {
 };
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 $("search").onfocus = showNotes;
-$("search-button").onclick = findNotes;
 // Keep the search open while its own button takes the click.
 $("find-replace").onmousedown = (e) => e.preventDefault();
 $("find-replace").onclick = () => {
   const query = $("search").value.trim();
   findInNote(query).catch(showError);
 };
-$("search").onblur = () => setTimeout(closeSearch);
 $("search").onkeydown = (event) => {
   if (event.key !== "Escape") return;
   event.preventDefault();
@@ -185,7 +192,7 @@ $("search").onkeydown = (event) => {
     $("search").value = "";
     $("search").dispatchEvent(new Event("input"));
   } else {
-    $("search-button").focus();
+    $("sidebar-search").focus();
     closeSearch();
   }
 };

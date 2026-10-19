@@ -5,7 +5,6 @@ interface AppElements {
   "brand": HTMLAnchorElement;
   "document-title": HTMLButtonElement;
   "search": HTMLInputElement;
-  "search-button": HTMLButtonElement;
   "find-replace": HTMLButtonElement;
   "outline-button": HTMLButtonElement;
   "history-button": HTMLButtonElement;
@@ -159,12 +158,12 @@ function updateCounts() {
     `${Array.from(state.body).length.toLocaleString()} characters`;
 }
 
-// Search sits behind a button in the header. The field stays open while
-// it holds a search or has focus; closeSearch hides an empty one.
+// The notes search opens from the sidebar's search icon; closeSearch hides
+// the field when it is empty and not being typed in.
 function closeSearch() {
   if ($("search").value || document.activeElement === $("search")) return;
   $("app").classList.remove("search-open");
-  $("search-button").setAttribute("aria-expanded", "false");
+  $("sidebar-search").setAttribute("aria-expanded", "false");
 }
 export {
   $,

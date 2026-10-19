@@ -149,39 +149,15 @@
         </section>
         </div>
         <button
-          id="search-button"
-          class="icon-button search-button"
+          id="find-replace"
+          class="icon-button"
           type="button"
-          title="Search notes · Ctrl Shift E"
-          aria-label="Search notes"
-          aria-expanded="false"
-          aria-controls="search"
+          title="Find and replace in this note"
+          aria-label="Find and replace in this note"
+          disabled
         >
-          <span data-icon="search"></span>
+          <span data-icon="replace"></span>
         </button>
-        <div class="search">
-          <label class="search-field"
-            ><span data-icon="search"></span
-            ><input
-              id="search"
-              type="search"
-              placeholder="Search notes"
-              autocomplete="off"
-              aria-label="Search notes"
-            /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
-              <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
-            </kbd></label
-          ><button
-            id="find-replace"
-            class="icon-button find-replace"
-            type="button"
-            title="Find and replace in this note"
-            aria-label="Find and replace in this note"
-            disabled
-          >
-            <span data-icon="replace"></span>
-          </button>
-        </div>
         </div>
           <span class="save-state" id="save-state" role="status"
             ><span class="save-dot"></span
@@ -227,11 +203,25 @@
             <span data-icon="newNote"></span></button
           ><button class="icon-button" id="today-note" title="Today's note · Alt J" aria-label="Today's note">
             <span data-icon="calendar"></span></button
-          ><button class="icon-button" id="sidebar-search" title="Search all notes · Ctrl/⌘ Shift E" aria-label="Search all notes">
+          ><button class="icon-button" id="sidebar-search" title="Search all notes · Ctrl/⌘ Shift E" aria-label="Search all notes" aria-expanded="false" aria-controls="search">
             <span data-icon="search"></span></button
           ><button class="icon-button" id="fold-folders" title="Collapse all folders" aria-label="Collapse all folders">
             <span data-icon="collapse"></span>
           </button>
+        </div>
+        <div class="search">
+          <label class="search-field"
+            ><span data-icon="search"></span
+            ><input
+              id="search"
+              type="search"
+              placeholder="Search notes"
+              autocomplete="off"
+              aria-label="Search notes"
+            /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
+              <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
+            </kbd></label
+          >
         </div>
         <details id="tag-filter" class="tag-filter" hidden>
           <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>

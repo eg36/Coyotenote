@@ -79,9 +79,12 @@ and the formatting buttons, so writing starts right below one bar. Between
 1280 and 1440 px wide, link, note link, table and image live in the Insert menu
 only; below 1280 px the editor controls take a second header row.
 On phones the menus stay under the title; note actions are available in File
-and View, leaving more room for the note name. The **search** button opens a
-search field below the header (its own header row on small screens); it stays
-open while it holds a search, and Escape clears it, then closes it.
+and View, leaving more room for the note name. The header's ⇄ button opens
+**Find and replace** for the open note, starting from any words in the notes search.
+
+The **search** icon above the notes list (or Ctrl/⌘ Shift E) opens a search field
+at the top of the list, in the notes drawer on small screens. It stays open until
+you click the icon again or press Escape; Escape clears a search first.
 
 The interface and writing pane use locally bundled **Lexend**. The writing size
 defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints
@@ -151,7 +154,7 @@ not change the Markdown files or follow the vault to another browser.
   indented by level. Click one to bring it into view in any view; the outline
   marks the section you are reading as you scroll. It stays open across reloads
   on wide screens and slides over the text on narrow ones.
-- **Search notes** (the search button or Ctrl/⌘ Shift E) matches **paths and note contents** and reveals
+- **Search notes** (the search icon above the list or Ctrl/⌘ Shift E) matches **paths and note contents** and reveals
   the notes sidebar when you use it. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.

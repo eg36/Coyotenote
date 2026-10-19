@@ -20,7 +20,11 @@ async function openSeed(page, body, name) {
 // searchBox opens the header search, which is a button until used.
 async function searchBox(page) {
   const box = page.locator("#search");
-  if (await box.isHidden()) await page.locator("#search-button").click();
+  if (await box.isHidden()) {
+    const icon = page.locator("#sidebar-search");
+    if (await icon.isVisible()) await icon.click();
+    else await page.keyboard.press("Control+Shift+e");
+  }
   await expect(box).toBeVisible();
   return box;
 }
@@ -825,7 +829,7 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   await expect(page.locator("#source-pane")).toBeVisible();
   await expect(page.locator("#preview-pane")).toBeVisible();
   await page.locator("#sidebar-toggle").click();
-  await expect(page.locator("#search-button")).toBeVisible();
+  await expect(page.locator("#sidebar-search")).toBeVisible();
   await page.locator("#sidebar-scrim").click();
   expect(
     await page.evaluate(
@@ -862,18 +866,19 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
   expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
   await page.locator("#sidebar-toggle").click();
-  await expect(page.locator("#search-button")).toBeVisible();
+  await expect(page.locator("#sidebar-search")).toBeVisible();
   await page.locator("#sidebar-scrim").click();
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
   expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
 });
 
-test("header search stays usable above the notes drawer and reveals search results", async ({ page }) => {
+test("search opens at the top of the notes list, in the drawer on small screens", async ({ page }) => {
   const stamp = Date.now();
   const id = await openSeed(page, `Find headerquery${stamp} in this note.`, `Header search ${stamp}`);
   const search = page.locator("#search");
-  // Search is a button in the header until it is used.
-  await expect(page.locator(".topbar #search-button")).toBeVisible();
+  // The header holds find and replace for the note, not a notes search.
+  await expect(page.locator(".topbar #search")).toHaveCount(0);
+  await expect(page.locator(".topbar").getByRole("button", { name: "Find and replace in this note" })).toBeVisible();
   await expect(search).toBeHidden();
   await page.locator("#sidebar-toggle").click();
   await expect(page.locator("#sidebar")).toBeHidden();
@@ -882,22 +887,26 @@ test("header search stays usable above the notes drawer and reveals search resul
   await expect(page.locator("#sidebar")).toBeVisible();
   for (const width of [1440, 900, 720, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
-    await search.click();
-    await search.fill(`headerquery${stamp}`);
+    const box = await searchBox(page);
+    await box.fill(`headerquery${stamp}`);
     await expect(page.locator("#note-list .note-row")).toHaveCount(1);
     await expect(page.locator("#note-list")).toContainText(id);
     await expect(search).toBeInViewport();
+    // The field sits in the sidebar, just above the results.
+    const field = await page.locator(".search").boundingBox();
+    const list = await page.locator("#note-list").boundingBox();
+    expect(field.y).toBeLessThan(list.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     if (width < 800) {
       const header = await page.locator(".topbar").boundingBox();
       const drawer = await page.locator("#sidebar").boundingBox();
       expect(drawer.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
-      await search.click(); // The open drawer/scrim must not cover search.
-      await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 100 } });
-      await expect(search).toBeVisible();
+      await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
+      await expect(page.locator("#sidebar")).not.toBeInViewport();
     }
   }
 });
+
 
 test("writing starts right below the header, which holds the editor controls on wide screens", async ({ page }) => {
   await openSeed(page, "# Close to the top\n\nThe first paragraph should be in view.");
@@ -1308,7 +1317,13 @@ test("sidebar icons start notes, open today's note, search and fold every folder
   await expect(page.locator(`.note-row[data-note^="Fold "]`)).toHaveCount(2);
   await page.getByRole("button", { name: "Search all notes" }).click();
   await expect(page.locator("#search")).toBeFocused();
-  await page.keyboard.press("Escape");
+  await page.locator("#search").fill("Fold");
+  // The field stays open when focus moves on, and the icon closes it again.
+  await page.locator("#note-sort").focus();
+  await expect(page.locator("#search")).toBeVisible();
+  await page.getByRole("button", { name: "Search all notes" }).click();
+  await expect(page.locator("#search")).toBeHidden();
+  await expect(page.locator("#search")).toHaveValue("");
   await page.getByRole("button", { name: "New note", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "New note" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -1329,7 +1344,7 @@ test("the logo goes to the start page and back returns to the note that was open
   await expect(page.locator("#history-back")).toBeDisabled();
 });
 
-test("the search field offers find and replace in the open note, starting from its words", async ({ page }) => {
+test("find and replace in the header opens for the note, starting from the notes search words", async ({ page }) => {
   await openSeed(page, "Replace the old word, then the old word again.");
   const box = await searchBox(page);
   await box.fill("old word");
