@@ -14,6 +14,7 @@ import { api } from "./api.js";
 import { findDraft, storeDraft, updateOrphans } from "./drafts.js";
 import { renderList, updateBacklinks } from "./list.js";
 import { applyTheme, followWiki } from "./dialogs.js";
+import { renderOutline } from "./outline.js";
 
 function changed(body, from) {
   if (state.restoring || !state.current || state.body === body) return;
@@ -32,6 +33,7 @@ function changed(body, from) {
   );
   if (from !== "source") state.source.replace(body);
   schedulePreview();
+  renderOutline();
   clearTimeout(state.saveTimer);
   if (state.dirty)
     state.saveTimer = setTimeout(() => save().catch(showError), 400);
@@ -162,6 +164,7 @@ async function openNote(
   history.replaceState(null, "", url);
   await setMode(state.mode, { focus: false });
   schedulePreview(true);
+  renderOutline(true);
   $("app").classList.remove("sidebar-open");
   if (heading) setTimeout(() => scrollToHeading(heading), 300);
 }
@@ -240,6 +243,7 @@ async function setMode(mode, { focus = true } = {}) {
   if (mode === "preview" || mode === "split") schedulePreview(true);
   if (focus) focusEditor();
   updateToolbar();
+  renderOutline(true);
 }
 function applyEditability() {
   const editable = !state.pendingDraft;

@@ -76,6 +76,10 @@ are at least 12 px.
   Start with `#` to jump to a heading of the open note, or `>` to run a command
   such as a view change, rename or theme. Anything typed can also become a
   content search or a new note.
+- The **outline** button (Alt+O) lists the note's headings beside the text,
+  indented by level. Click one to bring it into view in any view; the outline
+  marks the section you are reading as you scroll. It stays open across reloads
+  on wide screens and slides over the text on narrow ones.
 - **Search notes** in the sidebar matches **paths and note contents**. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
@@ -118,6 +122,7 @@ editing are not supported.
 | Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Preview → Split |
 | Alt+T or Ctrl/⌘+Shift+T | Choose a theme |
 | Ctrl/⌘+Shift+F | Toggle focus mode |
+| Alt+O | Show or hide the outline |
 | Ctrl/⌘+Shift+R | Rename or move |
 | Ctrl/⌘+Shift+D | Move to trash, with confirmation |
 | Alt+Up / Alt+Down | Previous / next note |
@@ -125,7 +130,7 @@ editing are not supported.
 | Ctrl/⌘+Alt+0–6 | Normal text / heading level in Write |
 | Ctrl/⌘+Z / Shift+Z | Undo / redo edits |
 | F1 or the footer “Shortcuts” button | All shortcuts |
-| Escape | Close a dialog or drawer |
+| Escape | Close a dialog, drawer or narrow-screen outline |
 
 Browsers and operating systems reserve some combinations. Ctrl+T/P/R/W and the
 usual copy/cut/paste/undo behavior stay with the browser and editor. On macOS,

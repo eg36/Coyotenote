@@ -105,6 +105,15 @@
               <span data-icon="arrowDown"></span></button
             ><span class="action-divider"></span
             ><button
+              id="outline-button"
+              class="icon-button"
+              title="Outline · Alt O"
+              aria-label="Show outline"
+              aria-pressed="false"
+              aria-controls="outline"
+            >
+              <span data-icon="outline"></span></button
+            ><button
               id="export-note"
               class="icon-button"
               title="Download Markdown"
@@ -276,6 +285,13 @@
             <div class="pane-label">Preview</div>
             <article id="preview" class="prose"></article>
           </section>
+          <aside id="outline" class="outline-panel" aria-label="Outline" hidden>
+            <h2>Outline</h2>
+            <nav id="outline-list"></nav>
+            <p id="outline-empty" class="outline-empty">
+              No headings yet. Start a line with # to add one.
+            </p>
+          </aside>
         </div>
         </div>
         <section class="empty-state" id="empty-state">

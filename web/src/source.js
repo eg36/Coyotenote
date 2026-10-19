@@ -190,6 +190,13 @@ export function createSource(element, { onChange, getNotes, onWarning }) {
     refresh() {
       view.requestMeasure();
     },
+    topLine() {
+      const top = view.scrollDOM.scrollTop;
+      return view.state.doc.lineAt(view.lineBlockAtHeight(top).from).number;
+    },
+    onScroll(listener) {
+      view.scrollDOM.addEventListener("scroll", listener, { passive: true });
+    },
     goToLine(number) {
       const line = view.state.doc.line(
         Math.max(1, Math.min(number, view.state.doc.lines)),

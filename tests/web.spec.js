@@ -1150,7 +1150,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText(
     "Keyboard shortcuts",
   );
-  await expect(page.locator(".help-grid kbd")).toHaveCount(16);
+  await expect(page.locator(".help-grid kbd")).toHaveCount(17);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
   await page.keyboard.press("Escape");
   await page.locator("body").click({ position: { x: 5, y: 5 } });
@@ -1340,4 +1340,56 @@ test("quick open finds notes by a few letters, jumps to headings and runs comman
   await page.keyboard.press("Control+k");
   await input.fill(`nothingmatcheszz${stamp}`);
   await expect(page.locator(".palette-option").first()).toContainText("Search note contents for");
+});
+
+test("the outline lists headings, jumps to them, follows scrolling and stays open", async ({
+  page,
+}) => {
+  const filler = (word) => Array.from({ length: 40 }, (_, i) => `${word} line ${i}.`).join("\n\n");
+  const body = `# Top\n\n${filler("Intro")}\n\n## Middle [[Target|section]]\n\n${filler("More")}\n\n### Deep end\n\n${filler("Last")}`;
+  const id = await openSeed(page, body);
+  const outline = page.getByRole("complementary", { name: "Outline" });
+  await expect(outline).toBeHidden();
+  await page.getByRole("button", { name: "Show outline" }).click();
+  await expect(outline.getByRole("button")).toHaveText(["Top", "Middle section", "Deep end"]);
+  const depth = (name) =>
+    outline.getByRole("button", { name }).evaluate((el) => getComputedStyle(el).paddingLeft);
+  expect(parseFloat(await depth("Deep end"))).toBeGreaterThan(parseFloat(await depth("Top")));
+
+  // Clicking a heading brings it to the top, and the outline marks it.
+  await outline.getByRole("button", { name: "Deep end" }).click();
+  await expect
+    .poll(() =>
+      page.locator(".tiptap h3").evaluate((el) => {
+        const pane = document.getElementById("rich-pane").getBoundingClientRect();
+        return Math.abs(el.getBoundingClientRect().top - pane.top) < 60;
+      }),
+    )
+    .toBe(true);
+  await expect(outline.locator("[aria-current]")).toHaveText("Deep end");
+  await page.locator("#rich-pane").evaluate((el) => el.scrollTo(0, 0));
+  await expect(outline.locator("[aria-current]")).toHaveText("Top");
+
+  // Markdown view: typing a heading adds it; jumping moves the cursor there.
+  await mode(page, "Markdown");
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("\n\n## Added later");
+  await expect(outline.getByRole("button")).toHaveText(["Top", "Middle section", "Deep end", "Added later"]);
+  await outline.getByRole("button", { name: "Middle section" }).click();
+  await expect(page.locator(".cm-activeLineGutter")).toHaveText("83");
+  await expect(outline.locator("[aria-current]")).toHaveText("Middle section");
+  await expect.poll(() => diskBody(page, id)).toContain("## Added later");
+
+  // The panel stays open across reloads, and Alt+O closes it.
+  await page.reload();
+  await expect(outline).toBeVisible();
+  await page.keyboard.press("Alt+o");
+  await expect(outline).toBeHidden();
+  await page.reload();
+  await expect(outline).toBeHidden();
+  await openSeed(page, "No headings here.");
+  await page.keyboard.press("Alt+o");
+  await expect(outline).toContainText("No headings yet");
+  await page.keyboard.press("Alt+o");
 });

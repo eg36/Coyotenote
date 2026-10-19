@@ -16,7 +16,7 @@ import {
   themeDialog,
   trashDialog,
 } from "./dialogs.js";
-import { headings, jumpToHeading } from "./outline.js";
+import { headings, jumpToHeading, toggleOutline } from "./outline.js";
 import { findNotes, toggleFocus } from "./shortcuts.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
@@ -81,6 +81,7 @@ const commands = [
   ["Preview view", "", () => setMode("preview").catch(showError), true],
   ["Split view", "", () => setMode("split").catch(showError), true],
   ["Toggle focus mode", "Ctrl Shift F", toggleFocus],
+  ["Show or hide outline", "Alt O", () => toggleOutline(), true],
   ["Choose a theme", "Ctrl Shift T", themeDialog],
   ["Open the trash", "", () => trashDialog().catch(showError)],
   ["Review unsaved drafts", "", draftsDialog, false, () => state.orphans?.length],

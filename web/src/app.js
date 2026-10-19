@@ -51,6 +51,7 @@ import {
 import { compareDialog } from "./compare.js";
 import { navigate, shortcutChords, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
+import { setupOutline, toggleOutline } from "./outline.js";
 
 async function initialize() {
   await claimTab();
@@ -70,6 +71,7 @@ async function initialize() {
     getNotes: () => state.notes,
     onWarning: (message) => showToast(message, { persistent: true }),
   });
+  setupOutline();
   const data = await refresh();
   state.version = data.version;
   const requested =
@@ -122,6 +124,7 @@ $("theme-button").onclick = themeDialog;
 $("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
+$("outline-button").onclick = () => toggleOutline();
 $("focus-button").onclick = toggleFocus;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);

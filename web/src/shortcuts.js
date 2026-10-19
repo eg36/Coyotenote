@@ -10,6 +10,7 @@ import {
   themeDialog,
 } from "./dialogs.js";
 import { paletteDialog } from "./palette.js";
+import { toggleOutline } from "./outline.js";
 
 async function navigate(delta) {
   const notes = visibleNotes();
@@ -44,6 +45,7 @@ const shortcuts = [
   ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views", ["alt+m", "mod+shift+m"], cycleMode],
   ["Alt T / Ctrl / ⌘ Shift T", "Choose a theme", ["alt+t", "mod+shift+t"], themeDialog],
   ["Ctrl / ⌘ Shift F", "Focus mode", ["mod+shift+f"], toggleFocus],
+  ["Alt O", "Show or hide the outline", ["alt+o"], () => toggleOutline()],
   ["Ctrl / ⌘ Shift R", "Rename or move note", ["mod+shift+r"], renameDialog],
   ["Ctrl / ⌘ Shift D", "Move note to trash", ["mod+shift+d"], deleteDialog],
   ["Alt ↑ / ↓", "Previous / next note", ["alt+arrowup", "alt+arrowdown"],
@@ -54,7 +56,10 @@ const shortcuts = [
   ["Ctrl / ⌘ Shift Z", "Redo an edit"],
   ["F1", "Keyboard shortcuts", ["f1"], helpDialog],
   ["Escape", "Close a dialog or the notes drawer", ["escape"],
-    () => $("app").classList.remove("sidebar-open"), { keepDefault: true }],
+    () => {
+      $("app").classList.remove("sidebar-open");
+      if (window.innerWidth < 800 && !$("outline").hidden) toggleOutline(false);
+    }, { keepDefault: true }],
 ];
 const shortcutChords = new Map(
   shortcuts.flatMap(([, , chords = [], run, options = {}]) =>
