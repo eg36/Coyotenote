@@ -66,6 +66,7 @@ import { setupMenus } from "./menus.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
+import { setupTooltips } from "./tooltip.js";
 
 function isMode(value: unknown): value is AppState["mode"] {
   return typeof value === "string" && ["write", "source", "preview", "split"].includes(value);
@@ -86,6 +87,7 @@ async function initialize() {
   hydrateIcons();
   buildBlockMenu();
   buildViewMenu();
+  setupTooltips();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   for (const key of document.querySelectorAll<HTMLElement>("kbd[data-keys]"))
     key.textContent = (mac ? "⌘" : "Ctrl ") + key.dataset.keys;

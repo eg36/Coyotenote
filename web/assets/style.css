@@ -968,6 +968,41 @@ input[type="search"]::-webkit-search-cancel-button {
 .block-type[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
+/* Tooltips name a control and its shortcut, in the theme's colors. They
+   use the top layer, so they also show over dialogs. */
+.tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: var(--font-small);
+  line-height: 1.4;
+  pointer-events: none;
+  box-shadow: 0 6px 20px #0004;
+  animation: tooltip-in 0.1s ease-out;
+}
+.tooltip:popover-open,
+.tooltip:not([popover]):not([hidden]) {
+  display: flex;
+}
+.tooltip kbd {
+  font-size: 11px;
+  opacity: 0.75;
+}
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+  }
+}
 .block-menu {
   position: fixed;
   z-index: 30;

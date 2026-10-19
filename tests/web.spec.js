@@ -1295,6 +1295,29 @@ test("opening a note updates the list in place, and saves still refresh its row"
   expect(await row(second).evaluate((el) => el.kept)).toBe(true);
 });
 
+test("controls show themed tooltips with their shortcut instead of the browser's", async ({ page }) => {
+  await openSeed(page, "Tooltips.");
+  const bold = page.locator('[data-format="bold"]');
+  const tip = page.locator(".tooltip");
+  await bold.hover();
+  await expect(tip).toBeVisible();
+  await expect(tip).toContainText("Bold");
+  await expect(tip.locator("kbd")).toHaveText(/^(Ctrl B|⌘B)$/);
+  // The title is set aside while ours shows, so the browser's never does.
+  await expect(bold).not.toHaveAttribute("title");
+  await page.mouse.move(700, 500);
+  await expect(tip).toBeHidden();
+  await expect(bold).toHaveAttribute("title", "Bold · Ctrl/⌘ B");
+  // Keyboard focus shows it at once, and Escape hides it.
+  await page.locator("#history-button").focus();
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#export-note")).toBeFocused();
+  await expect(tip).toBeVisible();
+  await expect(tip).toHaveText("Download Markdown");
+  await page.keyboard.press("Escape");
+  await expect(tip).toBeHidden();
+});
+
 test("an open tab picks up outside changes on its own, but not its own saves", async ({
   page,
 }) => {
