@@ -1550,11 +1550,6 @@ input[type="search"]::-webkit-search-cancel-button {
 .secondary-button:hover {
   background: var(--hover);
 }
-.empty-footnote {
-  color: var(--muted);
-  font-size: 13px;
-  margin-top: 18px;
-}
 .banner {
   display: flex;
   align-items: flex-start;
