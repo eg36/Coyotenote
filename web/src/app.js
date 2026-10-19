@@ -360,6 +360,7 @@ async function openNote(
     ? note.id.split("/").slice(0, -1).join(" / ")
     : "YOUR NOTEBOOK";
   $("document-head").hidden = false;
+  $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
   setSaveState("saved", "All changes saved");
@@ -382,6 +383,7 @@ function emptyNotebook() {
   state.dirty = false;
   $("history-back").disabled = true;
   $("document-head").hidden = true;
+  $("editor-frame").hidden = true;
   $("editor-area").hidden = true;
   $("editor-toolbar").hidden = true;
   $("empty-state").hidden = false;
@@ -461,13 +463,6 @@ async function setMode(mode, { focus = true } = {}) {
     button.classList.toggle("active", button.dataset.mode === mode);
     button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
   }
-  const descriptions = {
-    write: "Just you and the words.",
-    source: "A clear view of the source.",
-    preview: "Read it with fresh eyes.",
-    split: "The words, and what they become.",
-  };
-  $("mode-description").textContent = descriptions[mode];
   applyEditability();
   state.source.refresh();
   if (mode === "preview" || mode === "split") schedulePreview(true);
