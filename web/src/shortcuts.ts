@@ -1,3 +1,4 @@
+import type { AppState } from "./types.js";
 // Keyboard shortcuts and the note navigation they trigger.
 import { $, showError, state } from "./core.js";
 import { visibleNotes } from "./list.js";
@@ -13,7 +14,7 @@ import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
 import { dailyNote } from "./daily.js";
 
-async function navigate(delta) {
+async function navigate(delta: number) {
   const notes = visibleNotes();
   if (!notes.length) return;
   const index = notes.findIndex((n) => n.id === state.current?.id);
@@ -31,18 +32,20 @@ function findNotes() {
   $("search").focus();
 }
 function cycleMode() {
-  const modes = ["write", "source", "preview", "split"];
+  const modes: AppState["mode"][] = ["write", "source", "preview", "split"];
   setMode(modes[(modes.indexOf(state.mode) + 1) % modes.length]).catch(
     showError,
   );
 }
 function toggleFocus() {
   $("app").classList.toggle("focus-mode");
-  state.source.refresh();
+  state.source?.refresh();
 }
 // One table drives both the key handler and the help dialog. Chords name
 // "mod" for Ctrl or ⌘; rows without chords are handled by the editors.
-const shortcuts = [
+interface ShortcutOptions { keepDefault?: boolean }
+type Shortcut = [label: string, description: string, chords?: string[], run?: (chord: string) => unknown, options?: ShortcutOptions];
+const shortcuts: Shortcut[] = [
   ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
   ["Alt J", "Open today's note", ["alt+j"], () => dailyNote().catch(showError)],
   ["Alt K / Ctrl / ⌘ K", "Quick open a note, heading or command", ["alt+k", "mod+k"], () => paletteDialog()],

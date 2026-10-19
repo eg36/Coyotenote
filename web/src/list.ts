@@ -1,3 +1,4 @@
+import type { Note } from "./types.js";
 // The sidebar note list: ordering, excerpts and search highlights.
 import { icon } from "./icons.js";
 import { $, showError, state, storage } from "./core.js";
@@ -6,7 +7,7 @@ import { moveNote } from "./dialogs.js";
 
 // excerpt cleans a note's opening text for the list, leaving out a leading
 // heading that only repeats the note's title.
-function excerpt(text, title = "") {
+function excerpt(text: string, title = "") {
   const plain = text
     .replace(/^#+\s*/, "")
     .replace(/\[\[([^\]]+)\]\]/g, "$1")
@@ -17,10 +18,10 @@ function excerpt(text, title = "") {
 }
 // shortDate names the day a note changed, adding the year only when it is
 // not the current one.
-function shortDate(value) {
+function shortDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return "";
-  const options = { month: "short", day: "numeric" };
+  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
   return date.toLocaleDateString(undefined, options);
 }
@@ -29,7 +30,7 @@ const noteCollator = new Intl.Collator(undefined, {
   sensitivity: "base",
 });
 // hasTag reports whether note carries tag, ignoring letter case.
-const hasTag = (note, tag) =>
+const hasTag = (note: Note, tag: string) =>
   note.tags?.some((t) => t.toLowerCase() === tag.toLowerCase());
 function visibleNotes() {
   const notes = state.notes.filter(
@@ -37,8 +38,8 @@ function visibleNotes() {
       (!state.filteredIds || state.filteredIds.has(note.id)) &&
       (!state.tag || hasTag(note, state.tag)),
   );
-  const folder = (note) => note.id.slice(0, Math.max(0, note.id.lastIndexOf("/")));
-  const title = (note) => note.title.split("/").pop();
+  const folder = (note: Note) => note.id.slice(0, Math.max(0, note.id.lastIndexOf("/")));
+  const title = (note: Note) => note.title.split("/").pop() || note.title;
   return notes.sort((a, b) => {
     // Group folders consistently, then order the notes inside each group.
     const groupOrder =
@@ -59,7 +60,7 @@ function visibleNotes() {
 }
 // highlight fills element with text, marking each case-insensitive match of
 // query. It builds text nodes, so note content never becomes markup.
-function highlight(element, text, query) {
+function highlight(element: HTMLElement, text: string, query: string) {
   const needle = query.trim().replace(/\s+/g, " ").toLowerCase();
   const lower = text.toLowerCase();
   if (!needle || lower.length !== text.length) {
@@ -81,12 +82,13 @@ function highlight(element, text, query) {
 const collapsedKey = () => "coyote-collapsed:" + state.vaultId;
 function collapsedFolders() {
   try {
-    return new Set(JSON.parse(storage.get(collapsedKey()) || "[]"));
+    const value: unknown = JSON.parse(storage.get(collapsedKey()) || "[]");
+    return new Set(Array.isArray(value) ? value.filter((folder): folder is string => typeof folder === "string") : []);
   } catch {
-    return new Set();
+    return new Set<string>();
   }
 }
-function setCollapsed(folder, collapsed) {
+function setCollapsed(folder: string, collapsed: boolean) {
   const folders = collapsedFolders();
   if (collapsed === folders.has(folder)) return;
   if (collapsed) folders.add(folder);
@@ -94,14 +96,14 @@ function setCollapsed(folder, collapsed) {
   storage.set(collapsedKey(), JSON.stringify([...folders]));
 }
 // revealNote expands the folder holding id, so the open note is listed.
-function revealNote(id) {
+function revealNote(id: string) {
   setCollapsed(id.split("/").slice(0, -1).join("/"), false);
 }
 const noteType = "application/x-coyote-note";
 // renderTags offers the vault's tags, with how many notes carry each, as a
 // filter for the list. It hides while the vault has no tags.
 function renderTags() {
-  const counts = new Map();
+  const counts = new Map<string, { tag: string; n: number }>();
   for (const note of state.notes)
     for (const tag of note.tags || []) {
       const key = tag.toLowerCase();
@@ -113,13 +115,13 @@ function renderTags() {
   filter.hidden = counts.size === 0;
   const options = [...counts.values()]
     .sort((a, b) => noteCollator.compare(a.tag, b.tag))
-    .map(({ tag, n }) => [tag, n]);
+    .map(({ tag, n }): [string, number] => [tag, n]);
   // Keep the disclosure and its summary stable while note counts refresh.
   const signature = JSON.stringify(options);
   if (filter.dataset.signature !== signature) {
     filter.dataset.signature = signature;
     list.replaceChildren();
-    for (const [tag, n] of [["", state.notes.length], ...options]) {
+    for (const [tag, n] of [["", state.notes.length] as [string, number], ...options]) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "tag-option";
@@ -134,15 +136,16 @@ function renderTags() {
     }
   }
   const selected = state.tag.toLowerCase();
-  for (const button of list.children)
-    button.setAttribute("aria-pressed", String(button.dataset.tag.toLowerCase() === selected));
+  for (const button of list.querySelectorAll<HTMLButtonElement>("[data-tag]"))
+    button.setAttribute("aria-pressed", String((button.dataset.tag || "").toLowerCase() === selected));
   // The reset count also changes when untagged notes are created/deleted.
-  list.firstElementChild.querySelector(".tag-count").textContent = state.notes.length.toLocaleString();
-  $("tag-filter-label").textContent = state.tag ? `#${counts.get(selected).tag}` : "All tags";
+  const resetCount = list.firstElementChild?.querySelector(".tag-count");
+  if (resetCount) resetCount.textContent = state.notes.length.toLocaleString();
+  $("tag-filter-label").textContent = state.tag ? `#${(counts.get(selected)?.tag || state.tag)}` : "All tags";
   filter.classList.toggle("active", Boolean(state.tag));
 }
 // filterTag shows only notes with tag, or every note for "".
-function filterTag(tag) {
+function filterTag(tag: string) {
   state.tag = tag;
   renderTags();
   renderList();
@@ -157,7 +160,7 @@ function renderList() {
   const notes = visibleNotes();
   const list = $("note-list");
   list.replaceChildren();
-  $("note-count").textContent = notes.length;
+  $("note-count").textContent = String(notes.length);
   if (!notes.length) {
     const el = document.createElement("p");
     el.className = "list-empty";
@@ -171,7 +174,7 @@ function renderList() {
   }
   list.classList.toggle("searching", Boolean(state.filteredIds));
   const collapsed = state.filteredIds || state.tag ? new Set() : collapsedFolders();
-  const folderOf = (note) => note.id.split("/").slice(0, -1).join("/");
+  const folderOf = (note: Note) => note.id.split("/").slice(0, -1).join("/");
   let lastFolder = null;
   for (const note of notes) {
     const folder = folderOf(note);
@@ -185,7 +188,7 @@ function renderList() {
       const name = document.createElement("span");
       name.textContent = folder || "Notebook";
       const count = document.createElement("small");
-      count.textContent = notes.filter((n) => folderOf(n) === folder).length;
+      count.textContent = String(notes.filter((n) => folderOf(n) === folder).length);
       label.append(name, count);
       label.onclick = () => {
         setCollapsed(folder, !collapsed.has(folder));
@@ -208,7 +211,7 @@ function renderList() {
     head.className = "note-row-head";
     const label = document.createElement("span");
     label.className = "note-title";
-    label.textContent = note.title.split("/").pop();
+    label.textContent = note.title.split("/").pop() || note.title;
     const date = document.createElement("time");
     date.className = "note-date";
     date.textContent = shortDate(note.modified);
@@ -217,7 +220,7 @@ function renderList() {
     const text = document.createElement("span");
     text.className = "note-excerpt";
     const found = state.filteredIds && state.snippets?.[note.id];
-    if (found) highlight(text, found, state.searched);
+    if (found) highlight(text, found, state.searched || "");
     else
       text.textContent =
         excerpt(note.excerpt, label.textContent) || "Empty note";
@@ -226,8 +229,8 @@ function renderList() {
     button.dataset.folder = folder;
     button.draggable = true;
     button.ondragstart = (event) => {
-      event.dataTransfer.setData(noteType, note.id);
-      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer?.setData(noteType, note.id);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
       // Without notes at the top level, offer it as a place to drop, at
       // the end so nothing moves under the pointer.
       if (!list.querySelector('.folder-group[data-folder=""]')) {
@@ -247,9 +250,9 @@ function renderList() {
 // Dropping a note on a folder, or on a note in it, moves it there.
 function setupDragging() {
   const list = $("note-list");
-  const target = (event) =>
-    event.dataTransfer?.types.includes(noteType) &&
-    event.target.closest("[data-folder]");
+  const target = (event: DragEvent) =>
+    event.dataTransfer?.types.includes(noteType) && event.target instanceof Element
+      ? event.target.closest<HTMLElement>("[data-folder]") : null;
   const clear = () =>
     list.querySelectorAll(".drop-target").forEach((el) => el.classList.remove("drop-target"));
   const end = () => {
@@ -260,12 +263,12 @@ function setupDragging() {
     const over = target(event);
     if (!over) return;
     event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     clear();
-    list.querySelector(`.folder-group[data-folder="${CSS.escape(over.dataset.folder)}"]`)?.classList.add("drop-target");
+    list.querySelector(`.folder-group[data-folder="${CSS.escape(over.dataset.folder || "")}"]`)?.classList.add("drop-target");
   });
   list.addEventListener("dragleave", (event) => {
-    if (!list.contains(event.relatedTarget)) clear();
+    if (!(event.relatedTarget instanceof Node) || !list.contains(event.relatedTarget)) clear();
   });
   list.addEventListener("dragend", end);
   list.addEventListener("drop", (event) => {
@@ -273,13 +276,13 @@ function setupDragging() {
     end();
     if (!over) return;
     event.preventDefault();
-    moveNote(event.dataTransfer.getData(noteType), over.dataset.folder).catch(showError);
+    moveNote(event.dataTransfer?.getData(noteType) || "", over.dataset.folder || "").catch(showError);
   });
 }
 function updateBacklinks() {
   const note = state.notes.find((n) => n.id === state.current?.id);
   state.currentBacklinks = state.current?.backlinks || note?.backlinks || [];
-  $("backlinks-count").textContent = state.currentBacklinks.length;
+  $("backlinks-count").textContent = String(state.currentBacklinks.length);
   $("backlinks-label").textContent =
     state.currentBacklinks.length === 1 ? "backlink" : "backlinks";
   $("backlinks-button").disabled = !state.current;

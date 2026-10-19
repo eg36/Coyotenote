@@ -1,9 +1,10 @@
+import type { Note } from "./types.js";
 // A daily note is an ordinary Markdown file, dated in the writer's timezone.
 import { state } from "./core.js";
 import { applyEditability, createNote, openNote, refresh, save } from "./editor.js";
 
-let opening = null;
-function dailyNote() {
+let opening: Promise<Note | void> | null = null;
+function dailyNote(): Promise<Note | void> {
   if (opening) return opening;
   if (state.busy) return Promise.resolve();
   opening = (async () => {
@@ -21,7 +22,7 @@ function dailyNote() {
         return await createNote(id);
       } catch (error) {
         // Another tab may have created today's note after our refresh.
-        if (error.status !== 409) throw error;
+        if (!(error instanceof Error && "status" in error && error.status === 409)) throw error;
         await refresh();
         existing = state.notes.find((n) => n.id.toLowerCase() === id.toLowerCase());
         if (!existing) throw error;

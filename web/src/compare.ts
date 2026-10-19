@@ -6,8 +6,8 @@ import { closeModal, openModal } from "./dialogs.js";
 
 // changedLines marks the lines of each text that the other lacks, using a
 // longest common subsequence. Very long notes are compared without marks.
-function changedLines(a, b) {
-  const marks = [a.map(() => false), b.map(() => false)];
+function changedLines(a: string[], b: string[]) {
+  const marks: [boolean[], boolean[]] = [a.map(() => false), b.map(() => false)];
   if (a.length * b.length > 4_000_000) return null;
   const width = b.length + 1;
   const table = new Uint32Array((a.length + 1) * width);
@@ -34,7 +34,7 @@ function changedLines(a, b) {
 function compareDialog() {
   const disk = state.lastError?.current;
   if (!disk || disk.id !== state.current?.id) return;
-  const texts = [(disk.body || "").split("\n"), state.body.split("\n")];
+  const texts: [string[], string[]] = [(disk.body || "").split("\n"), state.body.split("\n")];
   const marks = changedLines(...texts);
   const container = document.createElement("div");
   const description = document.createElement("p");
@@ -73,6 +73,7 @@ function compareDialog() {
     "Compare versions",
     container,
     async () => {
+      if (!state.current || state.current.id !== disk.id) return;
       state.current = { ...state.current, revision: disk.revision };
       await save();
       showToast("Your edits replaced the disk version.");

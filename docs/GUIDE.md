@@ -318,9 +318,9 @@ Editing `web/src/` requires `npm run build` **then** rebuilding the Go binary.
 Refresh the browser afterwards. The 0.9 frontend migration is incremental:
 shared state, API requests, front matter, icons, attachments, outline and writing
 settings and both editor adapters now use strict TypeScript. The app entry
-point, drafts, lists, dialogs, menus, palette, history, daily notes and
-shortcuts are still JavaScript. Note loading, autosave and view changes also
-use TypeScript.
+point, drafts, dialogs, menus and palette are still JavaScript. Note loading,
+autosave, views, note lists, history, conflict comparison, daily notes and
+shortcuts also use TypeScript.
 `allowJs` keeps both working together; `checkJs` is off for the pending JavaScript
 modules. New and converted `.ts` files must pass `npm run typecheck` in CI.
 Existing `.js` import specifiers resolve to the converted `.ts` sources in both
