@@ -16,6 +16,10 @@ import (
 // MovedSyncError means the move completed but durability could not be confirmed.
 type MovedSyncError struct{ error }
 
+// MoveSync makes the directories of a completed rename, trash or restore
+// durable. Tests replace it to simulate a move whose sync fails.
+var MoveSync = syncDir
+
 // trashDirectory refuses symlinks so moving notes cannot redirect user data.
 func (s *Store) trashDirectory(create bool) (string, error) {
 	dir := filepath.Join(s.Dir, ".trash")
@@ -98,7 +102,7 @@ func (s *Store) Trash(n Note) (string, error) {
 	if err = renameReplace(source, destination); err != nil {
 		return "", err
 	}
-	if err := errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
+	if err := errors.Join(MoveSync(dir), MoveSync(sourceDir)); err != nil {
 		return id, MovedSyncError{err}
 	}
 	pruneEmpty(s.Dir, sourceDir)
@@ -140,8 +144,8 @@ func (s *Store) Restore(id, to string) (Note, error) {
 		return Note{}, err
 	}
 	n := Note{ID: to, Body: string(body)}
-	if err = errors.Join(syncDir(dir), syncDir(sourceDir)); err != nil {
-		return n, err
+	if err = errors.Join(MoveSync(dir), MoveSync(sourceDir)); err != nil {
+		return n, MovedSyncError{err}
 	}
 	pruneEmpty(trash, sourceDir)
 	return n, nil

@@ -49,6 +49,7 @@ type noteView struct {
 	Modified  string   `json:"modified"`
 	Words     int      `json:"words"`
 	Backlinks []string `json:"backlinks"`
+	Warning   string   `json:"warning,omitempty"`
 }
 
 type mutation struct {
@@ -391,10 +392,11 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			writeJSON(w, 200, view)
 		case "DELETE /api/note":
 			trashID, err := a.store.Trash(n)
+			warning, err := completedMove(err)
 			if err != nil {
 				return err
 			}
-			writeJSON(w, 200, map[string]string{"trashed": n.ID, "trashId": trashID})
+			writeJSON(w, 200, map[string]string{"trashed": n.ID, "trashId": trashID, "warning": warning})
 		case "POST /api/rename":
 			if in.Name == n.ID {
 				writeJSON(w, 200, map[string]any{"note": views(a.store, []vault.Note{n}, true)[0], "warnings": []string{}})
@@ -408,10 +410,14 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 					return &apiError{status: 409, message: "A note with that name already exists."}
 				}
 			}
-			if err = a.store.Rename(n, in.Name); err != nil {
+			warning, err := completedMove(a.store.Rename(n, in.Name))
+			if err != nil {
 				return err
 			}
 			warnings := a.rewriteLinks(notes, n.ID, in.Name)
+			if warning != "" {
+				warnings = append([]string{warning}, warnings...)
+			}
 			refreshed, _, err := a.load()
 			if err != nil {
 				return err
@@ -430,10 +436,13 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			to = in.ID
 		}
 		n, err := a.store.Restore(in.ID, to)
+		warning, err := completedMove(err)
 		if err != nil {
 			return &apiError{status: 409, message: err.Error()}
 		}
-		writeJSON(w, 200, views(a.store, []vault.Note{n}, true)[0])
+		restored := views(a.store, []vault.Note{n}, true)[0]
+		restored.Warning = warning
+		writeJSON(w, 200, restored)
 		return nil
 	case "POST /api/settings":
 		if !validTheme(in.Theme) {
@@ -481,6 +490,16 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	return &apiError{status: 404, message: "API route not found"}
+}
+
+// completedMove turns the error of a move that finished but could not be
+// synced into a warning, so the client still sees the move and updates.
+func completedMove(err error) (string, error) {
+	var moved vault.MovedSyncError
+	if errors.As(err, &moved) {
+		return "The note was moved, but the change could not be confirmed on disk: " + moved.Error(), nil
+	}
+	return "", err
 }
 
 func (a *webApp) rewriteLinks(before []vault.Note, oldID, newID string) []string {

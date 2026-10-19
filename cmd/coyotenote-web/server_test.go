@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -155,6 +156,37 @@ func TestRenameRewritesLinksAndBacklinks(t *testing.T) {
 	updated := request(t, a, "GET", "/api/note?id=Ideas", nil, 200)
 	if updated["body"] != "[[Work/New plan#Details|project]] and `[[Work/Plan]]`" {
 		t.Fatalf("wrong link rewrite: %v", updated["body"])
+	}
+}
+
+// A move that completes but cannot be synced is reported as done, with a
+// warning, so links are still rewritten and clients see where the note is.
+func TestMovesReportSuccessWhenDirectorySyncFails(t *testing.T) {
+	a := testApp(t)
+	note := request(t, a, "POST", "/api/note", mutation{ID: "Work/Plan", Body: "# Plan"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Ideas", Body: "See [[Work/Plan]]."}, 201)
+	sync := vault.MoveSync
+	vault.MoveSync = func(string) error { return errors.New("disk said no") }
+	t.Cleanup(func() { vault.MoveSync = sync })
+
+	renamed := request(t, a, "POST", "/api/rename", mutation{ID: "Work/Plan", Name: "Work/Project", Revision: note["revision"].(string)}, 200)
+	if warnings := fmt.Sprint(renamed["warnings"]); !strings.Contains(warnings, "disk said no") {
+		t.Fatalf("rename warnings: %v", warnings)
+	}
+	if body := request(t, a, "GET", "/api/note?id=Ideas", nil, 200)["body"]; body != "See [[Work/Project]]." {
+		t.Fatalf("links not rewritten after the move: %v", body)
+	}
+	moved := renamed["note"].(map[string]any)
+	trashed := request(t, a, "DELETE", "/api/note", mutation{ID: "Work/Project", Revision: moved["revision"].(string)}, 200)
+	if !strings.Contains(trashed["warning"].(string), "disk said no") || trashed["trashId"] != "Work/Project" {
+		t.Fatalf("trash response: %v", trashed)
+	}
+	restored := request(t, a, "POST", "/api/restore", mutation{ID: "Work/Project"}, 200)
+	if restored["id"] != "Work/Project" || !strings.Contains(restored["warning"].(string), "disk said no") {
+		t.Fatalf("restore response: %v", restored)
+	}
+	if _, err := os.Stat(filepath.Join(a.store.Dir, "Work", "Project.md")); err != nil {
+		t.Fatal(err)
 	}
 }
 

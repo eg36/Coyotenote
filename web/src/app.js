@@ -812,7 +812,7 @@ function deleteDialog() {
     async () => {
       await save();
       const id = state.current.id;
-      const { trashId } = await api("/api/note", "DELETE", {
+      const { trashId, warning } = await api("/api/note", "DELETE", {
         id,
         revision: state.current.revision,
       });
@@ -822,7 +822,9 @@ function deleteDialog() {
       const next = visibleNotes()[0] || state.notes[0];
       if (next) await openNote(next.id, { skipSave: true });
       else emptyNotebook();
-      showToast("Note moved to trash.", { undo: true });
+      showToast(["Note moved to trash.", warning].filter(Boolean).join(" "), {
+        undo: true,
+      });
     },
     { submit: "Move to trash" },
   );
@@ -838,7 +840,7 @@ async function undoTrash() {
   state.trash.pop();
   await refresh();
   await openNote(note.id, { skipSave: true });
-  showToast("Note restored.");
+  showToast(["Note restored.", note.warning].filter(Boolean).join(" "));
 }
 async function trashDialog() {
   const { notes } = await api("/api/trash");
@@ -879,7 +881,7 @@ async function trashDialog() {
         await refresh();
         closeModal();
         await openNote(restored.id, { skipSave: true });
-        showToast("Note restored.");
+        showToast(["Note restored.", restored.warning].filter(Boolean).join(" "));
       } catch (error) {
         $("modal-error").textContent = error.message;
         restore.disabled = false;
