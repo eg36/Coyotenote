@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Labradorite logo: a Labrador made of labradorite" width="320">
+  <img src="logo.png" alt="Labradorite logo: a Labrador made of labradorite" width="240">
 </p>
 
 # Labradorite
