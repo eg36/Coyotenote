@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-10-19T23:24:07.387Z",
         "reason": "Codex verified existing viewport shell clipping is intentional: internal panes scroll, tooltip uses top-layer popover and viewport clamping, and menus clamp to viewport. Detector flags only html and body."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "web/index.html"
+        ],
+        "createdAt": "2026-10-19T23:37:12.922Z",
+        "reason": "Codex review: the sole flagged search wrapper is a 36px control with a vertically centered full-height native input and 8px horizontal inset. Zero wrapper vertical padding does not put its text against the border; preserve the existing compact sidebar control."
       }
     ]
   }
