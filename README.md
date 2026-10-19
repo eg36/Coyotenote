@@ -91,7 +91,9 @@ Close the terminal app before opening the **same** vault: they share the origina
   footer lists backlinks. Hidden folders and symlinks are skipped just as on `main`.
 - Click the theme name for all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Hover/focus previews a theme;
-  click keeps it, Escape restores the previous theme. No system theme detection.
+  or use ↑/↓ to preview in a compact palette list. Enter/click keeps it; Escape
+  restores the previous theme. The picker leaves the background sharp and visible.
+  No system theme detection.
 - The focus button hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 

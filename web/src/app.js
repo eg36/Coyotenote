@@ -685,20 +685,52 @@ function themeDialog() {
   const search = document.createElement("input");
   search.placeholder = "Find a theme…";
   search.setAttribute("aria-label", "Find a theme");
-  const grid = document.createElement("div");
-  grid.className = "theme-list";
-  function render() {
-    grid.replaceChildren();
+  search.setAttribute("role", "combobox");
+  search.setAttribute("aria-expanded", "true");
+  search.setAttribute("aria-autocomplete", "list");
+  search.setAttribute("aria-controls", "theme-list");
+  const list = document.createElement("div");
+  list.id = "theme-list";
+  list.className = "theme-list";
+  list.setAttribute("role", "listbox");
+  list.setAttribute("aria-label", "Themes");
+  const empty = document.createElement("p");
+  empty.className = "theme-empty";
+  empty.setAttribute("role", "status");
+  empty.textContent = "No matching themes";
+  let active = -1;
+  let options = [];
+  function activate(index, preview = true, scroll = true) {
+    active = index;
+    for (const [i, option] of options.entries()) {
+      option.classList.toggle("chosen", i === active);
+      option.setAttribute("aria-selected", String(i === active));
+    }
+    const option = options[active];
+    if (!option) {
+      search.removeAttribute("aria-activedescendant");
+      return;
+    }
+    search.setAttribute("aria-activedescendant", option.id);
+    if (preview) applyTheme(option.dataset.themeId);
+    if (scroll) option.scrollIntoView({ block: "nearest" });
+  }
+  function render(preview = false) {
+    list.replaceChildren();
+    options = [];
     for (const theme of state.themes.filter((t) =>
-      t.name.toLowerCase().includes(search.value.toLowerCase()),
+      t.name.toLowerCase().includes(search.value.trim().toLowerCase()),
     )) {
       const button = document.createElement("button");
       button.type = "button";
-      button.className =
-        "theme-option" + (state.theme === theme.id ? " chosen" : "");
+      button.className = "theme-option";
+      button.id = "theme-option-" + theme.id;
       button.dataset.themeId = theme.id;
+      button.tabIndex = -1;
+      button.setAttribute("role", "option");
       const swatch = document.createElement("span");
       swatch.className = "theme-swatch";
+      swatch.setAttribute("aria-hidden", "true");
       for (const color of [
         theme.colors.accent,
         theme.colors.pink,
@@ -714,8 +746,9 @@ function themeDialog() {
       const type = document.createElement("small");
       type.textContent = theme.light ? "Light" : "Dark";
       button.append(swatch, name, type);
-      button.onmouseenter = () => applyTheme(theme.id);
-      button.onfocus = () => applyTheme(theme.id);
+      const index = options.length;
+      button.onmouseenter = () => activate(index, true, false);
+      button.onfocus = () => activate(index);
       button.onclick = async () => {
         try {
           await chooseTheme(theme.id);
@@ -725,15 +758,35 @@ function themeDialog() {
           $("modal-error").textContent = error.message;
         }
       };
-      grid.append(button);
+      options.push(button);
+      list.append(button);
     }
+    empty.hidden = options.length > 0;
+    const selected = options.findIndex((option) => option.dataset.themeId === state.theme);
+    activate(options.length ? Math.max(0, selected) : -1, preview);
   }
-  search.oninput = render;
+  search.oninput = () => render(true);
+  container.onkeydown = (event) => {
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (options.length) {
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        activate((active + step + options.length) % options.length);
+      }
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      options[active]?.click();
+    }
+  };
   const searchRow = document.createElement("div");
   searchRow.className = "theme-search";
   searchRow.innerHTML = icon("chevronDown");
   searchRow.prepend(search);
-  container.append(searchRow, grid);
+  const hints = document.createElement("p");
+  hints.className = "theme-key-hints";
+  hints.textContent = "↑↓ preview · Enter select · Esc cancel";
+  container.append(searchRow, list, empty, hints);
   openModal("Choose a theme", container, null, {
     className: "theme-picker",
     hideFooter: true,

@@ -141,6 +141,60 @@ test("theme picker is a compact palette list with an unobscured backdrop", async
   expect(box.height).toBeLessThanOrEqual(635);
 });
 
+test("theme keyboard preview wraps, cancels and commits a filtered selection", async ({ page }) => {
+  await openSeed(page, "# Keyboard themes");
+  await page.locator("#theme-button").click();
+  const search = page.getByRole("combobox", { name: "Find a theme" });
+  await search.fill("Coyote Dark");
+  await search.press("Enter");
+  await expect(page.locator("#modal")).not.toBeVisible();
+  await page.locator("#theme-button").click();
+  await expect(search).toBeFocused();
+  await search.press("ArrowUp");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "gruvbox-light");
+  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option", { selected: true })).toHaveAttribute("data-theme-id", "gruvbox-light");
+  await expect(search).toHaveAttribute("aria-activedescendant", "theme-option-gruvbox-light");
+  // Preview changes the page, but never persists until Enter/click.
+  expect((await (await page.request.get("/api/state")).json()).theme).toBe("dark");
+  await search.press("ArrowDown");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await search.press("ArrowDown");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await search.press("Escape");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.locator("#theme-button").click();
+  await search.fill("catppuccin");
+  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(4);
+  await search.press("ArrowDown");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "catppuccin-macchiato");
+  await search.press("Enter");
+  await expect(page.locator("#modal")).not.toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "catppuccin-macchiato");
+});
+
+test("empty theme search and failed selection preserve the previous theme", async ({ page }) => {
+  await openSeed(page, "# Theme recovery");
+  const original = await page.locator("html").getAttribute("data-theme");
+  await page.locator("#theme-button").click();
+  const search = page.getByRole("combobox", { name: "Find a theme" });
+  await search.fill("no such palette");
+  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(0);
+  await expect(page.getByText("No matching themes")).toBeVisible();
+  await expect(search).not.toHaveAttribute("aria-activedescendant");
+  await search.press("ArrowDown");
+  await search.press("Enter");
+  await expect(page.locator("#modal")).toBeVisible();
+  await search.fill("Nord");
+  await page.route("**/api/settings", (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Settings unavailable" }) }));
+  await search.press("Enter");
+  await expect(page.locator("#modal-error")).toContainText("Settings unavailable");
+  await expect(page.locator("#modal")).toBeVisible();
+  await search.press("Escape");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", original);
+  expect((await (await page.request.get("/api/state")).json()).theme).toBe(original);
+});
+
 test("create in folders, body search, rename, trash and undo", async ({
   page,
 }) => {
