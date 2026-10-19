@@ -2062,17 +2062,13 @@ dialog footer {
   margin-top: 24px;
 }
 /* Settings: theme and writing side by side, stacked on phones. The page
-   stays undimmed so theme previews show behind the window. */
+   is tinted like behind other dialogs; theme previews still show through. */
 dialog.settings {
   width: min(720px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
   margin-top: min(12dvh, 96px);
   /* The theme list floats over the window and the page below it. */
   overflow: visible;
-}
-dialog.settings::backdrop {
-  background: transparent;
-  backdrop-filter: none;
 }
 .settings .modal-error:empty {
   display: none;

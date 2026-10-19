@@ -236,7 +236,7 @@ test("every theme draws text, accents, pills and focus rings at AA contrast", as
   await page.keyboard.press("Escape");
 });
 
-test("settings hold the themes and writing preferences over an unobscured page", async ({ page }) => {
+test("settings hold the themes and writing preferences over a lightly tinted page", async ({ page }) => {
   await openSeed(page, "# Themes");
   await page.locator("#settings-button").click();
   const picker = page.getByRole("dialog", { name: "Settings" });
@@ -248,8 +248,8 @@ test("settings hold the themes and writing preferences over an unobscured page",
   await expect(picker.getByRole("button", { name: /^Theme: / })).toBeVisible();
   await openThemes(page);
   expect((await picker.boundingBox()).width).toBeLessThanOrEqual(720);
-  expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backdropFilter)).toBe("none");
-  expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  // The same light tint as other dialogs, so theme previews stay visible.
+  expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(16, 18, 24, 0.5)");
   await expect(picker.locator(".theme-option")).toHaveCount(14);
   await expect(picker.locator(".theme-list .theme-swatch i")).toHaveCount(56);
   const rows = await picker.locator(".theme-option").evaluateAll((els) => els.map((el) => el.getBoundingClientRect().x));
