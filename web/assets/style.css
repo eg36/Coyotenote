@@ -172,11 +172,6 @@ input[type="search"]::-webkit-search-cancel-button {
   border-radius: 7px;
 }
 .new-button,
-/* Lexend's visible letters sit slightly below its line-box center. */
-.new-button > [data-icon="plus"],
-#first-note > [data-icon="plus"] {
-  transform: translateY(0.5px);
-}
 .search {
   height: 36px;
   border-radius: 8px;
@@ -204,6 +199,11 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .new-button kbd {
   color: inherit;
+}
+/* Lexend's visible letters sit slightly below its line-box center. */
+.new-button > [data-icon="plus"],
+#first-note > [data-icon="plus"] {
+  transform: translateY(0.5px);
 }
 .search {
   display: flex;
@@ -2263,7 +2263,6 @@ dialog.danger #modal-submit {
     margin-left: 4px;
   }
   .note-folder,
-  #focus-button,
   .document-actions {
     display: none;
   }

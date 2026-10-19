@@ -753,11 +753,12 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeVisible();
-    await page.locator("#focus-button").click();
+    await page.locator('[data-menu="view"]').click();
+    await page.getByRole("menuitem", { name: "Focus mode", exact: true }).click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
     expect((await frame.boundingBox()).width).toBeCloseTo(width, 0);
-    await page.locator("#focus-button").click();
+    await page.keyboard.press("Control+Shift+f");
   }
   // Keep the correct column after switching from a collapsed desktop to mobile.
   await page.locator("#sidebar-toggle").click();
@@ -798,7 +799,7 @@ test("readable footer shortcuts stay available across screen sizes and focus mod
     await page.keyboard.press("Escape");
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.locator("#focus-button").click();
+  await page.keyboard.press("Control+Shift+f");
   await expect(page.locator("#hint-help")).toBeVisible();
   await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "18px");
 });

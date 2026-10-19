@@ -52,7 +52,7 @@ import {
   undoTrash,
 } from "./dialogs.js";
 import { compareDialog } from "./compare.js";
-import { navigate, shortcutChords, toggleFocus } from "./shortcuts.js";
+import { navigate, shortcutChords } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
@@ -144,7 +144,6 @@ $("outline-button").onclick = () => toggleOutline();
 $("history-button").onclick = () => historyDialog().catch(showError);
 $("tag-filter").onchange = () => filterTag($("tag-filter").value);
 $("properties-text").oninput = () => editProperties($("properties-text").value);
-$("focus-button").onclick = toggleFocus;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);
 for (const button of document.querySelectorAll("[data-format]")) {
