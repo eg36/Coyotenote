@@ -72,7 +72,8 @@ on the start page. Use ↑/↓ within a menu, ←/→ to switch menus and Escape
 The toolbar row below starts with the notes sidebar toggle and the back button,
 followed by the writing views and formatting controls.
 On phones the menus stay under the title; note actions are available in File
-and View, leaving more room for the note name.
+and View, leaving more room for the note name. Search notes sits between the
+name and save status on wide screens, with its own header row on phones.
 
 The interface and writing pane use locally bundled **Lexend**. The writing size
 defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints
@@ -115,8 +116,9 @@ not change the Markdown files or follow the vault to another browser.
   externally changed files are left alone and reported.
 - **Tags** come from a `tags` (or `tag`) property in front matter, as a list or
   comma-separated, and from `#tags` in the text outside code, as in Obsidian; a
-  tag needs a letter, so `#2026` is not one. When the vault has tags, a menu under
-  the search box filters the note list by one, showing how many notes carry each.
+  tag needs a letter, so `#2026` is not one. When the vault has tags, expand
+  **All tags** in the sidebar to see each tag and its note count. Choose a tag
+  to filter the note list, or choose All tags inside the list to reset it.
   In Preview, tags are buttons that apply the filter.
 - Click a folder's name in the sidebar to **collapse** it. Collapsed folders show
   how many notes they hold and stay collapsed in this browser; searching still
@@ -138,7 +140,8 @@ not change the Markdown files or follow the vault to another browser.
   indented by level. Click one to bring it into view in any view; the outline
   marks the section you are reading as you scroll. It stays open across reloads
   on wide screens and slides over the text on narrow ones.
-- **Search notes** in the sidebar matches **paths and note contents**. The sort
+- **Search notes** in the top bar matches **paths and note contents** and reveals
+  the notes sidebar when you use it. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
   **Alt+Up / Alt+Down** cycles the visible sorted notes; the back arrow returns
@@ -148,7 +151,7 @@ not change the Markdown files or follow the vault to another browser.
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
   neutral white/charcoal surfaces and blue accents. Hover, focus or ↑/↓ previews a
   theme; Enter/click keeps it; Escape restores the previous theme.
-- The focus button hides the sidebar. Small screens get a slide-out notes drawer,
+- **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 
 ### WYSIWYG round trips
