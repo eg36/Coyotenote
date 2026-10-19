@@ -841,6 +841,7 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
 test("start-page navigation stays together and status sits at the right edge", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#app")).toHaveClass(/at-home/);
+  await expect(page.getByRole("group", { name: "Workspace navigation" })).toBeVisible();
   for (const width of [1999, 1840, 1839, 1500, 1440, 1280, 900, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (let toggle = 0; toggle < 2; toggle++) {

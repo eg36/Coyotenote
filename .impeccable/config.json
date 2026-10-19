@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-10-19T19:20:18.029Z",
         "reason": "Agent review: the flagged 2px border belongs only to .prose blockquote, a semantic Markdown quotation marker rather than a card accent. Preserve quote styling."
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          "web/index.html"
+        ],
+        "createdAt": "2026-10-19T23:24:07.387Z",
+        "reason": "Codex verified existing viewport shell clipping is intentional: internal panes scroll, tooltip uses top-layer popover and viewport clamping, and menus clamp to viewport. Detector flags only html and body."
       }
     ]
   }

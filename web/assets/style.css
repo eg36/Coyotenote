@@ -779,7 +779,23 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   gap: 2px;
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: 12px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.nav-buttons .icon-button {
+  color: var(--text);
+}
+.nav-buttons .icon-button + .icon-button {
+  border-left: 1px solid var(--line);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.nav-buttons .icon-button:disabled {
+  color: var(--muted);
+  opacity: 0.45;
 }
 /* The start page has no note to edit, so the writing tools leave. */
 .app.at-home .header-tools,
