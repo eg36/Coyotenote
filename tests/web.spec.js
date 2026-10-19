@@ -331,11 +331,13 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
   await openSeed(page, "# Room to write\n\nThe editor should use the available space.");
   await mode(page, "Markdown");
   const workspace = page.locator(".workspace");
+  const frame = page.locator("#editor-frame");
   for (const width of [1440, 900, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width - (width <= 1200 ? 60 : 88), 0);
     await expect(page.locator("#source-pane")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.locator("#sidebar-toggle").click();
@@ -343,16 +345,19 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await page.locator("#focus-button").click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 1);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width - (width <= 1200 ? 60 : 88), 0);
     await page.locator("#focus-button").click();
   }
   // Keep the correct column after switching from a collapsed desktop to mobile.
   await page.locator("#sidebar-toggle").click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
+  expect((await frame.boundingBox()).width).toBeCloseTo(366, 0);
   await page.locator("#sidebar-toggle").click();
   await expect(page.getByLabel("Search notes")).toBeVisible();
   await page.locator("#sidebar-scrim").click();
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
+  expect((await frame.boundingBox()).width).toBeCloseTo(366, 0);
 });
 
 test("readable footer shortcuts stay available across screen sizes and focus mode", async ({ page }) => {
