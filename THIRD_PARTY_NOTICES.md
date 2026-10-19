@@ -22,3 +22,9 @@ palettes: [Ayu](https://github.com/ayu-theme/ayu-colors),
 [Dracula](https://github.com/dracula/dracula-theme), and
 [Gruvbox](https://github.com/morhetz/gruvbox). These adaptations do not imply
 endorsement by their original authors.
+
+The locally bundled Lexend variable font comes from
+[Google Fonts / Lexend](https://github.com/google/fonts/tree/main/ofl/lexend).
+Copyright 2018 The Lexend Project Authors. It is distributed under the SIL Open
+Font License 1.1; see `docs/licenses/Lexend.txt`. The font is embedded and served
+locally at `/assets/Lexend.ttf`; no font service is contacted at runtime.

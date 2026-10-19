@@ -72,6 +72,11 @@ Close the terminal app before opening the **same** vault: they share the origina
 
 ## Writing in the browser
 
+The interface and writing pane use locally bundled **Lexend**, matching the
+Lexxy site’s font. The writing size is 18 px, Markdown source is 16 px, and small
+interface labels and shortcut hints are at least 12 px. No font download is
+needed when running the app.
+
 - **Write** is a Tiptap WYSIWYG editor. Use the toolbar or Markdown input rules for
   headings, bold, italic, strike, lists, tasks, quotes, inline/fenced code, links
   and tables. Undo/redo operates on edits, independently of trash restore.

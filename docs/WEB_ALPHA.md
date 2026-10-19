@@ -43,7 +43,8 @@ There is no frontend framework. CodeMirror manages source transactions/history;
 Tiptap and ProseMirror manage rich editing, lists, tables, selection and undo.
 Markdown is the single persisted format. Rich editing is lazy-loaded as a local
 bundle chunk. All dependency assets and licenses are embedded; no runtime CDN,
-external fonts or telemetry are used.
+external font requests or telemetry are used. Lexend is bundled locally under
+the SIL Open Font License.
 
 Each browser tab has its own draft key under a vault-specific prefix. A pending
 draft blocks editing until restored/discarded and survives additional reloads.
