@@ -36,103 +36,6 @@
             ><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>
           </nav>
         </div>
-        <label class="search"
-          ><span data-icon="search"></span
-          ><input
-            id="search"
-            type="search"
-            placeholder="Search notes"
-            autocomplete="off"
-            aria-label="Search notes"
-          /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
-            <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
-          </kbd></label
-        >
-          <span class="save-state" id="save-state" role="status"
-            ><span class="save-dot"></span
-            ><span id="save-label">Ready when you are</span></span
-          >
-          <div class="document-actions" id="document-actions" hidden>
-            <button
-              id="previous-note"
-              class="icon-button"
-              title="Previous note · Alt ↑"
-              aria-label="Previous note"
-            >
-              <span data-icon="arrowUp"></span></button
-            ><button
-              id="next-note"
-              class="icon-button"
-              title="Next note · Alt ↓"
-              aria-label="Next note"
-            >
-              <span data-icon="arrowDown"></span></button
-            ><span class="action-divider"></span
-            ><button
-              id="outline-button"
-              class="icon-button"
-              title="Outline · Alt O"
-              aria-label="Show outline"
-              aria-pressed="false"
-              aria-controls="outline"
-            >
-              <span data-icon="outline"></span></button
-            ><button
-              id="history-button"
-              class="icon-button"
-              title="Note history"
-              aria-label="Note history"
-            >
-              <span data-icon="history"></span></button
-            ><button
-              id="export-note"
-              class="icon-button"
-              title="Download Markdown"
-              aria-label="Download Markdown"
-            >
-              <span data-icon="download"></span></button
-            ><button
-              id="delete-note"
-              class="icon-button danger-hover"
-              title="Move note to trash"
-              aria-label="Move note to trash"
-            >
-              <span data-icon="trash"></span>
-            </button>
-          </div>
-      </header>
-      <aside class="sidebar" id="sidebar" aria-label="Notes">
-        <button class="new-button" id="new-note">
-          <span data-icon="plus"></span>New note<kbd data-keys="N">Ctrl N</kbd>
-        </button>
-        <details id="tag-filter" class="tag-filter" hidden>
-          <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>
-          <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>
-        </details>
-        <div class="list-heading">
-          <span class="list-title">Notes <span id="note-count">0</span></span>
-          <select id="note-sort" aria-label="Sort notes">
-            <option value="modified">Recently edited</option>
-            <option value="title-asc">Title A–Z</option>
-            <option value="title-desc">Title Z–A</option>
-          </select>
-        </div>
-        <nav class="note-list" id="note-list" aria-label="Notebook notes"></nav>
-        <div class="sidebar-bottom">
-          <button id="trash-button" class="theme-button">
-            <span data-icon="trash"></span><span>Trash</span>
-          </button>
-          <button id="settings-button" class="theme-button">
-            <span data-icon="settings"></span><span>Settings</span>
-          </button>
-        </div>
-      </aside>
-      <button
-        id="sidebar-scrim"
-        class="sidebar-scrim"
-        aria-label="Close notes"
-      ></button>
-      <main class="workspace">
         <div class="editor-bar">
           <button
             id="sidebar-toggle"
@@ -244,6 +147,114 @@
           </button>
         </section>
         </div>
+        <button
+          id="search-button"
+          class="icon-button search-button"
+          type="button"
+          title="Search notes · Ctrl Shift E"
+          aria-label="Search notes"
+          aria-expanded="false"
+          aria-controls="search"
+        >
+          <span data-icon="search"></span>
+        </button>
+        <label class="search"
+          ><span data-icon="search"></span
+          ><input
+            id="search"
+            type="search"
+            placeholder="Search notes"
+            autocomplete="off"
+            aria-label="Search notes"
+          /><kbd id="search-shortcut" class="search-shortcut" aria-label="Control Shift E" title="Ctrl + Shift + E">
+            <span data-modifier>Ctrl</span><span data-icon="shift" role="img" aria-label="Shift"></span><span>E</span>
+          </kbd></label
+        >
+          <span class="save-state" id="save-state" role="status"
+            ><span class="save-dot"></span
+            ><span id="save-label">Ready when you are</span></span
+          >
+          <div class="document-actions" id="document-actions" hidden>
+            <button
+              id="previous-note"
+              class="icon-button"
+              title="Previous note · Alt ↑"
+              aria-label="Previous note"
+            >
+              <span data-icon="arrowUp"></span></button
+            ><button
+              id="next-note"
+              class="icon-button"
+              title="Next note · Alt ↓"
+              aria-label="Next note"
+            >
+              <span data-icon="arrowDown"></span></button
+            ><span class="action-divider"></span
+            ><button
+              id="outline-button"
+              class="icon-button"
+              title="Outline · Alt O"
+              aria-label="Show outline"
+              aria-pressed="false"
+              aria-controls="outline"
+            >
+              <span data-icon="outline"></span></button
+            ><button
+              id="history-button"
+              class="icon-button"
+              title="Note history"
+              aria-label="Note history"
+            >
+              <span data-icon="history"></span></button
+            ><button
+              id="export-note"
+              class="icon-button"
+              title="Download Markdown"
+              aria-label="Download Markdown"
+            >
+              <span data-icon="download"></span></button
+            ><button
+              id="delete-note"
+              class="icon-button danger-hover"
+              title="Move note to trash"
+              aria-label="Move note to trash"
+            >
+              <span data-icon="trash"></span>
+            </button>
+          </div>
+      </header>
+      <aside class="sidebar" id="sidebar" aria-label="Notes">
+        <button class="new-button" id="new-note">
+          <span data-icon="plus"></span>New note<kbd data-keys="N">Ctrl N</kbd>
+        </button>
+        <details id="tag-filter" class="tag-filter" hidden>
+          <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>
+          <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>
+        </details>
+        <div class="list-heading">
+          <span class="list-title">Notes <span id="note-count">0</span></span>
+          <select id="note-sort" aria-label="Sort notes">
+            <option value="modified">Recently edited</option>
+            <option value="title-asc">Title A–Z</option>
+            <option value="title-desc">Title Z–A</option>
+          </select>
+        </div>
+        <nav class="note-list" id="note-list" aria-label="Notebook notes"></nav>
+        <div class="sidebar-bottom">
+          <button id="trash-button" class="theme-button">
+            <span data-icon="trash"></span><span>Trash</span>
+          </button>
+          <button id="settings-button" class="theme-button">
+            <span data-icon="settings"></span><span>Settings</span>
+          </button>
+        </div>
+      </aside>
+      <button
+        id="sidebar-scrim"
+        class="sidebar-scrim"
+        aria-label="Close notes"
+      ></button>
+      <main class="workspace">
         <section
           id="error-banner"
           class="banner error-banner"

@@ -4,6 +4,7 @@ import { createSource } from "./source.js";
 import { hydrateIcons } from "./icons.js";
 import {
   $,
+  closeSearch,
   setSaveState,
   showError,
   showToast,
@@ -57,7 +58,7 @@ import {
   undoTrash,
 } from "./dialogs.js";
 import { compareDialog } from "./compare.js";
-import { navigate, shortcutChords, showNotes } from "./shortcuts.js";
+import { findNotes, navigate, shortcutChords, showNotes } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
@@ -149,6 +150,20 @@ $("note-sort").onchange = () => {
 };
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 $("search").onfocus = showNotes;
+$("search-button").onclick = findNotes;
+$("search").onblur = () => setTimeout(closeSearch);
+$("search").onkeydown = (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  // Escape clears a search first, then closes the empty field.
+  if ($("search").value) {
+    $("search").value = "";
+    $("search").dispatchEvent(new Event("input"));
+  } else {
+    $("search-button").focus();
+    closeSearch();
+  }
+};
 $("search").oninput = () => {
   showNotes();
   state.search = $("search").value;

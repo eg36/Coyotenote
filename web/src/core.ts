@@ -5,6 +5,7 @@ interface AppElements {
   "brand": HTMLAnchorElement;
   "document-title": HTMLButtonElement;
   "search": HTMLInputElement;
+  "search-button": HTMLButtonElement;
   "previous-note": HTMLButtonElement;
   "next-note": HTMLButtonElement;
   "outline-button": HTMLButtonElement;
@@ -154,9 +155,17 @@ function updateCounts() {
     `${Array.from(state.body).length.toLocaleString()} characters`;
 }
 
+// Search sits behind a button in the header. The field stays open while
+// it holds a search or has focus; closeSearch hides an empty one.
+function closeSearch() {
+  if ($("search").value || document.activeElement === $("search")) return;
+  $("app").classList.remove("search-open");
+  $("search-button").setAttribute("aria-expanded", "false");
+}
 export {
   $,
   clearError,
+  closeSearch,
   setSaveState,
   showError,
   showToast,

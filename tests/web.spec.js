@@ -17,6 +17,13 @@ async function openSeed(page, body, name) {
   await expect(page.locator("#document-title")).toHaveText(id.split("/").pop());
   return id;
 }
+// searchBox opens the header search, which is a button until used.
+async function searchBox(page) {
+  const box = page.locator("#search");
+  if (await box.isHidden()) await page.locator("#search-button").click();
+  await expect(box).toBeVisible();
+  return box;
+}
 // openThemes shows the theme list in Settings, opening the window first.
 async function openThemes(page) {
   if (!(await page.locator("#modal").evaluate((d) => d.open))) await page.locator("#settings-button").click();
@@ -352,7 +359,7 @@ test("note sorting remembers titles, uses edit times and follows search navigati
   await expect.poll(order).toEqual([ids[0], ids[1], ids[2]]);
   await page.reload();
   await expect(sort).toHaveValue("title-desc");
-  await page.getByLabel("Search notes").fill(folder);
+  await (await searchBox(page)).fill(folder);
   await expect(page.locator("#note-count")).toHaveText("3");
   await page.locator("#next-note").click();
   await expect(page.locator("#document-title")).toHaveText("alpha10");
@@ -378,9 +385,9 @@ test("create in folders, body search, rename, trash and undo", async ({
     "An elusive searchable phrase.",
     "Projects/Search " + Date.now(),
   );
-  await page.getByLabel("Search notes").fill("elusive searchable");
+  await (await searchBox(page)).fill("elusive searchable");
   await expect(page.locator(".note-row")).toHaveCount(1);
-  await page.getByLabel("Search notes").fill("");
+  await (await searchBox(page)).fill("");
   await expect(page.locator(".note-row").first()).toBeVisible();
   await page.locator("#document-title").click();
   const renamed = id + " revised";
@@ -817,7 +824,7 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   await expect(page.locator("#source-pane")).toBeVisible();
   await expect(page.locator("#preview-pane")).toBeVisible();
   await page.locator("#sidebar-toggle").click();
-  await expect(page.getByLabel("Search notes")).toBeVisible();
+  await expect(page.locator("#search-button")).toBeVisible();
   await page.locator("#sidebar-scrim").click();
   expect(
     await page.evaluate(
@@ -854,7 +861,7 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
   expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
   await page.locator("#sidebar-toggle").click();
-  await expect(page.getByLabel("Search notes")).toBeVisible();
+  await expect(page.locator("#search-button")).toBeVisible();
   await page.locator("#sidebar-scrim").click();
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
   expect((await frame.boundingBox()).width).toBeCloseTo(390, 0);
@@ -863,8 +870,10 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
 test("header search stays usable above the notes drawer and reveals search results", async ({ page }) => {
   const stamp = Date.now();
   const id = await openSeed(page, `Find headerquery${stamp} in this note.`, `Header search ${stamp}`);
-  const search = page.getByLabel("Search notes", { exact: true });
-  await expect(page.locator(".topbar #search")).toBeVisible();
+  const search = page.locator("#search");
+  // Search is a button in the header until it is used.
+  await expect(page.locator(".topbar #search-button")).toBeVisible();
+  await expect(search).toBeHidden();
   await page.locator("#sidebar-toggle").click();
   await expect(page.locator("#sidebar")).toBeHidden();
   await page.keyboard.press("Control+Shift+e");
@@ -889,11 +898,14 @@ test("header search stays usable above the notes drawer and reveals search resul
   }
 });
 
-test("writing starts below one header and one editor bar, even when zoomed", async ({ page }) => {
+test("writing starts right below the header, which holds the editor controls on wide screens", async ({ page }) => {
   await openSeed(page, "# Close to the top\n\nThe first paragraph should be in view.");
-  for (const [width, height] of [[1440, 900], [720, 450], [390, 844]]) {
+  for (const [width, height] of [[1440, 900], [1280, 800], [1100, 800], [720, 450], [390, 844]]) {
     await page.setViewportSize({ width, height });
-    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 220 : width < 800 ? 170 : 120);
+    // From 1280 px the toolbar shares the header row; below, it takes a second one.
+    const top = (await page.locator(".topbar").boundingBox()).height;
+    if (width >= 1280) expect(top).toBeLessThanOrEqual(70);
+    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 220 : width < 800 ? 170 : width < 1280 ? 120 : 72);
     await expect(page.locator(".tiptap p")).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
@@ -1100,7 +1112,7 @@ test("trashing the only search match opens another note without errors", async (
     lonely = `Lonely ${stamp}`;
   await seed(page, keep, "Still here.");
   await openSeed(page, `Unique word zephyr${stamp}.`, lonely);
-  await page.locator("#search").fill(`zephyr${stamp}`);
+  await (await searchBox(page)).fill(`zephyr${stamp}`);
   await expect(page.locator("#note-list .note-row")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Move note to trash", exact: true })
@@ -1110,8 +1122,8 @@ test("trashing the only search match opens another note without errors", async (
   await expect(page.locator("#modal")).toBeHidden();
   await expect(page.locator("#document-title")).not.toHaveText(lonely);
   await expect(page.locator("#note-list")).toContainText("No matching notes");
-  await page.locator("#search").fill("");
-  await page.locator("#search").fill(stamp.toString());
+  await (await searchBox(page)).fill("");
+  await (await searchBox(page)).fill(stamp.toString());
   await expect(page.locator("#note-list .note-row")).toHaveCount(1);
   await expect(page.locator("#note-list")).toContainText(keep);
 });
@@ -1231,7 +1243,7 @@ test("a server restarted on another vault cannot take over an open tab", async (
   });
   switched = true;
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await page.getByLabel("Search notes").fill("Same");
+  await (await searchBox(page)).fill("Same");
   await expect(page.locator("#error-text")).toContainText("different vault");
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).fill("Edited here.");
   await expect(page.locator("#retry-save")).toHaveText("Retry save");
@@ -1477,14 +1489,14 @@ test("search results show the matching passage with the match marked", async ({
     page,
     `# Garden\n\n${"Opening words. ".repeat(12)}Plant the ${word} <b>beds</b> early.`,
   );
-  await page.locator("#search").fill(word.toUpperCase());
+  await (await searchBox(page)).fill(word.toUpperCase());
   const row = page.locator(`#note-list .note-row[data-note="${id}"]`);
   await expect(row.locator("mark")).toHaveText(word);
   await expect(row.locator(".note-excerpt")).toContainText(
     `Plant the ${word} <b>beds</b> early.`,
   );
   await expect(row.locator(".note-excerpt b")).toHaveCount(0);
-  await page.locator("#search").fill("");
+  await (await searchBox(page)).fill("");
   await expect(row.locator("mark")).toHaveCount(0);
 });
 
@@ -1509,7 +1521,7 @@ test("typing in search after closing a dialog never lands in the note", async ({
   const opened = await page
     .locator("#note-list .note-row.selected")
     .getAttribute("data-note");
-  await page.locator("#search").click();
+  await (await searchBox(page)).click();
   await page.keyboard.type(`k${stamp}`, { delay: 40 });
   await expect(page.locator("#search")).toHaveValue(`k${stamp}`);
   await expect(page.locator("#search")).toBeFocused();
@@ -1636,9 +1648,9 @@ test("folders collapse, stay collapsed, and take notes dragged onto them", async
   await page.reload();
   await expect(row(`${archive}/Old plan`)).toHaveCount(0);
   // Searching still lists matches inside collapsed folders.
-  await page.locator("#search").fill(`Archived`);
+  await (await searchBox(page)).fill(`Archived`);
   await expect(row(`${archive}/Old plan`)).toBeVisible();
-  await page.locator("#search").fill("");
+  await (await searchBox(page)).fill("");
   await expect(row(`${archive}/Old plan`)).toHaveCount(0);
 
   // Dragging a note onto a folder moves it, and links follow it rather
@@ -1653,7 +1665,7 @@ test("folders collapse, stay collapsed, and take notes dragged onto them", async
   await expect(page.locator("#document-title")).toHaveText(draft);
   // Without top-level notes, the top level appears as a drop zone once
   // dragging starts. Searching keeps the source and target both in view.
-  await page.locator("#search").fill(String(stamp));
+  await (await searchBox(page)).fill(String(stamp));
   await expect(page.locator("#note-list")).toHaveClass(/searching/);
   await expect(row(`${inbox}/${draft}`)).toBeVisible();
   await row(`${inbox}/${draft}`).hover();

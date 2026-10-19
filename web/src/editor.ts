@@ -4,6 +4,7 @@ import { icon } from "./icons.js";
 import {
   $,
   clearError,
+  closeSearch,
   setSaveState,
   showError,
   showToast,
@@ -225,6 +226,7 @@ async function createNote(name: string, body = "") {
   const note = await api<Note>("/api/note", "POST", { id: name, body });
   state.search = "";
   $("search").value = "";
+  closeSearch();
   await refresh();
   await openNote(note.id, { skipSave: true });
   focusEditor();

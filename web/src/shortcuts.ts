@@ -29,6 +29,8 @@ function showNotes() {
 }
 function findNotes() {
   showNotes();
+  $("app").classList.add("search-open");
+  $("search-button").setAttribute("aria-expanded", "true");
   $("search").focus();
 }
 function cycleMode() {
