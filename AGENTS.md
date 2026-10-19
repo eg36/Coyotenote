@@ -3,8 +3,9 @@
 - One Go module holds two apps: the terminal app in `cmd/coyotenote` and the web
   app in `cmd/coyotenote-web`. Both read and write vaults through
   `internal/vault`; change vault behavior there, for both apps at once.
-- The web alpha is unreleased. Do not create tags, releases or deployments for it;
-  the release workflow ships only the terminal app.
+- Releases ship both apps in one archive, built by the release workflow from a
+  `v*` tag with notes in `.github/release-notes/<tag>.md`. Create tags or releases
+  only when asked.
 - The `web` package embeds `web/index.html`, `web/logo.png` and the committed `web/assets/` bundle. Frontend edits
   require `npm run build`, followed by a Go rebuild.
 - Preserve plain Markdown vaults, the original theme IDs and named upstream palettes, atomic writes,

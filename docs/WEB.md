@@ -11,9 +11,12 @@ a copy of your vault first. Coyotenote is AI-made software, built with Claude an
 
 ## Try it locally
 
-Go **1.26+** is the only requirement to build and run. Linux amd64 matches the current
-`main` CI target. Browser assets are bundled and committed: Node and npm are **not**
-needed to run the app, and there are no CDNs or runtime third-party requests.
+Release archives on the [Releases](https://github.com/eg36/Coyotenote/releases)
+page include `coyotenote-web` next to the terminal app; run it from the unpacked
+folder. To build it instead, Go **1.26+** is the only requirement. Linux amd64 is
+the CI and release target. Browser assets are bundled and committed: Node and npm
+are **not** needed to run the app, and there are no CDNs or runtime third-party
+requests.
 
 ```sh
 git clone https://github.com/eg36/Coyotenote.git
@@ -214,8 +217,8 @@ included at `/assets/THIRD_PARTY_LICENSES.txt`.
 
 The shared Linux CI job also builds the web app and runs its smoke script, which
 checks HTTP, persistence, trash, themes, conflicts and restart recovery. A browser
-job builds the assets and runs Playwright. The release workflow ships only the
-terminal app; **the web alpha has no release, tag or deployment.**
+job builds the assets and runs Playwright. Each release archive ships both apps,
+stamped with the release version; there is no hosted deployment.
 
 ## Provenance and architecture
 
