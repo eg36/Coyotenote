@@ -727,3 +727,33 @@ test("returning to the tab picks up notes changed outside the app", async ({
   await expect(page.locator("#note-list")).toContainText("Second outside edit");
   await expect(editor).toContainText("Unsaved local words.");
 });
+
+test("keyboard shortcuts run their actions and match the help list", async ({
+  page,
+}) => {
+  await openSeed(page, "Shortcut practice.");
+  await page.keyboard.press("F1");
+  await expect(page.locator("#modal-title")).toHaveText(
+    "A few familiar shortcuts",
+  );
+  await expect(page.locator(".help-grid kbd")).toHaveCount(14);
+  await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
+  await page.keyboard.press("Escape");
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+Shift+M");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await page.keyboard.press("Alt+m");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "preview");
+  await page.keyboard.press("Alt+m");
+  await page.keyboard.press("Alt+m");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+  await page.keyboard.press("Control+Shift+F");
+  await expect(page.locator("#app")).toHaveClass(/focus-mode/);
+  await page.keyboard.press("Control+Shift+F");
+  await expect(page.locator("#app")).not.toHaveClass(/focus-mode/);
+  await page.keyboard.press("Alt+t");
+  await expect(page.locator("#modal-title")).toHaveText("Choose a theme");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+k");
+  await expect(page.locator("#search")).toBeFocused();
+});

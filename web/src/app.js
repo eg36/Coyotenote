@@ -925,23 +925,7 @@ function backlinksDialog() {
 function helpDialog() {
   const container = document.createElement("div");
   container.className = "help-grid";
-  const rows = [
-    ["Alt N / Ctrl / ⌘ N", "Create note"],
-    ["Alt K / Ctrl / ⌘ K", "Find notes"],
-    ["Ctrl / ⌘ S", "Save immediately"],
-    ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views"],
-    ["Alt T / Ctrl / ⌘ Shift T", "Choose a theme"],
-    ["Ctrl / ⌘ Shift F", "Focus mode"],
-    ["Ctrl / ⌘ Shift R", "Rename or move note"],
-    ["Ctrl / ⌘ Shift D", "Move note to trash"],
-    ["Alt ↑ / ↓", "Previous / next note"],
-    ["Ctrl / ⌘ B, I", "Bold / italic in Write"],
-    ["Ctrl / ⌘ Z", "Undo an edit"],
-    ["Ctrl / ⌘ Shift Z", "Redo an edit"],
-    ["F1", "Keyboard shortcuts"],
-    ["Escape", "Close a dialog or the notes drawer"],
-  ];
-  for (const [key, description] of rows) {
+  for (const [key, description] of shortcuts) {
     const k = document.createElement("kbd");
     k.textContent = key;
     const label = document.createElement("span");
@@ -1044,14 +1028,8 @@ $("sidebar-scrim").onclick = () => {
 $("theme-button").onclick = themeDialog;
 $("hint-theme").onclick = themeDialog;
 $("hint-help").onclick = helpDialog;
-$("focus-button").onclick = () => {
-  $("app").classList.toggle("focus-mode");
-  state.source.refresh();
-};
-$("hint-search").onclick = () => {
-  $("app").classList.add("sidebar-open");
-  $("search").focus();
-};
+$("focus-button").onclick = toggleFocus;
+$("hint-search").onclick = findNotes;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);
 for (const button of document.querySelectorAll("[data-format]")) {
@@ -1190,70 +1168,59 @@ $("preview").onclick = (event) => {
   }
 };
 
+function findNotes() {
+  $("app").classList.add("sidebar-open");
+  $("search").focus();
+}
+function cycleMode() {
+  const modes = ["write", "source", "preview", "split"];
+  setMode(modes[(modes.indexOf(state.mode) + 1) % modes.length]).catch(
+    showError,
+  );
+}
+function toggleFocus() {
+  $("app").classList.toggle("focus-mode");
+  state.source.refresh();
+}
+// One table drives both the key handler and the help dialog. Chords name
+// "mod" for Ctrl or ⌘; rows without chords are handled by the editors.
+const shortcuts = [
+  ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
+  ["Alt K / Ctrl / ⌘ K", "Find notes", ["alt+k", "mod+k"], findNotes],
+  ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],
+  ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views", ["alt+m", "mod+shift+m"], cycleMode],
+  ["Alt T / Ctrl / ⌘ Shift T", "Choose a theme", ["alt+t", "mod+shift+t"], themeDialog],
+  ["Ctrl / ⌘ Shift F", "Focus mode", ["mod+shift+f"], toggleFocus],
+  ["Ctrl / ⌘ Shift R", "Rename or move note", ["mod+shift+r"], renameDialog],
+  ["Ctrl / ⌘ Shift D", "Move note to trash", ["mod+shift+d"], deleteDialog],
+  ["Alt ↑ / ↓", "Previous / next note", ["alt+arrowup", "alt+arrowdown"],
+    (chord) => navigate(chord.endsWith("up") ? -1 : 1)],
+  ["Ctrl / ⌘ B, I", "Bold / italic in Write"],
+  ["Ctrl / ⌘ Z", "Undo an edit"],
+  ["Ctrl / ⌘ Shift Z", "Redo an edit"],
+  ["F1", "Keyboard shortcuts", ["f1"], helpDialog],
+  ["Escape", "Close a dialog or the notes drawer", ["escape"],
+    () => $("app").classList.remove("sidebar-open"), { keepDefault: true }],
+];
+const shortcutChords = new Map(
+  shortcuts.flatMap(([, , chords = [], run, options = {}]) =>
+    chords.map((chord) => [chord, { run, options }]),
+  ),
+);
 document.addEventListener("keydown", (event) => {
-  const mod = event.ctrlKey || event.metaKey,
-    key = event.key.toLowerCase();
-  if ($("modal").open) return;
-  const actions = {
-    n: () => newNoteDialog(),
-    k: () => {
-      $("app").classList.add("sidebar-open");
-      $("search").focus();
-    },
-    s: () => save().catch(showError),
-  };
-  if (mod && !event.shiftKey && actions[key]) {
-    event.preventDefault();
-    actions[key]();
-    return;
-  }
-  if (mod && event.shiftKey) {
-    const actions = {
-      m: () => {
-        const modes = ["write", "source", "preview", "split"];
-        setMode(modes[(modes.indexOf(state.mode) + 1) % 4]).catch(showError);
-      },
-      t: themeDialog,
-      f: () => {
-        $("app").classList.toggle("focus-mode");
-        state.source.refresh();
-      },
-      r: renameDialog,
-      d: deleteDialog,
-    };
-    if (actions[key]) {
-      event.preventDefault();
-      actions[key]();
-      return;
-    }
-  }
-  if (event.altKey && !mod && ["n", "k", "m", "t"].includes(key)) {
-    event.preventDefault();
-    ({
-      n: newNoteDialog,
-      k: () => {
-        $("app").classList.add("sidebar-open");
-        $("search").focus();
-      },
-      m: () => {
-        const modes = ["write", "source", "preview", "split"];
-        setMode(modes[(modes.indexOf(state.mode) + 1) % 4]).catch(showError);
-      },
-      t: themeDialog,
-    })[key]();
-    return;
-  }
-  if (event.altKey && (key === "arrowup" || key === "arrowdown")) {
-    event.preventDefault();
-    navigate(key === "arrowup" ? -1 : 1);
-  }
-  if (key === "f1") {
-    event.preventDefault();
-    helpDialog();
-  }
-  if (key === "escape") {
-    $("app").classList.remove("sidebar-open");
-  }
+  if ($("modal").open || event.isComposing) return;
+  const chord = [
+    (event.ctrlKey || event.metaKey) && "mod",
+    event.shiftKey && "shift",
+    event.altKey && "alt",
+    event.key.toLowerCase(),
+  ]
+    .filter(Boolean)
+    .join("+");
+  const shortcut = shortcutChords.get(chord);
+  if (!shortcut) return;
+  if (!shortcut.options.keepDefault) event.preventDefault();
+  shortcut.run(chord);
 });
 window.addEventListener("beforeunload", (event) => {
   storeDraft();
