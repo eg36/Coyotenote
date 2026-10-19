@@ -285,6 +285,29 @@ export function createRich(
     });
     loading = false;
   }
+  // Tiptap's task checkbox builds its transaction and then focuses the
+  // editor, which in WebKit moves the selection first and leaves that
+  // transaction stale. Toggling here, before its listener, avoids that.
+  element.addEventListener(
+    "change",
+    (event) => {
+      const box = event.target;
+      const item = box instanceof HTMLInputElement && box.type === "checkbox" && box.closest("li[data-checked]");
+      if (!item || !editor) return;
+      event.stopImmediatePropagation();
+      if (!editor.isEditable) {
+        box.checked = !box.checked;
+        return;
+      }
+      const pos = editor.view.posAtDOM(item, 0) - 1;
+      const node = editor.state.doc.nodeAt(pos);
+      if (node?.type.name !== "taskItem") return;
+      editor.view.dispatch(
+        editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: box.checked }),
+      );
+    },
+    true,
+  );
   return {
     set(body, id) {
       if (!editor || currentId !== id) {
