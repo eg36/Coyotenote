@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Web alpha
+## Web app
 
 The browser contains MIT-licensed Tiptap/ProseMirror, CodeMirror, Lezer, Marked and
 related packages. Full license texts for every package included by the JavaScript

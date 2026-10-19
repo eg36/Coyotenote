@@ -1,6 +1,5 @@
 {
-  "name": "coyotenote-web-alpha",
-  "version": "0.1.0-alpha.1",
+  "name": "coyotenote-web",
   "private": true,
   "type": "module",
   "scripts": {

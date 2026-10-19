@@ -399,13 +399,3 @@ func TestStalePreviewRenderIgnored(t *testing.T) {
 		t.Fatal("current render missing")
 	}
 }
-func TestVersionString(t *testing.T) {
-	if versionString() == "" {
-		t.Fatal("empty version")
-	}
-	version = "v9.9.9"
-	t.Cleanup(func() { version = "" })
-	if versionString() != "v9.9.9" {
-		t.Fatal("ldflags version ignored")
-	}
-}

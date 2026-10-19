@@ -155,7 +155,7 @@ input[type="search"]::-webkit-search-cancel-button {
   object-fit: contain;
   border-radius: 8px;
 }
-.alpha-label {
+.brand-label {
   display: block;
   font-size: var(--font-small);
   color: var(--muted);

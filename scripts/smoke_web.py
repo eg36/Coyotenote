@@ -15,7 +15,7 @@ def start(vault):
     process = subprocess.Popen([BINARY, '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     first = process.stdout.readline()
     address = process.stdout.readline()
-    assert first.startswith('coyotenote web-alpha'), first
+    assert first.startswith('coyotenote-web '), first
     assert address.startswith('Open http://'), address
     base = address.strip().removeprefix('Open ')
     return process, base
@@ -34,6 +34,9 @@ def stop(process):
     process.terminate()
     out, error = process.communicate(timeout=10)
     assert process.returncode == 0, (process.returncode, out, error)
+
+version=subprocess.run([BINARY,'-version'],capture_output=True,text=True,check=True).stdout
+assert version.startswith('coyotenote-web '), version
 
 with tempfile.TemporaryDirectory(prefix='coyotenote-http-smoke-') as directory:
     process, base = start(directory)

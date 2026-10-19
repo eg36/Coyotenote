@@ -1016,7 +1016,7 @@ function helpDialog() {
   note.className = "help-note";
   note.textContent =
     "Browser shortcuts such as Ctrl+T, Ctrl+P, Ctrl+R and Ctrl+W stay with your browser. Use the Shift combinations above for the web app. Local app: " +
-    (state.version || "web alpha");
+    (state.version || "dev");
   container.append(note);
   openModal("A few familiar shortcuts", container, null, {
     eyebrow: "STAY IN THE FLOW",
