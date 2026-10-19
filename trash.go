@@ -90,6 +90,7 @@ func (s *store) trash(n note) (string, error) {
 		}
 		id = joinID(folderOf(n.ID), fmt.Sprintf("%s %d", path.Base(n.ID), i))
 	}
+	s.forget(n.ID)
 	if err = renameReplace(source, destination); err != nil {
 		return "", err
 	}
@@ -129,6 +130,7 @@ func (s *store) restore(id, to string) (note, error) {
 	if err != nil {
 		return note{}, err
 	}
+	s.forget(to)
 	if err = renameReplace(source, destination); err != nil {
 		return note{}, err
 	}

@@ -22,7 +22,11 @@ const (
 	maxPasteBytes = 1 << 20
 )
 
-type note struct{ ID, Body string }
+type note struct {
+	ID, Body string
+	// Modified is the file's modification time when load read it.
+	Modified time.Time
+}
 
 // editorText gives the editor LF line endings and reports whether the file used
 // CRLF, so saves can restore it. Lone CRs (classic Mac) become LF.
@@ -64,6 +68,24 @@ type store struct {
 	// the default data directory, and the data directory for other vaults.
 	config string
 	lock   *os.File
+	// cache holds what load last read for each note ID, so unchanged files
+	// are not read and checked again. Every write through the store forgets
+	// the IDs it touches, which keeps file systems with coarse modification
+	// times from serving stale text after a quick save of the same size.
+	cache map[string]cachedNote
+}
+
+type cachedNote struct {
+	size     int64
+	modified time.Time
+	body     string
+	skip     string // why load skipped the file; empty for a usable note
+}
+
+func (s *store) forget(ids ...string) {
+	for _, id := range ids {
+		delete(s.cache, id)
+	}
 }
 
 func dataDir() (string, error) {
@@ -109,6 +131,7 @@ func (s *store) close() { _ = unlockFile(s.lock); _ = s.lock.Close() }
 func (s *store) load() ([]note, loadReport, error) {
 	var r loadReport
 	var notes []note
+	seen := make(map[string]cachedNote, len(s.cache))
 	err := filepath.WalkDir(s.dir, func(p string, e fs.DirEntry, err error) error {
 		if err != nil {
 			if p == s.dir {
@@ -152,24 +175,45 @@ func (s *store) load() ([]note, loadReport, error) {
 			r.skipped = append(r.skipped, rel+" (unsupported name)")
 			return nil
 		}
-		b, err := os.ReadFile(p)
-		switch {
-		case err != nil:
+		info, err := e.Info()
+		if err != nil {
 			r.skipped = append(r.skipped, rel+" (unreadable)")
-		case !utf8.Valid(b):
-			r.skipped = append(r.skipped, rel+" (not UTF-8)")
-		case lineCount(string(b)) > maxLines:
-			r.skipped = append(r.skipped, fmt.Sprintf("%s (%d+ lines)", rel, maxLines))
-		case hasControl(string(b)):
-			r.skipped = append(r.skipped, rel+" (control characters)")
-		default:
-			notes = append(notes, note{id, string(b)})
+			return nil
+		}
+		c, ok := s.cache[id]
+		if !ok || c.size != info.Size() || !c.modified.Equal(info.ModTime()) {
+			c = cachedNote{size: info.Size(), modified: info.ModTime()}
+			b, err := os.ReadFile(p)
+			switch {
+			case err != nil:
+				c.skip = rel + " (unreadable)"
+			case !utf8.Valid(b):
+				c.skip = rel + " (not UTF-8)"
+			case lineCount(string(b)) > maxLines:
+				c.skip = fmt.Sprintf("%s (%d+ lines)", rel, maxLines)
+			case hasControl(string(b)):
+				c.skip = rel + " (control characters)"
+			default:
+				c.body = string(b)
+			}
+			if err != nil {
+				// Read the file again next time rather than remembering a transient failure.
+				r.skipped = append(r.skipped, c.skip)
+				return nil
+			}
+		}
+		seen[id] = c
+		if c.skip != "" {
+			r.skipped = append(r.skipped, c.skip)
+		} else {
+			notes = append(notes, note{ID: id, Body: c.body, Modified: c.modified})
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, r, err
 	}
+	s.cache = seen
 	sortNotes(notes)
 	return notes, r, nil
 }
@@ -221,6 +265,7 @@ func (s *store) create(id string) (note, error) {
 	if err != nil {
 		return note{}, err
 	}
+	s.forget(id)
 	f, err := os.OpenFile(s.path(id), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if os.IsExist(err) {
 		return note{}, fmt.Errorf("%q already exists", id)
@@ -270,6 +315,7 @@ func (s *store) save(n note, body string) error {
 	if string(b) != n.Body {
 		return errors.New("note changed outside coyotenote; copy your edits before restarting")
 	}
+	s.forget(n.ID)
 	return atomicWrite(dir, filepath.Base(p), []byte(body))
 }
 
@@ -348,6 +394,7 @@ func (s *store) rename(n note, newID string) error {
 	if err != nil {
 		return err
 	}
+	s.forget(n.ID, newID)
 	if err = renameReplace(source, destination); err != nil {
 		return err
 	}

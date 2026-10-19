@@ -338,3 +338,34 @@ func TestSessionRenewsTokenForTheSameVaultOnly(t *testing.T) {
 		t.Fatalf("cross-origin session request: %d %s", w.Code, w.Body.String())
 	}
 }
+
+func TestLoadCacheNeverServesStaleText(t *testing.T) {
+	a := testApp(t)
+	n := request(t, a, "POST", "/api/note", mutation{ID: "Cached", Body: "aaa"}, 201)
+	p := a.store.path("Cached")
+	info, err := os.Stat(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A coarse file system can give a quick same-size save the same time.
+	n = request(t, a, "PUT", "/api/note", mutation{ID: "Cached", Body: "bbb", Revision: n["revision"].(string)}, 200)
+	if err = os.Chtimes(p, info.ModTime(), info.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	if got := request(t, a, "GET", "/api/note?id=Cached", nil, 200); got["body"] != "bbb" || got["revision"] != n["revision"] {
+		t.Fatalf("own save served stale text: %v", got)
+	}
+	if err = os.WriteFile(p, []byte("changed outside"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := request(t, a, "GET", "/api/note?id=Cached", nil, 200); got["body"] != "changed outside" {
+		t.Fatalf("outside change missed: %v", got)
+	}
+	if err = os.WriteFile(p, []byte{0xff}, 0600); err != nil {
+		t.Fatal(err)
+	}
+	state := request(t, a, "GET", "/api/state", nil, 200)
+	if len(state["notes"].([]any)) != 0 || !strings.Contains(fmt.Sprint(state["warnings"]), "Cached.md (not UTF-8)") {
+		t.Fatalf("invalid file was not skipped: %v", state)
+	}
+}

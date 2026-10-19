@@ -186,38 +186,61 @@ func (a *webApp) load() ([]note, loadReport, error) {
 	return allowed, report, nil
 }
 
-func views(s *store, notes []note, includeBody bool) []noteView {
-	result := make([]noteView, 0, len(notes))
-	byID := make(map[string]int)
-	for _, n := range notes {
-		text, _ := editorText(n.Body)
-		excerpt := strings.Join(strings.Fields(text), " ")
-		runes := []rune(excerpt)
-		if len(runes) > 140 {
-			excerpt = string(runes[:140]) + "…"
+func view(s *store, n note, includeBody bool) noteView {
+	text, _ := editorText(n.Body)
+	fields := strings.Fields(text)
+	excerpt := ""
+	for _, word := range fields {
+		if excerpt != "" {
+			excerpt += " "
 		}
-		modified := ""
-		if info, err := os.Stat(s.path(n.ID)); err == nil {
-			modified = info.ModTime().UTC().Format(time.RFC3339Nano)
+		excerpt += word
+		if utf8.RuneCountInString(excerpt) > 140 {
+			excerpt = string([]rune(excerpt)[:140]) + "…"
+			break
 		}
-		v := noteView{ID: n.ID, Title: displayName(n.ID, n.Body), Excerpt: excerpt, Revision: revision(n.Body), Modified: modified, Words: len(strings.Fields(text)), Backlinks: []string{}}
-		if includeBody {
-			v.Body = text
-		}
-		byID[n.ID] = len(result)
-		result = append(result, v)
 	}
+	modified := n.Modified
+	if modified.IsZero() {
+		if info, err := os.Stat(s.path(n.ID)); err == nil {
+			modified = info.ModTime()
+		}
+	}
+	v := noteView{ID: n.ID, Title: displayName(n.ID, n.Body), Excerpt: excerpt, Revision: revision(n.Body), Words: len(fields), Backlinks: []string{}}
+	if !modified.IsZero() {
+		v.Modified = modified.UTC().Format(time.RFC3339Nano)
+	}
+	if includeBody {
+		v.Body = text
+	}
+	return v
+}
+
+// eachBacklink calls visit for every note linking to another note, once
+// per pair.
+func eachBacklink(notes []note, visit func(from, to string)) {
 	resolver := newResolver(notes)
 	for _, n := range notes {
 		seen := map[string]bool{}
 		for _, l := range parseLinks(n.Body) {
 			if id, ok := resolver.resolve(l.target, n.ID); ok && id != n.ID && !seen[id] {
-				idx := byID[id]
-				result[idx].Backlinks = append(result[idx].Backlinks, n.ID)
+				visit(n.ID, id)
 				seen[id] = true
 			}
 		}
 	}
+}
+
+func views(s *store, notes []note, includeBody bool) []noteView {
+	result := make([]noteView, 0, len(notes))
+	byID := make(map[string]int)
+	for _, n := range notes {
+		byID[n.ID] = len(result)
+		result = append(result, view(s, n, includeBody))
+	}
+	eachBacklink(notes, func(from, to string) {
+		result[byID[to]].Backlinks = append(result[byID[to]].Backlinks, from)
+	})
 	return result
 }
 
@@ -227,17 +250,16 @@ func (a *webApp) current(id string, notes []note, expected string) (note, *noteV
 	}
 	for _, n := range notes {
 		if n.ID == id {
-			var view noteView
-			for _, v := range views(a.store, notes, true) {
-				if v.ID == id {
-					view = v
-					break
+			v := view(a.store, n, true)
+			eachBacklink(notes, func(from, to string) {
+				if to == id {
+					v.Backlinks = append(v.Backlinks, from)
 				}
+			})
+			if expected != "" && expected != v.Revision {
+				return n, &v, &apiError{status: 409, message: "This note changed in another tab or program. Your edits are kept locally.", current: &v}
 			}
-			if expected != "" && expected != view.Revision {
-				return n, &view, &apiError{status: 409, message: "This note changed in another tab or program. Your edits are kept locally.", current: &view}
-			}
-			return n, &view, nil
+			return n, &v, nil
 		}
 	}
 	return note{}, nil, &apiError{status: 404, message: "Note not found. It may have been moved or deleted."}
@@ -352,7 +374,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			if err = a.store.save(n, body); err != nil {
 				return &apiError{status: 409, message: err.Error()}
 			}
-			n.Body = body
+			n.Body, n.Modified = body, time.Time{}
 			for i := range notes {
 				if notes[i].ID == n.ID {
 					notes[i] = n
