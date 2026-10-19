@@ -69,7 +69,8 @@ func Tags(body string) []string {
 			}
 			continue
 		}
-		if fence != "" || strings.HasPrefix(line, "    ") || strings.HasPrefix(line, "\t") {
+		// Most lines hold no tag; skip the regular expressions for them.
+		if fence != "" || strings.HasPrefix(line, "    ") || strings.HasPrefix(line, "\t") || !strings.Contains(line, "#") {
 			continue
 		}
 		for _, m := range inlineTag.FindAllStringSubmatch(codeSpan.ReplaceAllString(line, " "), -1) {
