@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eg36/labradorite/internal/vault"
 )
@@ -419,6 +420,49 @@ func TestLoadCacheNeverServesStaleText(t *testing.T) {
 	state := request(t, a, "GET", "/api/state", nil, 200)
 	if len(state["notes"].([]any)) != 0 || !strings.Contains(fmt.Sprint(state["warnings"]), "Cached.md (not UTF-8)") {
 		t.Fatalf("invalid file was not skipped: %v", state)
+	}
+}
+
+// List entries are cached per note; any change on disk must still reach
+// excerpts, tags, dates and the backlinks of other notes.
+func TestListCacheFollowsChangesOnDisk(t *testing.T) {
+	a := testApp(t)
+	request(t, a, "POST", "/api/note", mutation{ID: "Target", Body: "# Target"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Source", Body: "# First\n\nSee [[Target]] #one"}, 201)
+	entry := func(state map[string]any, id string) map[string]any {
+		for _, raw := range state["notes"].([]any) {
+			if n := raw.(map[string]any); n["id"] == id {
+				return n
+			}
+		}
+		return nil
+	}
+	state := request(t, a, "GET", "/api/state", nil, 200)
+	if fmt.Sprint(entry(state, "Target")["backlinks"]) != "[Source]" || fmt.Sprint(entry(state, "Source")["tags"]) != "[one]" {
+		t.Fatalf("first state: %v", state["notes"])
+	}
+	p := a.store.Path("Source")
+	if err := os.WriteFile(p, []byte("# Second\n\nNo link now #two"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	state = request(t, a, "GET", "/api/state", nil, 200)
+	source := entry(state, "Source")
+	if fmt.Sprint(entry(state, "Target")["backlinks"]) != "[]" || source["excerpt"] != "# Second No link now #two" || fmt.Sprint(source["tags"]) != "[two]" {
+		t.Fatalf("outside edit not reflected: %v", state["notes"])
+	}
+	later := time.Now().Add(time.Hour)
+	if err := os.Chtimes(p, later, later); err != nil {
+		t.Fatal(err)
+	}
+	if got := entry(request(t, a, "GET", "/api/state", nil, 200), "Source")["modified"]; got != later.UTC().Format(time.RFC3339Nano) {
+		t.Fatalf("modified %v, want %v", got, later)
+	}
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
+	request(t, a, "GET", "/api/state", nil, 200)
+	if _, kept := a.derived["Source"]; kept || len(a.derived) != 1 {
+		t.Fatalf("deleted note still cached: %v", a.derived)
 	}
 }
 

@@ -49,6 +49,17 @@ type webApp struct {
 	// formerIDs are IDs this vault had at earlier paths, so the browser can
 	// find drafts it filed under them.
 	formerIDs []string
+	// derived keeps what each note's list entry and links were computed
+	// from and to, so a large vault's unchanged notes are not parsed again
+	// on every list refresh.
+	derived map[string]derivedNote
+}
+
+type derivedNote struct {
+	body     string
+	modified time.Time
+	view     noteView // without Body and Backlinks
+	links    []vault.Link
 }
 
 // vaultID names the vault at dir for the browser, which files drafts and
@@ -245,13 +256,41 @@ func view(s *vault.Store, n vault.Note, includeBody bool) noteView {
 	return v
 }
 
+// derive returns n's list entry and links, from the cache while n's text
+// and modification time are unchanged. Notes without a modification time
+// are computed fresh, since view looks theirs up on disk.
+func (a *webApp) derive(n vault.Note) derivedNote {
+	if d, ok := a.derived[n.ID]; ok && d.body == n.Body && d.modified.Equal(n.Modified) && !n.Modified.IsZero() {
+		return d
+	}
+	d := derivedNote{body: n.Body, modified: n.Modified, view: view(a.store, n, false), links: vault.ParseLinks(n.Body)}
+	if !n.Modified.IsZero() {
+		if a.derived == nil {
+			a.derived = map[string]derivedNote{}
+		}
+		a.derived[n.ID] = d
+	}
+	return d
+}
+
+// forgetDerived drops cached entries for notes no longer in the vault.
+func (a *webApp) forgetDerived(notes []vault.Note) {
+	keep := make(map[string]derivedNote, len(notes))
+	for _, n := range notes {
+		if d, ok := a.derived[n.ID]; ok {
+			keep[n.ID] = d
+		}
+	}
+	a.derived = keep
+}
+
 // eachBacklink calls visit for every note linking to another note, once
 // per pair.
-func eachBacklink(notes []vault.Note, visit func(from, to string)) {
+func (a *webApp) eachBacklink(notes []vault.Note, visit func(from, to string)) {
 	resolver := vault.NewResolver(notes)
 	for _, n := range notes {
 		seen := map[string]bool{}
-		for _, l := range vault.ParseLinks(n.Body) {
+		for _, l := range a.derive(n).links {
 			if id, ok := resolver.Resolve(l.Target, n.ID); ok && id != n.ID && !seen[id] {
 				visit(n.ID, id)
 				seen[id] = true
@@ -260,14 +299,19 @@ func eachBacklink(notes []vault.Note, visit func(from, to string)) {
 	}
 }
 
-func views(s *vault.Store, notes []vault.Note, includeBody bool) []noteView {
+func (a *webApp) views(notes []vault.Note, includeBody bool) []noteView {
 	result := make([]noteView, 0, len(notes))
 	byID := make(map[string]int)
 	for _, n := range notes {
 		byID[n.ID] = len(result)
-		result = append(result, view(s, n, includeBody))
+		v := a.derive(n).view
+		v.Backlinks = []string{}
+		if includeBody {
+			v.Body, _ = vault.EditorText(n.Body)
+		}
+		result = append(result, v)
 	}
-	eachBacklink(notes, func(from, to string) {
+	a.eachBacklink(notes, func(from, to string) {
 		result[byID[to]].Backlinks = append(result[byID[to]].Backlinks, from)
 	})
 	return result
@@ -279,8 +323,10 @@ func (a *webApp) current(id string, notes []vault.Note, expected string) (vault.
 	}
 	for _, n := range notes {
 		if n.ID == id {
-			v := view(a.store, n, true)
-			eachBacklink(notes, func(from, to string) {
+			v := a.derive(n).view
+			v.Backlinks = []string{}
+			v.Body, _ = vault.EditorText(n.Body)
+			a.eachBacklink(notes, func(from, to string) {
 				if to == id {
 					v.Backlinks = append(v.Backlinks, from)
 				}
@@ -310,7 +356,8 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if b, e := os.ReadFile(filepath.Join(a.store.Config, "theme")); e == nil && validTheme(strings.TrimSpace(string(b))) {
 			theme = strings.TrimSpace(string(b))
 		}
-		list := views(a.store, notes, false)
+		a.forgetDerived(notes)
+		list := a.views(notes, false)
 		// Notes always lists the whole vault; matches names the search hits,
 		// so a filtered sidebar never leaves stale notes behind.
 		var matches []string
@@ -412,7 +459,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		writeJSON(w, 201, views(a.store, []vault.Note{n}, true)[0])
+		writeJSON(w, 201, a.views([]vault.Note{n}, true)[0])
 		return nil
 	case "PUT /api/note", "DELETE /api/note", "POST /api/rename":
 		if in.Revision == "" {
@@ -455,7 +502,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			writeJSON(w, 200, map[string]string{"trashed": n.ID, "trashId": trashID, "warning": warning})
 		case "POST /api/rename":
 			if in.Name == n.ID {
-				writeJSON(w, 200, map[string]any{"note": views(a.store, []vault.Note{n}, true)[0], "warnings": []string{}})
+				writeJSON(w, 200, map[string]any{"note": a.views([]vault.Note{n}, true)[0], "warnings": []string{}})
 				return nil
 			}
 			if err = vault.CheckName(in.Name); err != nil {
@@ -513,7 +560,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		}
 		a.written[n.ID] = revision(body)
 		n.Body, n.Modified = body, time.Time{}
-		writeJSON(w, 200, views(a.store, []vault.Note{n}, true)[0])
+		writeJSON(w, 200, a.views([]vault.Note{n}, true)[0])
 		return nil
 	case "POST /api/restore":
 		// Name is the note's original path when its trash name has a suffix.
@@ -526,7 +573,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return &apiError{status: 409, message: err.Error()}
 		}
-		restored := views(a.store, []vault.Note{n}, true)[0]
+		restored := a.views([]vault.Note{n}, true)[0]
 		restored.Warning = warning
 		writeJSON(w, 200, restored)
 		return nil
