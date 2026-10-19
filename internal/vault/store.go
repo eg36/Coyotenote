@@ -80,10 +80,37 @@ type Store struct {
 }
 
 type cachedNote struct {
+	stamp fileStamp
+	// read is when load read the file. A file changed shortly before then
+	// may change again within the same timestamp tick, so it is read again.
+	read time.Time
+	body string
+	skip string // why load skipped the file; empty for a usable note
+}
+
+// fileStamp identifies a version of a file without reading it. Size and
+// modification time alone miss an outside write that keeps the length and
+// restores the time; the inode and change time catch it where available.
+type fileStamp struct {
 	size     int64
 	modified time.Time
-	body     string
-	skip     string // why load skipped the file; empty for a usable note
+	inode    uint64
+	changed  time.Time
+}
+
+// racyWindow covers the coarsest modification times in common use (FAT's
+// two seconds). A cached file must have been older than this when read.
+var racyWindow = 2 * time.Second
+
+func stampOf(info fs.FileInfo) fileStamp {
+	inode, changed := changeStamp(info)
+	return fileStamp{size: info.Size(), modified: info.ModTime(), inode: inode, changed: changed}
+}
+
+func (c cachedNote) current(stamp fileStamp) bool {
+	return c.stamp.size == stamp.size && c.stamp.modified.Equal(stamp.modified) &&
+		c.stamp.inode == stamp.inode && c.stamp.changed.Equal(stamp.changed) &&
+		c.read.Sub(c.stamp.modified) >= racyWindow && c.read.Sub(c.stamp.changed) >= racyWindow
 }
 
 func (s *Store) forget(ids ...string) {
@@ -184,9 +211,10 @@ func (s *Store) Load() ([]Note, LoadReport, error) {
 			r.Skipped = append(r.Skipped, rel+" (unreadable)")
 			return nil
 		}
+		stamp := stampOf(info)
 		c, ok := s.cache[id]
-		if !ok || c.size != info.Size() || !c.modified.Equal(info.ModTime()) {
-			c = cachedNote{size: info.Size(), modified: info.ModTime()}
+		if !ok || !c.current(stamp) {
+			c = cachedNote{stamp: stamp, read: time.Now()}
 			b, err := os.ReadFile(p)
 			switch {
 			case err != nil:
@@ -210,7 +238,7 @@ func (s *Store) Load() ([]Note, LoadReport, error) {
 		if c.skip != "" {
 			r.Skipped = append(r.Skipped, c.skip)
 		} else {
-			notes = append(notes, Note{ID: id, Body: c.body, Modified: c.modified})
+			notes = append(notes, Note{ID: id, Body: c.body, Modified: c.stamp.modified})
 		}
 		return nil
 	})

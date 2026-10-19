@@ -389,6 +389,16 @@ func TestLoadCacheNeverServesStaleText(t *testing.T) {
 	if got := request(t, a, "GET", "/api/note?id=Cached", nil, 200); got["body"] != "bbb" || got["revision"] != n["revision"] {
 		t.Fatalf("own save served stale text: %v", got)
 	}
+	// Another editor may keep the length and restore the time.
+	if err = os.WriteFile(p, []byte("ccc"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Chtimes(p, info.ModTime(), info.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	if got := request(t, a, "GET", "/api/note?id=Cached", nil, 200); got["body"] != "ccc" {
+		t.Fatalf("same-size outside change missed: %v", got)
+	}
 	if err = os.WriteFile(p, []byte("changed outside"), 0600); err != nil {
 		t.Fatal(err)
 	}

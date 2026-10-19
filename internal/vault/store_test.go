@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func testStore(t *testing.T) *Store {
@@ -86,4 +87,61 @@ func TestNameValidation(t *testing.T) {
 			t.Errorf("accepted %q", bad)
 		}
 	}
+}
+
+func TestLoadSeesOutsideWritesThatKeepSizeAndTime(t *testing.T) {
+	s := testStore(t)
+	writeNote(t, s, "Cached", "AAAA")
+	p := s.Path("Cached")
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(p, old, old); err != nil {
+		t.Fatal(err)
+	}
+	load := func() string {
+		t.Helper()
+		notes, _, err := s.Load()
+		if err != nil || len(notes) != 1 {
+			t.Fatalf("load: %v %v", notes, err)
+		}
+		return notes[0].Body
+	}
+	rewrite := func(body string) {
+		t.Helper()
+		info, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(p, []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err = os.Chtimes(p, info.ModTime(), info.ModTime()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A file changed just before it was read is read again, whatever the platform.
+	load()
+	rewrite("BBBB")
+	if got := load(); got != "BBBB" {
+		t.Fatalf("recent outside write missed: %q", got)
+	}
+	if inode, changed := changeStamp(mustStat(t, p)); inode == 0 && changed.IsZero() {
+		t.Skip("no change stamp on this platform")
+	}
+	// Older files are trusted by their stamp, which a restored time does not fool.
+	defer func(w time.Duration) { racyWindow = w }(racyWindow)
+	racyWindow = 0
+	load()
+	rewrite("CCCC")
+	if got := load(); got != "CCCC" {
+		t.Fatalf("outside write with restored time missed: %q", got)
+	}
+}
+
+func mustStat(t *testing.T, p string) os.FileInfo {
+	t.Helper()
+	info, err := os.Stat(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return info
 }
