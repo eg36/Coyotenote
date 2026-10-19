@@ -101,6 +101,28 @@ function setCollapsed(folder: string, collapsed: boolean) {
   else folders.delete(folder);
   storage.set(collapsedKey(), JSON.stringify([...folders]));
 }
+// The sidebar's fold button collapses every folder, or expands them all
+// when they already are; its icon and label say which it will do.
+const folderNames = () => [...new Set(state.notes.map((n) => n.id.split("/").slice(0, -1).join("/")))];
+function allCollapsed() {
+  const folders = collapsedFolders();
+  const names = folderNames();
+  return names.length > 0 && names.every((name) => folders.has(name));
+}
+function toggleAllFolders() {
+  const expand = allCollapsed();
+  storage.set(collapsedKey(), JSON.stringify(expand ? [] : folderNames()));
+  renderList();
+}
+function updateFoldButton() {
+  const expand = allCollapsed();
+  const button = $("fold-folders");
+  const label = expand ? "Expand all folders" : "Collapse all folders";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.innerHTML = icon(expand ? "expand" : "collapse");
+  button.disabled = folderNames().length === 0;
+}
 // revealNote expands the folder holding id, so the open note is listed.
 function revealNote(id: string) {
   setCollapsed(id.split("/").slice(0, -1).join("/"), false);
@@ -195,6 +217,7 @@ function fillRow(button: HTMLButtonElement, note: Note) {
 }
 function renderList() {
   renderTags();
+  updateFoldButton();
   const notes = visibleNotes();
   const list = $("note-list");
   $("note-count").textContent = String(notes.length);
@@ -324,6 +347,7 @@ export {
   revealNote,
   setupDragging,
   shortDate,
+  toggleAllFolders,
   updateBacklinks,
   visibleNotes,
 };

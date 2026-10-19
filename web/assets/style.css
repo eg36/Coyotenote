@@ -176,37 +176,30 @@ input[type="search"]::-webkit-search-cancel-button {
   object-fit: contain;
   border-radius: 7px;
 }
-.new-button,
 .search {
   height: 36px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface);
 }
-.new-button {
+/* Note actions as a row of icons above the list, as in Obsidian. */
+.sidebar-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 7px;
-  font-size: 14px;
-  font-weight: 550;
-  border-color: transparent;
-  height: 48px;
+  gap: 4px;
   flex-shrink: 0;
-  margin-bottom: 12px;
+  margin: 0 0 10px;
 }
-.new-button svg {
-  width: 18px;
-  height: 18px;
-  color: currentColor;
+.sidebar-actions .icon-button {
+  width: 36px;
+  height: 36px;
+}
+.sidebar-actions .icon-button svg {
+  width: 20px;
+  height: 20px;
 }
 .search kbd {
   margin-left: auto;
   color: var(--muted);
-}
-/* Center the plus on Lexend's capitals, where "New note" reads centered. */
-.new-button > [data-icon="plus"] {
-  transform: translateY(0.75px);
 }
 .search {
   display: flex;
@@ -1706,12 +1699,10 @@ input[type="search"]::-webkit-search-cancel-button {
   font-size: 14px;
   font-weight: 600;
 }
-.new-button,
 .primary-button {
   background: var(--accent);
   color: var(--onPill);
 }
-.new-button:hover,
 .primary-button:hover {
   background: color-mix(in srgb, var(--accent) 85%, var(--text));
   color: var(--onPill);

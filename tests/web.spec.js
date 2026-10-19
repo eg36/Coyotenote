@@ -1295,6 +1295,27 @@ test("opening a note updates the list in place, and saves still refresh its row"
   expect(await row(second).evaluate((el) => el.kept)).toBe(true);
 });
 
+test("sidebar icons start notes, open today's note, search and fold every folder", async ({ page }) => {
+  const stamp = Date.now();
+  await seed(page, `Fold A ${stamp}/One`, "First.");
+  await openSeed(page, "Second.", `Fold B ${stamp}/Two`);
+  const fold = page.locator("#fold-folders");
+  await expect(fold).toHaveAttribute("aria-label", "Collapse all folders");
+  await fold.click();
+  await expect(page.locator(`.note-row[data-note^="Fold "]`)).toHaveCount(0);
+  await expect(fold).toHaveAttribute("aria-label", "Expand all folders");
+  await fold.click();
+  await expect(page.locator(`.note-row[data-note^="Fold "]`)).toHaveCount(2);
+  await page.getByRole("button", { name: "Search all notes" }).click();
+  await expect(page.locator("#search")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "New note", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "New note" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Today's note" }).click();
+  await expect(page.locator("#note-folder")).toHaveText("Journal");
+});
+
 test("the logo goes to the start page and back returns to the note that was open", async ({ page }) => {
   const id = await openSeed(page, "Come back to me.");
   await page.evaluate(() => { window.stayed = true; });

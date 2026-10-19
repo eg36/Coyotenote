@@ -222,9 +222,17 @@
           </div>
       </header>
       <aside class="sidebar" id="sidebar" aria-label="Notes">
-        <button class="new-button" id="new-note" title="New note · Ctrl/⌘ N">
-          <span data-icon="plus"></span><span>New note</span>
-        </button>
+        <div class="sidebar-actions" role="toolbar" aria-label="Notes">
+          <button class="icon-button" id="new-note" title="New note · Ctrl/⌘ N" aria-label="New note">
+            <span data-icon="newNote"></span></button
+          ><button class="icon-button" id="today-note" title="Today's note · Alt J" aria-label="Today's note">
+            <span data-icon="calendar"></span></button
+          ><button class="icon-button" id="sidebar-search" title="Search all notes · Ctrl/⌘ Shift E" aria-label="Search all notes">
+            <span data-icon="search"></span></button
+          ><button class="icon-button" id="fold-folders" title="Collapse all folders" aria-label="Collapse all folders">
+            <span data-icon="collapse"></span>
+          </button>
+        </div>
         <details id="tag-filter" class="tag-filter" hidden>
           <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>
           <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>

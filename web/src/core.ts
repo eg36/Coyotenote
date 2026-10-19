@@ -12,6 +12,9 @@ interface AppElements {
   "export-note": HTMLButtonElement;
   "delete-note": HTMLButtonElement;
   "new-note": HTMLButtonElement;
+  "today-note": HTMLButtonElement;
+  "sidebar-search": HTMLButtonElement;
+  "fold-folders": HTMLButtonElement;
   "tag-filter": HTMLDetailsElement;
   "note-sort": HTMLSelectElement;
   "trash-button": HTMLButtonElement;

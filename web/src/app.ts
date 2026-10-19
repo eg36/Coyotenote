@@ -23,7 +23,7 @@ import {
   storeDraft,
   updateOrphans,
 } from "./drafts.js";
-import { filterTag, renderList, setupDragging, visibleNotes } from "./list.js";
+import { filterTag, renderList, setupDragging, toggleAllFolders, visibleNotes } from "./list.js";
 import {
   applyEditability,
   buildBlockMenu,
@@ -67,6 +67,7 @@ import { setupMenus } from "./menus.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
+import { dailyNote } from "./daily.js";
 import { setupTooltips } from "./tooltip.js";
 
 function isMode(value: unknown): value is AppState["mode"] {
@@ -128,6 +129,9 @@ async function initialize() {
   if (new URL(location.href).searchParams.has("new")) newNoteDialog();
 }
 $("new-note").onclick = newNoteDialog;
+$("today-note").onclick = () => dailyNote().catch(showError);
+$("sidebar-search").onclick = findNotes;
+$("fold-folders").onclick = toggleAllFolders;
 $("first-note").onclick = newNoteDialog;
 $("document-title").onclick = renameDialog;
 $("delete-note").onclick = deleteDialog;

@@ -129,6 +129,8 @@ not change the Markdown files or follow the vault to another browser.
   **All tags** in the sidebar to see each tag and its note count. Choose a tag
   to filter the note list, or choose All tags inside the list to reset it.
   In Preview, tags are buttons that apply the filter.
+- The icons above the notes list start a **new note**, open **today's note**, open
+  **search** and **collapse or expand every folder** at once.
 - Click a folder's name in the sidebar to **collapse** it. Collapsed folders show
   how many notes they hold and stay collapsed in this browser; searching still
   lists their matches, and opening a note inside one expands it.
