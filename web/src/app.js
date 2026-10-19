@@ -150,7 +150,10 @@ $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
 $("outline-button").onclick = () => toggleOutline();
 $("history-button").onclick = () => historyDialog().catch(showError);
-$("tag-filter").onchange = () => filterTag($("tag-filter").value);
+$("tag-options").onclick = (event) => {
+  const button = event.target.closest("button[data-tag]");
+  if (button) filterTag(button.dataset.tag);
+};
 $("properties-text").oninput = () => editProperties($("properties-text").value);
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);

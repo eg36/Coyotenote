@@ -107,30 +107,50 @@ function renderTags() {
       const key = tag.toLowerCase();
       counts.set(key, { tag: counts.get(key)?.tag || tag, n: (counts.get(key)?.n || 0) + 1 });
     }
-  const select = $("tag-filter");
+  const filter = $("tag-filter");
+  const list = $("tag-options");
   if (state.tag && !counts.has(state.tag.toLowerCase())) state.tag = "";
-  select.hidden = counts.size === 0;
+  filter.hidden = counts.size === 0;
   const options = [...counts.values()]
     .sort((a, b) => noteCollator.compare(a.tag, b.tag))
-    .map(({ tag, n }) => [`#${tag} · ${n}`, tag]);
-  // Rebuilding the menu while it is open would close it, so only on change.
+    .map(({ tag, n }) => [tag, n]);
+  // Keep the disclosure and its summary stable while note counts refresh.
   const signature = JSON.stringify(options);
-  if (select.dataset.signature !== signature) {
-    select.dataset.signature = signature;
-    select.replaceChildren(new Option("All tags", ""));
-    for (const [label, tag] of options) select.append(new Option(label, tag));
+  if (filter.dataset.signature !== signature) {
+    filter.dataset.signature = signature;
+    list.replaceChildren();
+    for (const [tag, n] of [["", state.notes.length], ...options]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "tag-option";
+      button.dataset.tag = tag;
+      const label = document.createElement("span");
+      label.textContent = tag ? `#${tag}` : "All tags";
+      const count = document.createElement("span");
+      count.className = "tag-count";
+      count.textContent = n.toLocaleString();
+      button.append(label, count);
+      list.append(button);
+    }
   }
-  select.value = state.tag
-    ? [...select.options].find((o) => o.value.toLowerCase() === state.tag.toLowerCase())?.value || ""
-    : "";
-  select.classList.toggle("active", Boolean(state.tag));
+  const selected = state.tag.toLowerCase();
+  for (const button of list.children)
+    button.setAttribute("aria-pressed", String(button.dataset.tag.toLowerCase() === selected));
+  // The reset count also changes when untagged notes are created/deleted.
+  list.firstElementChild.querySelector(".tag-count").textContent = state.notes.length.toLocaleString();
+  $("tag-filter-label").textContent = state.tag ? `#${counts.get(selected).tag}` : "All tags";
+  filter.classList.toggle("active", Boolean(state.tag));
 }
 // filterTag shows only notes with tag, or every note for "".
 function filterTag(tag) {
   state.tag = tag;
   renderTags();
   renderList();
-  if (tag) $("app").classList.add("sidebar-open");
+  if (tag) {
+    $("tag-filter").open = true;
+    $("app").classList.remove("sidebar-hidden", "focus-mode");
+    $("app").classList.add("sidebar-open");
+  }
 }
 function renderList() {
   renderTags();

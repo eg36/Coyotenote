@@ -1658,21 +1658,29 @@ test("tags from properties and text filter the note list", async ({ page }) => {
   await seed(page, `Tagged B ${stamp}`, `Second, about #${tag.toUpperCase()} and #other${stamp}.`);
   await seed(page, `Untagged ${stamp}`, "Third, `#${tag}` in code only.");
   await openSeed(page, `Read about #${tag} here.`, `Reader ${stamp}`);
-  const filter = page.getByLabel("Show notes with a tag");
-  await expect(filter).toBeVisible();
-  await expect(filter.locator("option", { hasText: `#${tag} · 3` })).toHaveCount(1);
-  await filter.selectOption(tag);
+  const disclosure = page.locator("#tag-filter");
+  await expect(disclosure).toBeVisible();
+  await disclosure.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(disclosure).toHaveAttribute("open", "");
+  const filter = page.getByRole("group", { name: "Show notes with a tag" });
+  const choice = filter.locator(`button[data-tag="${tag}"]`);
+  await expect(choice).toContainText(`#${tag}`);
+  await expect(choice.locator(".tag-count")).toHaveText("3");
+  await choice.click();
+  await expect(choice).toHaveAttribute("aria-pressed", "true");
+  await expect(disclosure).toHaveAttribute("open", "");
   await expect(page.locator("#note-list .note-row")).toHaveCount(3);
   await expect(page.locator("#note-list")).not.toContainText(`Untagged ${stamp}`);
-  await filter.selectOption("");
+  await filter.locator('button[data-tag=""]').click();
   await expect(page.locator("#note-list")).toContainText(`Untagged ${stamp}`);
 
   // Tags in Preview are buttons that apply the filter.
   await mode(page, "Preview");
   await page.locator("#preview .tag", { hasText: `#${tag}` }).click();
-  await expect(filter).toHaveValue(tag);
+  await expect(choice).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#note-list .note-row")).toHaveCount(3);
-  await filter.selectOption("");
+  await filter.locator('button[data-tag=""]').click();
 });
 
 test("Chromium reads the manifest that makes the app installable", async ({ page }) => {

@@ -105,7 +105,10 @@
         <button class="new-button" id="new-note">
           <span data-icon="plus"></span>New note<kbd data-keys="N">Ctrl N</kbd>
         </button>
-        <select id="tag-filter" class="tag-filter" aria-label="Show notes with a tag" hidden></select>
+        <details id="tag-filter" class="tag-filter" hidden>
+          <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>
+          <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>
+        </details>
         <div class="list-heading">
           <span class="list-title">Notes <span id="note-count">0</span></span>
           <select id="note-sort" aria-label="Sort notes">
