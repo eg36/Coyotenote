@@ -59,14 +59,12 @@ function openModal(
   $("modal-footer").hidden = hideFooter;
   modalAction = action;
   $("modal").showModal();
-  setTimeout(
-    () =>
-      (
-        $("modal-content").querySelector<HTMLElement>("input,button,select") ||
-        $("modal-close")
-      ).focus(),
-    30,
-  );
+  // Focus before the user can choose a control; a delayed callback can steal
+  // focus back from a theme search opened immediately after the dialog.
+  (
+    $("modal-content").querySelector<HTMLElement>("input,button,select") ||
+    $("modal-close")
+  ).focus();
 }
 // A dialog stays open while its action runs, so nothing can be edited or
 // opened between the request and the screen catching up with it.

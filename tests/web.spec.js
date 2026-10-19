@@ -170,6 +170,21 @@ test("the text style menu previews each style and applies it by mouse or keyboar
   await expect.poll(() => diskBody(page, id)).toMatch(/^A plain line\.\s*$/);
 });
 
+test("opening theme search immediately keeps focus after the dialog settles", async ({ page }) => {
+  await openSeed(page, "Settings focus stays where I put it.");
+  await expect(page.locator("#rich-editor")).toBeVisible();
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await page.locator("#settings-button").click();
+  await page.getByRole("button", { name: /^Theme:/ }).click();
+  const search = page.getByRole("combobox", { name: "Find a theme" });
+  await expect(search).toBeFocused();
+  await page.clock.runFor(100);
+  await expect(search).toBeFocused();
+  await search.fill("Tokyo");
+  await expect(page.locator(".theme-option")).toHaveCount(1);
+});
+
 test("all fourteen themes, preview cancel and persistence", async ({
   page,
 }) => {
