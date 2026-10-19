@@ -1492,6 +1492,8 @@ input[type="search"]::-webkit-search-cancel-button {
 .empty-art {
   width: 120px;
   height: 120px;
+  flex-shrink: 0;
+  background: url("/assets/logo-nobg.png") center / contain no-repeat;
   margin: 0 0 20px;
 }
 .empty-state h1 {
