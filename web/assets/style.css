@@ -12,6 +12,7 @@
   --pink: #ff8cc6;
   --blue: #8aadf4;
   --onPill: #1b1d24;
+  --font-small: 12px;
   --font-ui: Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --font-prose:
@@ -96,7 +97,7 @@ svg {
 }
 kbd {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--font-small);
   white-space: nowrap;
 }
 input,
@@ -149,7 +150,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .alpha-label {
   display: block;
-  font-size: 8px;
+  font-size: var(--font-small);
   color: var(--muted);
   letter-spacing: 2.5px;
   margin-top: 5px;
@@ -160,7 +161,7 @@ input[type="search"]::-webkit-search-cancel-button {
   align-items: center;
   gap: 9px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-small);
   padding: 3px 10px 19px;
 }
 .vault-label svg {
@@ -191,7 +192,7 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 9px;
   padding: 12px;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   box-shadow: 0 4px 16px #00000008;
 }
@@ -200,7 +201,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--accent);
 }
 .new-button kbd {
-  font-size: 9px;
+  font-size: var(--font-small);
   margin-left: auto;
   font-weight: 400;
   opacity: 0.7;
@@ -229,20 +230,20 @@ input[type="search"]::-webkit-search-cancel-button {
   border: 0;
   border-radius: 0;
   background: transparent;
-  font-size: 11px;
+  font-size: 14px;
   outline: none;
   padding: 2px 0;
 }
 .search kbd {
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--font-small);
 }
 .list-heading {
   display: flex;
   justify-content: space-between;
   padding: 0 9px 14px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--font-small);
   letter-spacing: 1.5px;
   font-weight: 600;
 }
@@ -264,7 +265,7 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 8px;
   padding: 13px 9px 8px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--font-small);
   font-weight: 550;
   overflow-wrap: anywhere;
 }
@@ -326,7 +327,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--accent);
 }
 .note-excerpt {
-  font-size: 10px;
+  font-size: var(--font-small);
   color: var(--muted);
   line-height: 1.6;
   display: -webkit-box;
@@ -336,13 +337,13 @@ input[type="search"]::-webkit-search-cancel-button {
   opacity: 0.85;
 }
 .note-meta {
-  font-size: 9px;
+  font-size: var(--font-small);
   color: var(--muted);
   opacity: 0.65;
 }
 .list-empty {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-small);
   line-height: 1.7;
   padding: 0 9px;
 }
@@ -357,7 +358,7 @@ input[type="search"]::-webkit-search-cancel-button {
   width: 100%;
   padding: 9px 7px;
   background: transparent;
-  font-size: 11px;
+  font-size: 14px;
 }
 .theme-button:hover {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
@@ -401,7 +402,7 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 10px;
+  font-size: var(--font-small);
   min-width: 0;
 }
 .breadcrumb-root {
@@ -446,7 +447,7 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   gap: 7px;
   align-items: center;
-  font-size: 9px;
+  font-size: var(--font-small);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -488,7 +489,7 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 15px;
 }
 .eyebrow {
-  font-size: 9px;
+  font-size: var(--font-small);
   letter-spacing: 1.7px;
   color: var(--muted);
   font-weight: 600;
@@ -539,7 +540,7 @@ input[type="search"]::-webkit-search-cancel-button {
   align-items: center;
   gap: 7px;
   padding: 8px 12px;
-  font-size: 10px;
+  font-size: 14px;
   white-space: nowrap;
   color: var(--muted);
   background: transparent;
@@ -602,7 +603,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .editor-toolbar select {
   border: 0;
   background: transparent;
-  font-size: 10px;
+  font-size: var(--font-small);
   color: var(--muted);
   width: 95px;
   flex-shrink: 0;
@@ -644,13 +645,13 @@ input[type="search"]::-webkit-search-cancel-button {
   align-items: center;
   justify-content: space-between;
   padding: 21px 28px 6px 44px;
-  font-size: 8px;
+  font-size: var(--font-small);
   letter-spacing: 1.7px;
   color: var(--muted);
   font-weight: 600;
 }
 .pane-label span {
-  font-size: 10px;
+  font-size: var(--font-small);
   letter-spacing: 0;
   font-weight: 400;
   font-family: var(--font-prose);
@@ -681,7 +682,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .prose {
   color: var(--text);
   font-family: var(--font-prose);
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.85;
   overflow-wrap: break-word;
 }
@@ -915,8 +916,8 @@ input[type="search"]::-webkit-search-cancel-button {
   font-size: 26px;
 }
 .statusbar {
-  height: 42px;
-  min-height: 42px;
+  height: 50px;
+  min-height: 50px;
   border-top: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
   padding: 0 24px;
   background: color-mix(in srgb, var(--chrome) 65%, var(--surface));
@@ -924,7 +925,7 @@ input[type="search"]::-webkit-search-cancel-button {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  font-size: 9px;
+  font-size: var(--font-small);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -952,7 +953,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--muted);
   padding: 4px;
   margin-left: 2px;
-  font-size: 9px;
+  font-size: var(--font-small);
 }
 .footer-left button svg {
   width: 12px;
@@ -964,21 +965,22 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 17px;
 }
 .footer-hints button {
+  min-height: 32px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   background: transparent;
-  font-size: 8px;
-  color: var(--muted);
-  padding: 2px 0;
+  font-size: var(--font-small);
+  color: var(--text);
+  padding: 4px 0;
 }
 .footer-hints kbd {
-  font-size: 8px;
+  font-size: var(--font-small);
   border: 1px solid currentColor;
   background: color-mix(in srgb, currentColor 10%, transparent);
   border-radius: 4px;
-  padding: 3px 5px;
-  line-height: 1;
+  padding: 4px 6px;
+  line-height: 1.2;
 }
 .key-purple {
   color: var(--accent);
@@ -997,7 +999,7 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 7px;
   align-items: center;
   letter-spacing: 1px;
-  font-size: 7px;
+  font-size: var(--font-small);
   font-weight: 600;
 }
 .local-badge .local-dot {
@@ -1050,7 +1052,7 @@ input[type="search"]::-webkit-search-cancel-button {
   font-size: 15px;
 }
 .empty-state > .eyebrow {
-  font-size: 8px;
+  font-size: var(--font-small);
   letter-spacing: 2px;
   color: var(--muted);
 }
@@ -1082,7 +1084,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--onPill);
   padding: 11px 16px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: var(--font-small);
   font-weight: 650;
 }
 .primary-button:hover {
@@ -1100,7 +1102,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .empty-footnote {
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--font-small);
   opacity: 0.65;
   margin-top: 20px;
 }
@@ -1110,7 +1112,7 @@ input[type="search"]::-webkit-search-cancel-button {
   border-radius: 7px;
   padding: 10px 15px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--font-small);
 }
 .banner {
   display: flex;
@@ -1118,7 +1120,7 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 10px;
   padding: 12px 24px;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: var(--font-small);
   border-bottom: 1px solid var(--line);
   background: var(--chrome);
   flex-shrink: 0;
@@ -1133,7 +1135,7 @@ input[type="search"]::-webkit-search-cancel-button {
   line-height: 1.6;
 }
 .banner button {
-  font-size: 10px;
+  font-size: var(--font-small);
   color: var(--accent);
   background: transparent;
   padding: 4px 7px;
@@ -1173,7 +1175,7 @@ dialog header {
   gap: 10px;
 }
 dialog .eyebrow {
-  font-size: 8px;
+  font-size: var(--font-small);
   letter-spacing: 1.7px;
   color: var(--accent);
 }
@@ -1193,7 +1195,7 @@ dialog input:not([type="checkbox"]) {
 }
 .field-label {
   display: block;
-  font-size: 10px;
+  font-size: var(--font-small);
   color: var(--muted);
   margin-bottom: 8px;
 }
@@ -1207,7 +1209,7 @@ input + .dialog-description {
   margin-top: 12px;
 }
 .modal-error {
-  font-size: 11px;
+  font-size: var(--font-small);
   line-height: 1.7;
   color: var(--danger);
   margin-top: 13px;
@@ -1293,17 +1295,17 @@ dialog.theme-picker::backdrop {
 }
 .theme-option strong {
   flex: 1;
-  font-size: 11px;
+  font-size: var(--font-small);
   font-weight: 450;
 }
 .theme-option small {
-  font-size: 10px;
+  font-size: var(--font-small);
   color: var(--muted);
 }
 .theme-key-hints {
   margin: 10px 0 0;
   text-align: center;
-  font-size: 10px;
+  font-size: var(--font-small);
   color: var(--muted);
 }
 .theme-empty {
@@ -1340,17 +1342,17 @@ dialog.theme-picker::backdrop {
 }
 .help-grid kbd {
   color: var(--accent);
-  font-size: 10px;
+  font-size: var(--font-small);
 }
 .help-grid span {
-  font-size: 11px;
+  font-size: var(--font-small);
   color: var(--muted);
 }
 .help-note {
   grid-column: 1/-1;
   border-top: 1px solid var(--line);
   padding-top: 18px;
-  font-size: 10px;
+  font-size: var(--font-small);
   line-height: 1.8;
   color: var(--muted);
   margin: 10px 0 0;
@@ -1369,7 +1371,7 @@ dialog.theme-picker::backdrop {
   align-items: center;
   gap: 15px;
   padding: 13px 16px;
-  font-size: 11px;
+  font-size: var(--font-small);
   line-height: 1.6;
   z-index: 100;
   overflow-wrap: anywhere;
@@ -1377,7 +1379,7 @@ dialog.theme-picker::backdrop {
 .toast #undo-trash {
   background: transparent;
   color: var(--accent);
-  font-size: 11px;
+  font-size: var(--font-small);
   font-weight: 600;
 }
 .toast > .icon-button {
@@ -1402,9 +1404,6 @@ dialog.theme-picker::backdrop {
 }
 .focus-mode .topbar {
   opacity: 0.7;
-}
-.focus-mode .footer-hints {
-  display: none;
 }
 .focus-mode .document-actions {
   opacity: 0.6;
@@ -1479,6 +1478,10 @@ dialog.theme-picker::backdrop {
     padding-right: 13px;
   }
   .footer-hints {
+    display: flex;
+    gap: 0;
+  }
+  .footer-hints button:not(:last-child) {
     display: none;
   }
   .document-heading {
@@ -1491,7 +1494,9 @@ dialog.theme-picker::backdrop {
     font-size: 23px;
   }
   .view-switch button {
-    padding: 8px 9px;
+    flex: 1;
+    justify-content: center;
+    padding: 8px 6px;
     gap: 5px;
   }
   .topbar {
@@ -1505,7 +1510,7 @@ dialog.theme-picker::backdrop {
     gap: 5px;
   }
   .save-state {
-    font-size: 8px;
+    font-size: var(--font-small);
   }
   .sidebar-hidden,
   .focus-mode {
@@ -1607,7 +1612,7 @@ dialog.theme-picker::backdrop {
   .save-state {
     max-width: 110px;
     overflow: hidden;
-    font-size: 8px;
+    font-size: var(--font-small);
   }
   .save-state #save-label {
     white-space: nowrap;
@@ -1650,20 +1655,21 @@ dialog.theme-picker::backdrop {
     height: 15px;
   }
   .eyebrow {
-    font-size: 8px;
+    font-size: var(--font-small);
   }
   .view-switch {
     width: 100%;
     justify-content: space-between;
   }
   .view-switch button {
-    padding: 8px 9px;
-    font-size: 9px;
+    flex: 1;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 14px;
     gap: 5px;
   }
   .view-switch svg {
-    width: 12px;
-    height: 12px;
+    display: none;
   }
   .writing-bar {
     padding-bottom: 18px;
@@ -1686,7 +1692,7 @@ dialog.theme-picker::backdrop {
     padding: 24px 23px 70px;
   }
   .prose {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1.85;
   }
   .prose h1 {
@@ -1721,7 +1727,7 @@ dialog.theme-picker::backdrop {
   }
   .statusbar {
     padding: 0 13px;
-    font-size: 8px;
+    font-size: var(--font-small);
     gap: 8px;
   }
   .footer-left {
@@ -1741,10 +1747,10 @@ dialog.theme-picker::backdrop {
     gap: 11px 12px;
   }
   .help-grid kbd {
-    font-size: 8px;
+    font-size: var(--font-small);
   }
   .help-grid span {
-    font-size: 10px;
+    font-size: var(--font-small);
   }
   .empty-state {
     padding: 25px;
@@ -1758,17 +1764,17 @@ dialog.theme-picker::backdrop {
     margin-bottom: 30px;
   }
   .empty-state > .eyebrow {
-    font-size: 7px;
+    font-size: var(--font-small);
   }
   .banner {
     padding: 10px 15px;
   }
   .banner button {
-    font-size: 9px;
+    font-size: var(--font-small);
   }
   .toast {
     width: calc(100% - 28px);
-    font-size: 10px;
+    font-size: var(--font-small);
   }
   .document-actions #previous-note,
   .document-actions #next-note {

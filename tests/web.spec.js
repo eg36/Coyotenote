@@ -355,6 +355,28 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
   expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(389);
 });
 
+test("readable footer shortcuts stay available across screen sizes and focus mode", async ({ page }) => {
+  await openSeed(page, "# Readable writing\n\nA little room to think.");
+  for (const width of [1440, 1100, 900, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const help = page.locator("#hint-help");
+    await expect(help).toBeVisible();
+    await expect(help).toHaveCSS("font-size", "12px");
+    await expect(help.locator("kbd")).toHaveCSS("font-size", "12px");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    const box = await help.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    await help.click();
+    await expect(page.locator("#modal")).toContainText("Browser shortcuts");
+    await page.keyboard.press("Escape");
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.locator("#focus-button").click();
+  await expect(page.locator("#hint-help")).toBeVisible();
+  await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "18px");
+});
+
 test("keyboard hints, source editing, selection undo and no runtime remote requests", async ({
   page,
 }) => {

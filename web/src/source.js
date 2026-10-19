@@ -101,7 +101,7 @@ export function createSource(element, { onChange, getNotes, onWarning }) {
       },
       ".cm-scroller": {
         fontFamily: "var(--font-mono)",
-        fontSize: "14px",
+        fontSize: "16px",
         lineHeight: "1.85",
         overflow: "auto",
       },
