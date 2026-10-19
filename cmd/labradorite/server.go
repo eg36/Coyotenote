@@ -24,9 +24,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/eg36/coyotenote/internal/vault"
-	"github.com/eg36/coyotenote/internal/version"
-	"github.com/eg36/coyotenote/web"
+	"github.com/eg36/labradorite/internal/vault"
+	"github.com/eg36/labradorite/internal/version"
+	"github.com/eg36/labradorite/web"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
@@ -45,6 +45,16 @@ type webApp struct {
 	// written holds the revision of what this process last saved to each
 	// note, so a save can tell when the file changed outside the app.
 	written map[string]string
+	// formerIDs are IDs this vault had at earlier paths, so the browser can
+	// find drafts it filed under them.
+	formerIDs []string
+}
+
+// vaultID names the vault at dir for the browser, which files drafts and
+// settings under it.
+func vaultID(dir string) string {
+	absolute, _ := filepath.Abs(dir)
+	return revision(absolute)[:16]
 }
 
 // versionInterval is how often a note's history keeps a version while
@@ -130,7 +140,7 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeError(w, &apiError{status: 403, message: "cross-origin requests are not allowed"})
 			return
 		}
-		if r.Method != "GET" && r.Header.Get("X-Coyote-Token") != a.token {
+		if r.Method != "GET" && r.Header.Get("X-Labradorite-Token") != a.token {
 			writeError(w, &apiError{status: 403, message: "missing local session token; reload the page"})
 			return
 		}
@@ -150,6 +160,10 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(data)
 		return
+	}
+	if r.URL.Path == "/favicon.ico" {
+		// Browsers ask for this before reading the page's icon links.
+		r.URL.Path = "/assets/favicon.ico"
 	}
 	if r.URL.Path == "/assets/logo.png" {
 		data, _ := web.Files.ReadFile("logo.png")
@@ -282,8 +296,7 @@ func (a *webApp) current(id string, notes []vault.Note, expected string) (vault.
 func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 	if r.Method+" "+r.URL.Path == "GET /api/session" {
 		// A cheap way for an open tab to renew its token after a restart.
-		absolute, _ := filepath.Abs(a.store.Dir)
-		writeJSON(w, 200, map[string]string{"token": a.token, "vaultId": revision(absolute)[:16]})
+		writeJSON(w, 200, map[string]string{"token": a.token, "vaultId": vaultID(a.store.Dir)})
 		return nil
 	}
 	notes, report, err := a.load()
@@ -325,7 +338,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.Recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.Recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": revision(absolute)[:16], "token": a.token, "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/note" || route == "GET /api/export" {

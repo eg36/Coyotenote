@@ -1,4 +1,4 @@
-module github.com/eg36/coyotenote
+module github.com/eg36/labradorite
 
 go 1.26.0
 

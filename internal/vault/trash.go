@@ -89,7 +89,7 @@ func (s *Store) Trash(n Note) (string, error) {
 		return "", err
 	}
 	if string(body) != n.Body {
-		return "", errors.New("note changed outside coyotenote; restart before deleting")
+		return "", errors.New("note changed outside Labradorite; restart before deleting")
 	}
 	trash, err := s.trashDirectory(true)
 	if err != nil {

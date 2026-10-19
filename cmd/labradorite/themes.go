@@ -10,10 +10,10 @@ type themeSpec struct {
 
 // Palettes are mapped to application roles; sources are linked in README.md.
 // Preserve dark/light IDs so existing settings keep working.
-// Coyote palettes use neutral web surfaces and blue accents; named upstream palettes are unchanged.
+// Labradorite palettes use neutral web surfaces and blue accents; named upstream palettes are unchanged.
 var themes = []themeSpec{
-	{"dark", "Coyote Dark", false, palette{"#212121", "#181818", "#ECECEC", "#ABABAB", "#76B9ED", "#8BC8F3", "#8EC49A", "#D4B778", "#F28B82", "#424242", "#8EBDE8", "#76B9ED", "#15202B"}},
-	{"light", "Coyote Light", true, palette{"#FFFFFF", "#F7F5F4", "#202123", "#63666B", "#2374AB", "#176D9C", "#397C58", "#916419", "#B54040", "#D9DDE3", "#347BA9", "#236EA0", "#FFFFFF"}},
+	{"dark", "Labradorite Dark", false, palette{"#212121", "#181818", "#ECECEC", "#ABABAB", "#76B9ED", "#8BC8F3", "#8EC49A", "#D4B778", "#F28B82", "#424242", "#8EBDE8", "#76B9ED", "#15202B"}},
+	{"light", "Labradorite Light", true, palette{"#FFFFFF", "#F7F5F4", "#202123", "#63666B", "#2374AB", "#176D9C", "#397C58", "#916419", "#B54040", "#D9DDE3", "#347BA9", "#236EA0", "#FFFFFF"}},
 	{"ayu-dark", "Ayu Dark", false, palette{"#10141C", "#0D1017", "#BFBDB6", "#92959C", "#E6B450", "#95E6CB", "#AAD94C", "#FFB454", "#F07178", "#273747", "#D2A6FF", "#59C2FF", "#0B0E14"}},
 	{"ayu-mirage", "Ayu Mirage", false, palette{"#242936", "#1F2430", "#CCCAC2", "#959CA9", "#FFCC66", "#95E6CB", "#D5FF80", "#FFD173", "#F28779", "#3D4A66", "#DFBFFF", "#73D0FF", "#1F2430"}},
 	{"ayu-light", "Ayu Light", true, palette{"#FCFCFC", "#F3F4F5", "#5C6166", "#707A85", "#A66700", "#167D7F", "#527A00", "#976000", "#C43D37", "#CFD8E3", "#8959A8", "#1674A5", "#FFFFFF"}},

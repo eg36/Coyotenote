@@ -29,7 +29,7 @@ Theme colors are adapted to application UI roles from the original projects:
 - Dracula — https://github.com/dracula/dracula-theme
 - Gruvbox — https://github.com/morhetz/gruvbox
 
-The app keeps the 12 named palettes' values; its Coyote Light/Dark use
+The app keeps the 12 named palettes' values; its Labradorite Light/Dark use
 neutral surfaces with blue accents. These themes are community adaptations; they
 do not imply endorsement by their original authors. The existing Go module
 dependencies retain their own licenses.

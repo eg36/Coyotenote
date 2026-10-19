@@ -29,13 +29,13 @@ async function api(path, method = "GET", data, retried = false) {
               "Content-Type": file
                 ? data.type || "application/octet-stream"
                 : "application/json",
-              "X-Coyote-Token": state.token,
+              "X-Labradorite-Token": state.token,
             },
       body: data === undefined || file ? data : JSON.stringify(data),
     });
   } catch {
     throw new Error(
-      "Cannot reach the local app. Keep this tab open, restart coyotenote, then retry.",
+      "Cannot reach the local app. Keep this tab open, restart Labradorite, then retry.",
     );
   }
   let result;

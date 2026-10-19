@@ -137,20 +137,20 @@ func DataDir() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return filepath.Join(base, "coyotenote"), nil
+		return filepath.Join(base, "labradorite"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 	if runtime.GOOS == "darwin" {
-		return filepath.Join(home, "Library", "Application Support", "coyotenote"), nil
+		return filepath.Join(home, "Library", "Application Support", "labradorite"), nil
 	}
 	base := os.Getenv("XDG_DATA_HOME")
 	if !filepath.IsAbs(base) {
 		base = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(base, "coyotenote"), nil
+	return filepath.Join(base, "labradorite"), nil
 }
 func Open(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -162,7 +162,7 @@ func Open(dir string) (*Store, error) {
 	}
 	if err = lockFile(f); err != nil {
 		f.Close()
-		return nil, fmt.Errorf("notes are open in another coyotenote instance: %w", err)
+		return nil, fmt.Errorf("notes are open in another Labradorite instance: %w", err)
 	}
 	return &Store{Dir: dir, Config: dir, lock: f}, nil
 }
@@ -368,7 +368,7 @@ func (s *Store) Save(n Note, body string) error {
 		return err
 	}
 	if string(b) != n.Body {
-		return errors.New("note changed outside coyotenote; copy your edits before restarting")
+		return errors.New("note changed outside Labradorite; copy your edits before restarting")
 	}
 	s.forget(n.ID)
 	return AtomicWrite(dir, filepath.Base(p), []byte(body))
@@ -384,7 +384,7 @@ func (s *Store) WriteRecovery(n Note, body string) (string, error) {
 		return filepath.Join(s.Dir, name), nil
 	}
 	// CreateTemp opens exclusively (0600), so a planted symlink cannot redirect it.
-	f, e := os.CreateTemp("", "coyotenote-recovery-"+flat+"-*.md")
+	f, e := os.CreateTemp("", "labradorite-recovery-"+flat+"-*.md")
 	if e == nil {
 		if _, e = f.Write([]byte(body)); e == nil {
 			e = f.Sync()
@@ -434,7 +434,7 @@ func (s *Store) Rename(n Note, newID string) error {
 		return err
 	}
 	if string(body) != n.Body {
-		return errors.New("note changed outside coyotenote; restart before renaming")
+		return errors.New("note changed outside Labradorite; restart before renaming")
 	}
 	destination := s.Path(newID)
 	if err = requireAbsent(destination); err != nil {

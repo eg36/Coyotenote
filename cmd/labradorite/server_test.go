@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/eg36/coyotenote/internal/vault"
+	"github.com/eg36/labradorite/internal/vault"
 )
 
 func testApp(t *testing.T) *webApp {
@@ -42,7 +42,7 @@ func request(t *testing.T, a *webApp, method, path string, body any, want int) m
 		text = string(b)
 	}
 	r := httptest.NewRequest(method, "http://127.0.0.1:4280"+path, strings.NewReader(text))
-	r.Header.Set("X-Coyote-Token", a.token)
+	r.Header.Set("X-Labradorite-Token", a.token)
 	r.Header.Set("Origin", "http://127.0.0.1:4280")
 	w := httptest.NewRecorder()
 	a.ServeHTTP(w, r)
@@ -259,7 +259,7 @@ func TestLocalRequestProtection(t *testing.T) {
 	} {
 		r := httptest.NewRequest("POST", "http://"+tc.host+"/api/note", strings.NewReader(`{"id":"Bad"}`))
 		r.Header.Set("Origin", tc.origin)
-		r.Header.Set("X-Coyote-Token", tc.token)
+		r.Header.Set("X-Labradorite-Token", tc.token)
 		w := httptest.NewRecorder()
 		a.ServeHTTP(w, r)
 		if w.Code != http.StatusForbidden {
@@ -269,7 +269,7 @@ func TestLocalRequestProtection(t *testing.T) {
 	r := httptest.NewRequest("GET", "http://127.0.0.1:4280/", nil)
 	w := httptest.NewRecorder()
 	a.ServeHTTP(w, r)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), "coyotenote") || !strings.Contains(w.Header().Get("Content-Security-Policy"), "frame-ancestors 'none'") {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "Labradorite") || !strings.Contains(w.Header().Get("Content-Security-Policy"), "frame-ancestors 'none'") {
 		t.Fatal("index or protection headers missing")
 	}
 }
@@ -495,7 +495,7 @@ func TestSearchSnippetsShowTheMatchingPassage(t *testing.T) {
 func raw(t *testing.T, a *webApp, method, path string, body []byte, headers map[string]string) *httptest.ResponseRecorder {
 	t.Helper()
 	r := httptest.NewRequest(method, "http://127.0.0.1:4280"+path, bytes.NewReader(body))
-	r.Header.Set("X-Coyote-Token", a.token)
+	r.Header.Set("X-Labradorite-Token", a.token)
 	r.Header.Set("Origin", "http://127.0.0.1:4280")
 	for k, v := range headers {
 		r.Header.Set(k, v)
@@ -518,7 +518,7 @@ func TestAttachmentsUploadServeAndRender(t *testing.T) {
 			t.Errorf("%s accepted: %d", name, w.Code)
 		}
 	}
-	if w := raw(t, a, "POST", "/api/attachment?name=a.png", tinyPNG, map[string]string{"X-Coyote-Token": "wrong"}); w.Code != 403 {
+	if w := raw(t, a, "POST", "/api/attachment?name=a.png", tinyPNG, map[string]string{"X-Labradorite-Token": "wrong"}); w.Code != 403 {
 		t.Errorf("upload without the token: %d", w.Code)
 	}
 
@@ -627,13 +627,16 @@ func TestManifestMakesTheAppInstallable(t *testing.T) {
 	if w.Code != 200 || w.Header().Get("Content-Type") != "application/manifest+json" || json.Unmarshal(w.Body.Bytes(), &manifest) != nil {
 		t.Fatalf("manifest: %d %s", w.Code, w.Header().Get("Content-Type"))
 	}
-	if manifest.Name != "coyotenote" || len(manifest.Icons) != 2 {
+	if manifest.Name != "Labradorite" || len(manifest.Icons) != 2 {
 		t.Fatalf("manifest %+v", manifest)
 	}
 	for _, icon := range manifest.Icons {
 		if w := raw(t, a, "GET", icon.Src, nil, nil); w.Code != 200 || w.Header().Get("Content-Type") != "image/png" {
 			t.Errorf("%s: %d", icon.Src, w.Code)
 		}
+	}
+	if w := raw(t, a, "GET", "/favicon.ico", nil, nil); w.Code != 200 || w.Header().Get("Content-Type") != "image/vnd.microsoft.icon" {
+		t.Errorf("favicon: %d %s", w.Code, w.Header().Get("Content-Type"))
 	}
 	if page := raw(t, a, "GET", "/", nil, nil).Body.String(); !strings.Contains(page, `rel="manifest" href="/assets/manifest.webmanifest"`) {
 		t.Error("page does not link the manifest")
@@ -671,7 +674,7 @@ func TestEmptyTrashDeletesForGood(t *testing.T) {
 		t.Fatalf("trash %v", notes)
 	}
 	request(t, a, "POST", "/api/restore", mutation{ID: "One"}, 409)
-	if w := raw(t, a, "POST", "/api/trash/empty", []byte("{}"), map[string]string{"X-Coyote-Token": "wrong"}); w.Code != 403 {
+	if w := raw(t, a, "POST", "/api/trash/empty", []byte("{}"), map[string]string{"X-Labradorite-Token": "wrong"}); w.Code != 403 {
 		t.Fatalf("emptied without the token: %d", w.Code)
 	}
 }

@@ -1,6 +1,6 @@
-# Coyotenote
+# Labradorite
 
-- One Go module holds the app: a local web server in `cmd/coyotenote` with its
+- One Go module holds the app: a local web server in `cmd/labradorite` with its
   browser frontend in `web/`. It reads and writes vaults through
   `internal/vault`; keep vault rules (paths, locking, writes, trash, links) there.
 - Releases ship the app in one archive, built by the release workflow from a
@@ -13,7 +13,7 @@
 - Give each feature, fix or independent change its own focused commit. Include
   its relevant tests and generated bundle changes; do not bundle unrelated work.
 - Validate relevant changes with `go vet ./...`, `go test -race ./...`,
-  `go build -o bin/coyotenote ./cmd/coyotenote`, `python3 scripts/smoke_web.py`, and browser tests
+  `go build -o bin/labradorite ./cmd/labradorite`, `python3 scripts/smoke_web.py`, and browser tests
   (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm test` when using an installed
   Chromium). Keep the committed bundle current.
 - Preserve the human author/committer identity. Every commit made or amended by

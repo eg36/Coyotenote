@@ -12,7 +12,7 @@ import (
 
 // Earlier versions of each note are kept in .history/<note path>.md/, one
 // file per version named by the UTC time it was kept. The folder is hidden,
-// so neither coyotenote nor Obsidian lists it as notes.
+// so neither Labradorite nor Obsidian lists it as notes.
 const (
 	historyDir = ".history"
 	// MaxVersions is how many versions are kept per note; older ones go.

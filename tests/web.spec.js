@@ -4,7 +4,7 @@ let counter = 0;
 async function seed(page, name, body = "") {
   const bootstrap = await (await page.request.get("/api/state")).json();
   const response = await page.request.post("/api/note", {
-    headers: { "X-Coyote-Token": bootstrap.token },
+    headers: { "X-Labradorite-Token": bootstrap.token },
     data: { id: name, body },
   });
   expect(response.ok(), await response.text()).toBeTruthy();
@@ -188,7 +188,7 @@ test("theme keyboard preview wraps, cancels and commits a filtered selection", a
   await openSeed(page, "# Keyboard themes");
   await page.locator("#theme-button").click();
   const search = page.getByRole("combobox", { name: "Find a theme" });
-  await search.fill("Coyote Dark");
+  await search.fill("Labradorite Dark");
   await search.press("Enter");
   await expect(page.locator("#modal")).not.toBeVisible();
   await page.locator("#theme-button").click();
@@ -516,7 +516,7 @@ test("drafts of notes renamed or deleted elsewhere can still be recovered", asyn
   const renamed = `Orphan ${stamp}`,
     deleted = `Doomed ${stamp}`;
   const token = (await (await page.request.get("/api/state")).json()).token;
-  const headers = { "X-Coyote-Token": token };
+  const headers = { "X-Labradorite-Token": token };
   page.on("dialog", (dialog) => dialog.accept());
   await seed(page, deleted, "Saved doomed base.");
   await openSeed(page, "Saved orphan base.", renamed);
@@ -854,7 +854,7 @@ test("restoring an old draft cannot overwrite a newer disk revision", async ({
     await page.request.get("/api/note?id=" + encodeURIComponent(id))
   ).json();
   const response = await page.request.put("/api/note", {
-    headers: { "X-Coyote-Token": bootstrap.token },
+    headers: { "X-Labradorite-Token": bootstrap.token },
     data: { id, body: "Newer disk version.", revision: note.revision },
   });
   expect(response.ok()).toBeTruthy();
@@ -1041,7 +1041,7 @@ test("autosave renews a stale token after a restart but never across vaults", as
     const request = route.request();
     if (request.method() !== "PUT" || stale-- <= 0) return route.continue();
     return route.continue({
-      headers: { ...request.headers(), "x-coyote-token": "stale-token" },
+      headers: { ...request.headers(), "x-labradorite-token": "stale-token" },
     });
   });
   const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
@@ -1085,7 +1085,7 @@ test("a server restarted on another vault cannot take over an open tab", async (
   await page.route("**/api/note", (route) => {
     const request = route.request();
     if (!switched || request.method() === "GET") return route.continue();
-    if (request.headers()["x-coyote-token"] === "new-vault-token") leaked = true;
+    if (request.headers()["x-labradorite-token"] === "new-vault-token") leaked = true;
     return route.fulfill({ status: 403, json: { error: "Invalid token" } });
   });
   switched = true;
@@ -1110,7 +1110,7 @@ test("returning to the tab picks up notes changed outside the app", async ({
     await page.request.get("/api/note?id=" + encodeURIComponent(id))
   ).json();
   await page.request.put("/api/note", {
-    headers: { "X-Coyote-Token": bootstrap.token },
+    headers: { "X-Labradorite-Token": bootstrap.token },
     data: { id, body: "Edited elsewhere.", revision: note.revision },
   });
   const outside = `Outside ${Date.now()}`;
@@ -1134,7 +1134,7 @@ test("returning to the tab picks up notes changed outside the app", async ({
     await page.request.get("/api/note?id=" + encodeURIComponent(id))
   ).json();
   await page.request.put("/api/note", {
-    headers: { "X-Coyote-Token": bootstrap.token },
+    headers: { "X-Labradorite-Token": bootstrap.token },
     data: { id, body: "Second outside edit.", revision: latest.revision },
   });
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
@@ -1466,7 +1466,7 @@ test("images show in Write and Preview, keep their Markdown, and can be pasted, 
 }) => {
   const bootstrap = await (await page.request.get("/api/state")).json();
   const upload = await page.request.post("/api/attachment?name=diagram.png", {
-    headers: { "X-Coyote-Token": bootstrap.token, "Content-Type": "image/png" },
+    headers: { "X-Labradorite-Token": bootstrap.token, "Content-Type": "image/png" },
     data: pixel,
   });
   const { path } = await upload.json();
@@ -1629,7 +1629,7 @@ test("Chromium reads the manifest that makes the app installable", async ({ page
   const manifest = await client.send("Page.getAppManifest");
   expect(manifest.url).toMatch(/\/assets\/manifest\.webmanifest$/);
   expect(manifest.errors).toEqual([]);
-  expect(JSON.parse(manifest.data)).toMatchObject({ name: "coyotenote", display: "standalone" });
+  expect(JSON.parse(manifest.data)).toMatchObject({ name: "Labradorite", display: "standalone" });
 });
 
 test("the trash can be emptied for good after a confirmation", async ({ page }) => {
@@ -1657,4 +1657,25 @@ test("the trash can be emptied for good after a confirmation", async ({ page }) 
   await page.locator("#trash-button").click();
   await expect(page.locator(".trash-list")).toContainText("The trash is empty.");
   await expect(page.getByRole("button", { name: "Delete all…" })).toHaveCount(0);
+});
+
+test("drafts kept under the vault's former ID are found after its folder moves", async ({ page }) => {
+  const id = await openSeed(page, "Saved before the move.");
+  const vaultId = (await (await page.request.get("/api/state")).json()).vaultId;
+  // Pretend the vault used to live at another path, with a draft filed there.
+  await page.evaluate(({ id }) => {
+    localStorage.setItem(
+      `coyote-draft:formerid12345678:oldtab:${id}`,
+      JSON.stringify({ id, body: "Unsaved from the old folder.", base: "x", time: Date.now() }),
+    );
+  }, { id });
+  await page.route("**/api/state*", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    await route.fulfill({ response, json: { ...data, formerVaultIds: ["formerid12345678"] } });
+  });
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("coyote-draft:")));
+  expect(keys).toEqual([`coyote-draft:${vaultId}:oldtab:${id}`]);
 });

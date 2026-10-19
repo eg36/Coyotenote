@@ -9,13 +9,13 @@ import tempfile
 import urllib.error
 import urllib.request
 
-BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'coyotenote')
+BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'labradorite')
 
 def start(vault):
     process = subprocess.Popen([BINARY, '-no-browser', '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     first = process.stdout.readline()
     address = process.stdout.readline()
-    assert first.startswith('coyotenote '), first
+    assert first.startswith('labradorite '), first
     assert address.startswith('Open http://'), address
     base = address.strip().removeprefix('Open ')
     return process, base
@@ -25,7 +25,7 @@ def call(base, route, method='GET', body=None, token=None):
     if body is not None:
         headers['Content-Type'] = 'application/json'
     if token:
-        headers['X-Coyote-Token'] = token
+        headers['X-Labradorite-Token'] = token
     request = urllib.request.Request(base + route, data=None if body is None else json.dumps(body).encode(), method=method, headers=headers)
     with urllib.request.urlopen(request, timeout=10) as response:
         return json.load(response)
@@ -36,9 +36,9 @@ def stop(process):
     assert process.returncode == 0, (process.returncode, out, error)
 
 version=subprocess.run([BINARY,'-version'],capture_output=True,text=True,check=True).stdout
-assert version.startswith('coyotenote '), version
+assert version.startswith('labradorite '), version
 
-with tempfile.TemporaryDirectory(prefix='coyotenote-http-smoke-') as directory:
+with tempfile.TemporaryDirectory(prefix='labradorite-http-smoke-') as directory:
     process, base = start(directory)
     try:
         state = call(base, '/api/state')

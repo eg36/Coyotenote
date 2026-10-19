@@ -27,7 +27,7 @@ async function historyDialog() {
   description.className = "dialog-description";
   description.textContent = versions.length
     ? "Earlier versions of this note. Changed lines are marked against the current text."
-    : "No earlier versions yet. coyotenote keeps one when a save replaces text, at most every 10 minutes, and always when the file was changed outside the app.";
+    : "No earlier versions yet. Labradorite keeps one when a save replaces text, at most every 10 minutes, and always when the file was changed outside the app.";
   container.append(description);
   if (!versions.length) {
     openModal("Note history", container, null, { hideFooter: true });

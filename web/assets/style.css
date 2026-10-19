@@ -806,7 +806,7 @@ input[type="search"]::-webkit-search-cancel-button {
   font-size: 14px;
   color: var(--muted);
 }
-/* Match the writing surface: Coyote themes keep headings neutral. */
+/* Match the writing surface: Labradorite themes keep headings neutral. */
 :is([data-theme="light"], [data-theme="dark"]) .block-option .block-sample {
   color: var(--text);
 }
@@ -1029,7 +1029,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--warn);
   font-weight: 700;
 }
-/* Keep Coyote writing surfaces neutral; named palettes retain their colors. */
+/* Keep Labradorite writing surfaces neutral; named palettes retain their colors. */
 :is([data-theme="light"], [data-theme="dark"]) .prose :is(h1, h2, h3, h4, h5, h6, strong) {
   color: var(--text);
 }

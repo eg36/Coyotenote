@@ -9,31 +9,32 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 
-	"github.com/eg36/coyotenote/internal/vault"
-	"github.com/eg36/coyotenote/internal/version"
+	"github.com/eg36/labradorite/internal/vault"
+	"github.com/eg36/labradorite/internal/version"
 )
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "coyotenote:", err)
+		fmt.Fprintln(os.Stderr, "labradorite:", err)
 		os.Exit(1)
 	}
 }
 
 func run() error {
 	listen := flag.String("listen", "127.0.0.1:4280", "loopback address for the local web app")
-	dir := flag.String("data-dir", "", "isolated notes/settings directory (default: coyotenote-web in application data)")
+	dir := flag.String("data-dir", "", "isolated notes/settings directory (default: labradorite in application data)")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	noBrowser := flag.Bool("no-browser", false, "do not open the app in a browser on start")
 	flag.Usage = func() {
-		fmt.Fprintln(flag.CommandLine.Output(), "usage: coyotenote [flags] [vault]\n\nOpens a folder of Markdown notes in your browser, served only to this computer.")
+		fmt.Fprintln(flag.CommandLine.Output(), "usage: labradorite [flags] [vault]\n\nOpens a folder of Markdown notes in your browser, served only to this computer.")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("coyotenote", version.String())
+		fmt.Println("labradorite", version.String())
 		return nil
 	}
 	if flag.NArg() > 1 || flag.NArg() == 1 && *dir != "" {
@@ -43,8 +44,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	// The default vault keeps the name it had beside the terminal app.
-	config += "-web"
+	// Labradorite was called coyotenote, whose web app kept its notes and
+	// settings in coyotenote-web. That folder moves over once.
+	former := filepath.Join(filepath.Dir(config), "coyotenote-web")
+	if *dir == "" {
+		if moved, err := moveFormerData(former, config); moved {
+			fmt.Printf("Moved your notes from %s to %s\n", former, config)
+		} else if err != nil {
+			fmt.Printf("Keeping your notes in %s: %v\n", former, err)
+			config = former
+		}
+	}
 	vaultDir := flag.Arg(0)
 	if vaultDir == "" {
 		vaultDir = *dir
@@ -58,7 +68,7 @@ func run() error {
 	}
 	ip := net.ParseIP(host)
 	if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-		return errors.New("coyotenote must listen on a loopback address, such as 127.0.0.1:4280")
+		return errors.New("labradorite must listen on a loopback address, such as 127.0.0.1:4280")
 	}
 	s, err := vault.Open(vaultDir)
 	if err != nil {
@@ -76,9 +86,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if same(vaultDir, config) {
+		// Browser drafts are filed under the vault's ID, which follows its path.
+		app.formerIDs = []string{vaultID(former)}
+	}
 	listener, err := net.Listen("tcp", *listen)
 	if err != nil {
-		return fmt.Errorf("%w; is coyotenote already running? Choose another address with -listen", err)
+		return fmt.Errorf("%w; is Labradorite already running? Choose another address with -listen", err)
 	}
 	app.port = listener.Addr().(*net.TCPAddr).Port
 	server := &http.Server{Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
@@ -99,7 +113,7 @@ func run() error {
 		case <-done:
 		}
 	}()
-	fmt.Printf("coyotenote %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", version.String(), listener.Addr(), s.Dir)
+	fmt.Printf("labradorite %s\nOpen http://%s\nVault: %s\nPress Ctrl+C to stop.\n", version.String(), listener.Addr(), s.Dir)
 	if !*noBrowser {
 		openBrowser("http://" + listener.Addr().String())
 	}
@@ -114,4 +128,34 @@ func run() error {
 		return nil
 	}
 	return err
+}
+
+// moveFormerData moves the former data folder to its new name, unless the
+// new one exists already or there is nothing to move. A coyotenote still
+// running on the former folder keeps it where it is.
+func moveFormerData(from, to string) (bool, error) {
+	if _, err := os.Lstat(to); err == nil {
+		return false, nil
+	}
+	if info, err := os.Lstat(from); err != nil || !info.IsDir() {
+		return false, nil
+	}
+	old, err := vault.Open(from)
+	if err != nil {
+		return false, fmt.Errorf("stop coyotenote first so it can move: %w", err)
+	}
+	old.Close()
+	if err := os.MkdirAll(filepath.Dir(to), 0700); err != nil {
+		return false, err
+	}
+	if err := os.Rename(from, to); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func same(a, b string) bool {
+	a, errA := filepath.Abs(a)
+	b, errB := filepath.Abs(b)
+	return errA == nil && errB == nil && a == b
 }

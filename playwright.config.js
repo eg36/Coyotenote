@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-const vault = mkdtempSync(join(tmpdir(), "coyotenote-web-test-"));
+const vault = mkdtempSync(join(tmpdir(), "labradorite-test-"));
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -24,7 +24,7 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: `./bin/coyotenote -no-browser -listen 127.0.0.1:4289 -data-dir "${vault}"`,
+    command: `./bin/labradorite -no-browser -listen 127.0.0.1:4289 -data-dir "${vault}"`,
     url: "http://127.0.0.1:4289/healthz",
     reuseExistingServer: false,
     timeout: 15000,

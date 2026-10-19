@@ -53,7 +53,27 @@ async function liveTabs() {
     return new Set();
   }
 }
+// Storage keys keep the app's former name, coyote, so drafts and settings
+// from before the rename stay where the app looks for them.
 const draftPrefix = () => `coyote-draft:${state.vaultId}:`;
+// adoptFormerVault refiles drafts and settings kept under IDs the vault had
+// at an earlier path, before its folder moved, under its current ID.
+function adoptFormerVault(formerIds = []) {
+  for (const former of formerIds) {
+    if (former === state.vaultId) continue;
+    const keys = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    } catch {}
+    for (const key of keys) {
+      const match = /^(coyote-[a-z]+):([^:]+)(:.*)?$/.exec(key || "");
+      if (!match || match[2] !== former) continue;
+      const renamed = `${match[1]}:${state.vaultId}${match[3] || ""}`;
+      if (storage.get(renamed) === null) storage.set(renamed, storage.get(key));
+      storage.remove(key);
+    }
+  }
+}
 const draftKey = () => `${draftPrefix()}${tabId}:${state.current?.id}`;
 // releaseDraft forgets a stored draft unless another open tab wrote it:
 // that tab still has those edits and the draft is its only stored copy.
@@ -212,6 +232,7 @@ function draftsDialog() {
 }
 
 export {
+  adoptFormerVault,
   claimTab,
   downloadDraft,
   draftKey,

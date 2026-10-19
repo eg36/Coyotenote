@@ -29,7 +29,7 @@ var imageTypes = map[string]string{
 }
 
 // ImageType is the media type of an image file name, or "" for files that
-// coyotenote does not show.
+// Labradorite does not show.
 func ImageType(name string) string { return imageTypes[strings.ToLower(path.Ext(name))] }
 
 // regularFile reports whether the vault-relative path rel names a regular

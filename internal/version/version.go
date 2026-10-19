@@ -1,11 +1,11 @@
-// Package version reports the version coyotenote prints. A release stamps it
+// Package version reports the version Labradorite prints. A release stamps it
 // into the binary, so the app always says which release it came from.
 package version
 
 import "runtime/debug"
 
 // Version is set at build time with
-// -ldflags "-X github.com/eg36/coyotenote/internal/version.Version=v1.2.3".
+// -ldflags "-X github.com/eg36/labradorite/internal/version.Version=v1.2.3".
 var Version = ""
 
 // String returns Version, else the module version recorded by go install,

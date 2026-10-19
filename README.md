@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="logo.png" alt="coyotenote logo: a fox holding a note" width="280">
+  <img src="logo.png" alt="Labradorite logo: a Labrador made of labradorite" width="320">
 </p>
 
-# coyotenote
+# Labradorite
 
-> **AI-made software.** coyotenote was built with AI coding agents, Claude and
+> **AI-made software.** Labradorite was built with AI coding agents, Claude and
 > Codex, as an experiment to test what modern agents can do. It is not intended
 > to be used as a notepad for daily use; keep important notes in a tool built for
 > that.
@@ -17,21 +17,21 @@ only. No account, cloud service or network access.
 ## Install
 
 Download the Linux amd64 archive from
-[Releases](https://github.com/eg36/Coyotenote/releases) and check it against
+[Releases](https://github.com/eg36/Labradorite/releases) and check it against
 `SHA256SUMS`. Or build it with Go 1.26+:
 
 ```sh
-git clone git@github.com:eg36/Coyotenote.git
-cd Coyotenote
-go build -o bin/coyotenote ./cmd/coyotenote
+git clone git@github.com:eg36/Labradorite.git
+cd Labradorite
+go build -o bin/labradorite ./cmd/labradorite
 ```
 
 ## Usage
 
 ```sh
-coyotenote              # notes in ~/.local/share/coyotenote-web, at http://127.0.0.1:4280
-coyotenote ~/Notes      # any folder as a vault
-coyotenote -version
+labradorite              # notes in ~/.local/share/labradorite, at http://127.0.0.1:4280
+labradorite ~/Notes      # any folder as a vault
+labradorite -version
 ```
 
 The app opens in your default browser (pass `-no-browser` to only print the
@@ -39,6 +39,10 @@ address). Keep the process running while you write; Ctrl+C stops it. Chrome
 and Edge can install it as an app with its own window. See
 [docs/GUIDE.md](docs/GUIDE.md) for everything the app does, its shortcuts and
 its safety rules.
+
+Labradorite was called **coyotenote** until v0.6.1. On its first start it
+moves the old default folder, `~/.local/share/coyotenote-web`, to
+`~/.local/share/labradorite`, and browser drafts carry over.
 
 ## Notes and links
 
@@ -55,7 +59,7 @@ its safety rules.
 - Autosave runs 400 ms after you stop typing, with atomic writes.
 - Notes changed by another program are never overwritten; you compare and choose.
 - Unsaved edits are kept as browser drafts until they reach the file.
-- Files coyotenote can't edit safely (over 10,000 lines or 4 MiB, not UTF-8,
+- Files Labradorite can't edit safely (over 10,000 lines or 4 MiB, not UTF-8,
   symlinks, control characters) are skipped with a warning and left untouched.
 - Line endings (LF or CRLF) and tabs are preserved.
 
@@ -63,7 +67,7 @@ its safety rules.
 
 ```sh
 go vet ./... && go test -race ./...
-go build -o bin/coyotenote ./cmd/coyotenote && python3 scripts/smoke_web.py
+go build -o bin/labradorite ./cmd/labradorite && python3 scripts/smoke_web.py
 npm ci && npm run build && npm test     # browser tests, Node 24+
 ```
 

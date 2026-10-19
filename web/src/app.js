@@ -12,12 +12,14 @@ import {
 } from "./core.js";
 import { api } from "./api.js";
 import {
+  adoptFormerVault,
   claimTab,
   downloadDraft,
   draftKey,
   draftsDialog,
   releaseDraft,
   storeDraft,
+  updateOrphans,
 } from "./drafts.js";
 import { filterTag, renderList, setupDragging, visibleNotes } from "./list.js";
 import {
@@ -79,6 +81,8 @@ async function initialize() {
   setupOutline();
   setupDragging();
   const data = await refresh();
+  adoptFormerVault(data.formerVaultIds);
+  updateOrphans();
   state.version = data.version;
   const requested =
     new URL(location.href).searchParams.get("note") ||
@@ -350,10 +354,10 @@ async function syncFromDisk() {
       const next = visibleNotes()[0] || state.notes[0];
       if (next) await openNote(next.id, { skipSave: true, pushBack: false });
       else emptyNotebook();
-      showToast(`“${id}” was moved or deleted outside coyotenote.`);
+      showToast(`“${id}” was moved or deleted outside Labradorite.`);
     } else if (summary.revision !== before) {
       await openNote(id, { skipSave: true, pushBack: false });
-      showToast("Reloaded changes made outside coyotenote.");
+      showToast("Reloaded changes made outside Labradorite.");
     }
   } catch {
     // An unreachable server is reported by the next save instead.

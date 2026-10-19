@@ -1,26 +1,26 @@
-# coyotenote guide
+# Labradorite guide
 
 A local-first writing space in your browser, powered by Go. Notes are plain
 Markdown files in a folder you choose. The app offers a WYSIWYG editor, Markdown
 source, rendered preview, split view, body search, focus mode, 14 themes and
 browser draft recovery.
 
-**coyotenote is experimental** AI-made software, built with Claude and Codex.
+**Labradorite is experimental** AI-made software, built with Claude and Codex.
 Keep important notes backed up and try it on a copy of your vault first.
 
 ## Run it
 
-Release archives on the [Releases](https://github.com/eg36/Coyotenote/releases)
-page hold the `coyotenote` binary; run it from the unpacked folder. To build it
+Release archives on the [Releases](https://github.com/eg36/Labradorite/releases)
+page hold the `labradorite` binary; run it from the unpacked folder. To build it
 instead, Go **1.26+** is the only requirement. Browser assets are bundled and
 committed: Node and npm are **not** needed to run the app, and there are no CDNs
 or runtime third-party requests.
 
 ```sh
-git clone git@github.com:eg36/Coyotenote.git
-cd Coyotenote
-go build -o bin/coyotenote ./cmd/coyotenote
-./bin/coyotenote
+git clone git@github.com:eg36/Labradorite.git
+cd Labradorite
+go build -o bin/labradorite ./cmd/labradorite
+./bin/labradorite
 ```
 
 The app opens **http://127.0.0.1:4280** in your default browser; a current
@@ -29,18 +29,18 @@ vault path too. Keep that process running while
 using the app; Ctrl+C stops it. There is no account, cloud sync, telemetry,
 database or remote access mode.
 
-**Install it as an app:** Chrome and Edge offer *Install coyotenote* in the
+**Install it as an app:** Chrome and Edge offer *Install Labradorite* in the
 address bar or menu. The installed app opens in its own window with the
-coyotenote icon; it still needs `coyotenote` running to work.
+Labradorite icon; it still needs `labradorite` running to work.
 
 ### Choose a vault
 
 ```sh
-./bin/coyotenote ~/Notes                  # open an existing Markdown vault
-./bin/coyotenote -data-dir /tmp/test      # isolated notes AND theme settings
-./bin/coyotenote -listen 127.0.0.1:4390   # choose another local port
-./bin/coyotenote -no-browser              # print the address without opening it
-./bin/coyotenote -version
+./bin/labradorite ~/Notes                  # open an existing Markdown vault
+./bin/labradorite -data-dir /tmp/test      # isolated notes AND theme settings
+./bin/labradorite -listen 127.0.0.1:4390   # choose another local port
+./bin/labradorite -no-browser              # print the address without opening it
+./bin/labradorite -version
 ```
 
 Flags go **before** the optional vault path. The app only accepts loopback
@@ -49,13 +49,19 @@ and server must be on the same computer. This is not a hosted multi-user service
 
 The default vault is:
 
-- Linux: `$XDG_DATA_HOME/coyotenote-web`, or `~/.local/share/coyotenote-web`.
-- macOS: `~/Library/Application Support/coyotenote-web` (not verified on a Mac).
-- Windows: `%AppData%\coyotenote-web` (not tested).
+- Linux: `$XDG_DATA_HOME/labradorite`, or `~/.local/share/labradorite`.
+- macOS: `~/Library/Application Support/labradorite` (not verified on a Mac).
+- Windows: `%AppData%\labradorite` (not tested).
+
+Labradorite was called coyotenote until v0.6.1. On its first start without
+`-data-dir`, it moves the former default folder (`coyotenote-web` beside the new
+one) to the new name, once. If coyotenote is still running on that folder, or
+the move fails, it keeps using the old folder and says so. Browser drafts kept
+under the old folder's path are refiled under the new one.
 
 With an explicit vault, theme preferences stay in that default data directory.
 `-data-dir` keeps both notes and settings in the given directory. Only one
-coyotenote process can open a vault at a time; a second one is refused.
+Labradorite process can open a vault at a time; a second one is refused.
 
 ## Writing
 
@@ -110,7 +116,7 @@ are at least 12 px.
   from linked-note navigation. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
 - Click the theme name for all **14 palettes**, including the four Catppuccin
-  flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Coyote Light/Dark use
+  flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
   neutral white/charcoal surfaces and blue accents. Hover, focus or ↑/↓ previews a
   theme; Enter/click keeps it; Escape restores the previous theme.
 - The focus button hides the sidebar. Small screens get a slide-out notes drawer,
@@ -195,7 +201,7 @@ requires confirmation. There is no automatic merge.
 **Note history** (the clock button, or "Show note history" in Quick open) lists
 earlier versions of the open note. Before a save replaces a note's text, the
 replaced text is kept as a version: at most every 10 minutes while you type, and
-always when the file was changed outside the app since coyotenote last wrote it.
+always when the file was changed outside the app since Labradorite last wrote it.
 The dialog shows each version with the lines that differ from the current text
 marked; **Restore this version** brings it back and keeps the text it replaces as
 another version. Versions live in the vault's hidden `.history/` folder (up to 50
@@ -261,7 +267,7 @@ npm run build                       # refresh committed, embedded assets
 
 go vet ./...
 go test -race ./...
-go build -o bin/coyotenote ./cmd/coyotenote
+go build -o bin/labradorite ./cmd/labradorite
 python3 scripts/smoke_web.py        # Python 3, standard library only
 
 npx playwright install --with-deps chromium
@@ -287,7 +293,7 @@ deployment.
 
 ## Manual test checklist
 
-1. Build `bin/coyotenote` and run it with a temporary vault.
+1. Build `bin/labradorite` and run it with a temporary vault.
 2. Open the printed localhost URL and create a note in Write mode.
 3. Use headings, bold, a checklist and a table. Switch to Markdown, Preview and Split.
 4. Reload and confirm saved content; try changing the theme and reload again.
