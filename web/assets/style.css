@@ -2365,6 +2365,9 @@ dialog.danger #modal-submit {
   .note-heading {
     margin-left: 4px;
   }
+  .app-title {
+    margin-left: 4px;
+  }
   .note-folder,
   .document-actions {
     display: none;
