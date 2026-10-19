@@ -1,7 +1,50 @@
 // Shared page state, browser storage and the status messages every part uses.
 import type { AppError, AppState } from "./types.js";
 
+interface AppElements {
+  "brand": HTMLAnchorElement;
+  "document-title": HTMLButtonElement;
+  "search": HTMLInputElement;
+  "previous-note": HTMLButtonElement;
+  "next-note": HTMLButtonElement;
+  "outline-button": HTMLButtonElement;
+  "history-button": HTMLButtonElement;
+  "export-note": HTMLButtonElement;
+  "delete-note": HTMLButtonElement;
+  "new-note": HTMLButtonElement;
+  "tag-filter": HTMLDetailsElement;
+  "note-sort": HTMLSelectElement;
+  "trash-button": HTMLButtonElement;
+  "theme-button": HTMLButtonElement;
+  "sidebar-scrim": HTMLButtonElement;
+  "sidebar-toggle": HTMLButtonElement;
+  "history-back": HTMLButtonElement;
+  "block-type": HTMLButtonElement;
+  "compare-versions": HTMLButtonElement;
+  "retry-save": HTMLButtonElement;
+  "download-draft": HTMLButtonElement;
+  "recovery-copy": HTMLButtonElement;
+  "reload-note": HTMLButtonElement;
+  "restore-draft": HTMLButtonElement;
+  "discard-draft": HTMLButtonElement;
+  "review-drafts": HTMLButtonElement;
+  "properties-text": HTMLTextAreaElement;
+  "first-note": HTMLButtonElement;
+  "backlinks-button": HTMLButtonElement;
+  "hint-open": HTMLButtonElement;
+  "hint-help": HTMLButtonElement;
+  "app-version": HTMLAnchorElement;
+  "modal": HTMLDialogElement;
+  "modal-close": HTMLButtonElement;
+  "modal-cancel": HTMLButtonElement;
+  "modal-submit": HTMLButtonElement;
+  "undo-trash": HTMLButtonElement;
+  "toast-close": HTMLButtonElement;
+}
+
 // These IDs belong to the static app shell, which is loaded before app.js.
+function $<K extends keyof AppElements>(id: K): AppElements[K];
+function $(id: string): HTMLElement;
 function $(id: string): HTMLElement {
   const element = document.getElementById(id);
   if (!element) throw new Error(`Missing app element: ${id}`);

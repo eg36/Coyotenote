@@ -1,3 +1,4 @@
+import type { AppState, Note, StateResponse } from "./types.js";
 // The open note: editing, saving, loading, views and the formatting toolbar.
 import { icon } from "./icons.js";
 import {
@@ -18,7 +19,7 @@ import { renderOutline } from "./outline.js";
 import { splitFrontMatter, withProperties } from "./frontmatter.js";
 import { addImages, fileUrl, imageFiles } from "./attachments.js";
 
-function changed(body, from) {
+function changed(body: string, from: "source" | "rich" | "properties") {
   if (state.restoring || !state.current || state.body === body) return;
   state.edits++;
   state.body = body;
@@ -33,14 +34,14 @@ function changed(body, from) {
     state.dirty ? "dirty" : "saved",
     state.dirty ? "Unsaved changes" : "All changes saved",
   );
-  if (from !== "source") state.source.replace(body);
+  if (from !== "source") state.source?.replace(body);
   schedulePreview();
   renderOutline();
   clearTimeout(state.saveTimer);
   if (state.dirty)
     state.saveTimer = setTimeout(() => save().catch(showError), 400);
 }
-async function save() {
+async function save(): Promise<void> {
   clearTimeout(state.saveTimer);
   if (state.saving) {
     await state.saving;
@@ -54,7 +55,7 @@ async function save() {
   setSaveState("saving", "Saving…");
   state.savingBody = body;
   state.saving = (async () => {
-    const { warning, ...note } = await api("/api/note", "PUT", {
+    const { warning, ...note } = await api<Note>("/api/note", "PUT", {
       id,
       body,
       revision: base,
@@ -87,7 +88,7 @@ async function save() {
 }
 async function refresh({ query = state.search } = {}) {
   const generation = ++state.searchGeneration;
-  const data = await api(
+  const data = await api<StateResponse>(
     "/api/state" + (query ? "?q=" + encodeURIComponent(query) : ""),
   );
   if (generation !== state.searchGeneration) return;
@@ -129,13 +130,13 @@ async function refresh({ query = state.search } = {}) {
   return data;
 }
 async function openNote(
-  id,
+  id: string,
   { skipSave = false, pushBack = true, heading = "" } = {},
 ) {
   const generation = ++state.openGeneration;
   if (!skipSave) await save();
   const edits = state.edits;
-  const note = await api("/api/note?id=" + encodeURIComponent(id));
+  const note = await api<Note>("/api/note?id=" + encodeURIComponent(id));
   if (generation !== state.openGeneration) return;
   // Typing while the note loaded changed the note still open. Save it
   // first, and stay on it if that fails or if it is the note being loaded,
@@ -157,9 +158,9 @@ async function openNote(
   clearError();
   $("draft-banner").hidden = !state.pendingDraft;
   state.restoring = true;
-  state.source.replace(state.body, { reset: true });
+  state.source?.replace(state.body, { reset: true });
   state.restoring = false;
-  $("document-title").textContent = note.title.split("/").pop();
+  $("document-title").textContent = note.title.split("/").pop() || note.title;
   $("note-folder").textContent = note.id.split("/").slice(0, -1).join(" / ");
   $("document-head").hidden = false;
   $("document-actions").hidden = false;
@@ -215,9 +216,9 @@ function emptyNotebook() {
   renderList();
   updateOrphans();
 }
-async function createNote(name, body = "") {
+async function createNote(name: string, body = "") {
   await save();
-  const note = await api("/api/note", "POST", { id: name, body });
+  const note = await api<Note>("/api/note", "POST", { id: name, body });
   state.search = "";
   $("search").value = "";
   await refresh();
@@ -228,7 +229,7 @@ async function createNote(name, body = "") {
 async function findInNote() {
   if (!state.current || state.pendingDraft || state.busy) return;
   if (!["source", "split"].includes(state.mode)) await setMode("source");
-  state.source.find();
+  state.source?.find();
 }
 async function ensureRich() {
   if (!state.rich) {
@@ -245,7 +246,7 @@ async function ensureRich() {
   }
   return state.rich;
 }
-async function setMode(mode, { focus = true } = {}) {
+async function setMode(mode: AppState["mode"], { focus = true } = {}) {
   if (!state.current) {
     state.mode = mode;
     return;
@@ -273,12 +274,12 @@ async function setMode(mode, { focus = true } = {}) {
   $("preview-pane").hidden = !["preview", "split"].includes(mode);
   $("editor-toolbar").hidden = mode !== "write";
   closeBlockMenu();
-  for (const button of document.querySelectorAll("[data-mode]")) {
+  for (const button of document.querySelectorAll<HTMLElement>("[data-mode]")) {
     button.classList.toggle("active", button.dataset.mode === mode);
     button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
   }
   applyEditability();
-  state.source.refresh();
+  state.source?.refresh();
   if (mode === "preview" || mode === "split") schedulePreview(true);
   if (focus) focusEditor();
   updateToolbar();
@@ -294,7 +295,7 @@ function showProperties() {
   box.style.height = box.scrollHeight + 2 + "px";
 }
 // editProperties rebuilds the note from the edited properties and its text.
-function editProperties(inner) {
+function editProperties(inner: string) {
   const text = state.body.slice(state.front?.prefix.length || 0);
   const body = withProperties(state.front, inner, text);
   state.front = splitFrontMatter(body);
@@ -304,16 +305,16 @@ function editProperties(inner) {
 function applyEditability() {
   const editable = !state.pendingDraft && !state.busy;
   $("properties-text").readOnly = !editable;
-  state.source.readOnly(!editable);
+  state.source?.readOnly(!editable);
   state.rich?.editor?.setEditable(editable, false);
-  for (const button of document.querySelectorAll("[data-format], #block-type"))
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format], #block-type"))
     button.disabled = !editable;
 }
 function focusEditor() {
   if (!state.current) return;
   if (state.mode === "write") state.rich?.focus();
   else if (state.mode === "source" || state.mode === "split")
-    state.source.focus();
+    state.source?.focus();
 }
 function schedulePreview(immediate = false) {
   clearTimeout(state.previewTimer);
@@ -324,7 +325,7 @@ function schedulePreview(immediate = false) {
   state.previewTimer = setTimeout(
     async () => {
       try {
-        const data = await api("/api/render", "POST", { id, body });
+        const data = await api<{ html: string }>("/api/render", "POST", { id, body });
         if (generation === state.previewGeneration) {
           $("preview").innerHTML = data.html;
           decorateLinks();
@@ -332,7 +333,7 @@ function schedulePreview(immediate = false) {
         }
       } catch (error) {
         if (generation === state.previewGeneration)
-          showToast("Preview unavailable: " + error.message);
+          showToast("Preview unavailable: " + (error instanceof Error ? error.message : String(error)));
       }
     },
     immediate ? 0 : 180,
@@ -342,7 +343,7 @@ function decorateLinks() {
   $("preview")
     .querySelectorAll("a")
     .forEach((a) => {
-      const u = new URL(a.getAttribute("href"), location.href);
+      const u = new URL(a.getAttribute("href") || "", location.href);
       if (u.origin !== location.origin) {
         a.target = "_blank";
         a.rel = "noopener noreferrer";
@@ -351,16 +352,19 @@ function decorateLinks() {
 }
 // decorateTags turns #tags in rendered text into buttons that filter the
 // note list, leaving code and links alone.
-function decorateTags(root) {
+function decorateTags(root: HTMLElement) {
   const tag = /(^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
-      node.parentElement.closest("code, pre, a, h1, h2, h3, h4, h5, h6")
+      node.parentElement?.closest("code, pre, a, h1, h2, h3, h4, h5, h6")
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT,
   });
   const nodes = [];
-  while (walker.nextNode()) if (walker.currentNode.data.includes("#")) nodes.push(walker.currentNode);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node instanceof Text && node.data.includes("#")) nodes.push(node);
+  }
   for (const node of nodes) {
     const parts = [];
     let last = 0;
@@ -384,9 +388,9 @@ function decorateTags(root) {
 function updateToolbar() {
   const editor = state.rich?.editor;
   if (!editor) return;
-  for (const button of document.querySelectorAll("[data-format]")) {
+  for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
     const format = button.dataset.format;
-    button.setAttribute("aria-pressed", String(editor.isActive(format)));
+    button.setAttribute("aria-pressed", String(editor.isActive(format || "")));
   }
   let block = "p";
   for (let level = 1; level <= 6; level++)
@@ -394,8 +398,8 @@ function updateToolbar() {
   state.block = block;
   $("block-type-label").textContent = blockStyles.find(
     ([value]) => value === block,
-  )[1];
-  for (const option of $("block-menu").children)
+  )?.[1] || "Normal text";
+  for (const option of $("block-menu").querySelectorAll<HTMLElement>("[data-block]"))
     option.setAttribute("aria-selected", String(option.dataset.block === block));
 }
 // The text style menu previews each style in its own type and names the
@@ -438,22 +442,22 @@ function closeBlockMenu(refocus = false) {
   $("block-type").setAttribute("aria-expanded", "false");
   if (refocus) state.rich?.focus();
 }
-function highlightBlock(index) {
+function highlightBlock(index: number) {
   const options = [...$("block-menu").children];
   index = (index + options.length) % options.length;
   options.forEach((option, i) => option.classList.toggle("active", i === index));
   $("block-menu").setAttribute("aria-activedescendant", options[index].id);
   options[index].scrollIntoView({ block: "nearest" });
 }
-function chooseBlock(value) {
+function chooseBlock(value: string) {
   closeBlockMenu();
   state.rich?.command("block", value);
 }
-function scrollToHeading(heading) {
+function scrollToHeading(heading: string) {
   const root = state.mode === "write" ? $("rich-editor") : $("preview");
   const target = [...root.querySelectorAll("h1,h2,h3,h4,h5,h6")].find(
     (el) =>
-      el.textContent.toLowerCase() === heading.toLowerCase() ||
+      (el.textContent || "").toLowerCase() === heading.toLowerCase() ||
       el.id === "h-" + heading.toLowerCase().replace(/ /g, "-"),
   );
   target?.scrollIntoView({ block: "start", behavior: "smooth" });
