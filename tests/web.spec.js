@@ -1211,6 +1211,23 @@ test("a server restarted on another vault cannot take over an open tab", async (
   expect(await diskBody(page, id)).toContain("Same text in both vaults.");
 });
 
+test("choosing Markdown while Write is still loading keeps Markdown and stays editable", async ({ page }) => {
+  const id = `Slow write ${Date.now()}`;
+  await seed(page, id, "Loaded slowly.");
+  // The Write editor's code arrives late, as on a slow machine.
+  await page.route("**/assets/chunk-*.js", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue();
+  });
+  await page.goto("/?note=" + encodeURIComponent(id));
+  await expect(page.locator("#document-title")).toHaveText(id);
+  await mode(page, "Markdown");
+  await page.waitForTimeout(2000);
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await page.locator(".cm-content").fill("Typed in Markdown.");
+  await expect.poll(() => diskBody(page, id)).toBe("Typed in Markdown.");
+});
+
 test("opening a note updates the list in place, and saves still refresh its row", async ({ page }) => {
   const stamp = Date.now();
   const first = `Inplace A ${stamp}`, second = `Inplace B ${stamp}`;

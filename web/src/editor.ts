@@ -250,13 +250,19 @@ async function ensureRich() {
   }
   return state.rich;
 }
+// A view switch waits for the Write editor's code the first time. A newer
+// switch made meanwhile, such as clicking Markdown while a note opens,
+// wins, and the older one gives up instead of switching back.
+let modeGeneration = 0;
 async function setMode(mode: AppState["mode"], { focus = true } = {}) {
+  const generation = ++modeGeneration;
   if (!state.current) {
     state.mode = mode;
     return;
   }
   if (mode === "write") {
     const { supportsRich } = await import("./rich.js");
+    if (generation !== modeGeneration || !state.current) return;
     const front = splitFrontMatter(state.body);
     const text = front ? front.rest : state.body;
     const reason = supportsRich(text);
@@ -264,9 +270,10 @@ async function setMode(mode: AppState["mode"], { focus = true } = {}) {
       showToast(reason, { persistent: true });
       mode = "source";
     } else {
+      const rich = await ensureRich();
+      if (generation !== modeGeneration || !state.current) return;
       state.front = front;
       showProperties();
-      const rich = await ensureRich();
       rich.set(text, state.current.id);
     }
   }
