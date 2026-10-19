@@ -58,6 +58,29 @@ test("empty notebook, create a note, WYSIWYG writing and autosave", async ({
   await expect(editor).toContainText("A thought worth keeping.");
 });
 
+test("document menus switch views, close with Escape and disable note actions at home", async ({ page }) => {
+  await page.goto("/");
+  const file = page.locator('[data-menu="file"]');
+  const view = page.locator('[data-menu="view"]');
+  const popup = page.locator("#menu-popup");
+  await file.click();
+  await expect(popup.getByRole("menuitem", { name: "Rename or move…" })).toBeDisabled();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('[data-menu="edit"]')).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(popup).toBeHidden();
+  await expect(page.locator('[data-menu="edit"]')).toBeFocused();
+  await openSeed(page, "A document with menus.");
+  await view.click();
+  await popup.getByRole("menuitem", { name: "Split", exact: true }).click();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
+  await expect(popup).toBeHidden();
+  await view.click();
+  await page.keyboard.press("Escape");
+  await expect(popup).toBeHidden();
+  await expect(view).toBeFocused();
+});
+
 test("rich formatting and Markdown survive source, split and preview modes", async ({
   page,
 }) => {

@@ -65,6 +65,13 @@ Labradorite process can open a vault at a time; a second one is refused.
 
 ## Writing
 
+The top bar holds the Labradorite logo, the note title (click to rename),
+and **File / Edit / View / Insert** menus. These collect the same commands
+as the visible controls and keyboard shortcuts; note-only commands are disabled
+on the start page. Use ↑/↓ within a menu, ←/→ to switch menus and Escape to close.
+The toolbar row below starts with the notes sidebar toggle and the back button,
+followed by the writing views and formatting controls.
+
 The interface and writing pane use locally bundled **Lexend**. The writing size
 is 18 px, Markdown source is 16 px, and small interface labels and shortcut hints
 are at least 12 px.
