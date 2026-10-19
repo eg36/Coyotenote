@@ -1,3 +1,10 @@
+import type { Note } from "./types.js";
+interface ModalOptions { submit?: string; hideFooter?: boolean; className?: string }
+interface InputOptions extends ModalOptions { required?: boolean; description?: string }
+interface RenameResponse { note: Note; warnings: string[] }
+interface TrashedNote { id: string; modified: string; excerpt: string }
+interface ResolveResponse { id: string; found: boolean; target: string; heading: string }
+
 // The modal dialog and the dialogs built on it, including themes and trash.
 import { icon } from "./icons.js";
 import { $, showError, showToast, state, storage } from "./core.js";
@@ -15,10 +22,10 @@ import {
 } from "./editor.js";
 import { shortcuts } from "./shortcuts.js";
 
-let modalAction = null,
-  modalBusy = 0,
-  themeOriginal = null;
-function applyTheme(id) {
+let modalAction: (() => unknown) | null = null;
+let modalBusy = 0;
+let themeOriginal: string | null = null;
+function applyTheme(id: string) {
   const theme = state.themes.find((t) => t.id === id) || state.themes[0];
   if (!theme) return;
   state.theme = theme.id;
@@ -29,7 +36,7 @@ function applyTheme(id) {
     root.style.setProperty("--" + role, color);
   $("theme-name").textContent = theme.name;
 }
-async function chooseTheme(id) {
+async function chooseTheme(id: string) {
   await api("/api/settings", "POST", { theme: id });
   applyTheme(id);
   showToast(
@@ -37,10 +44,10 @@ async function chooseTheme(id) {
   );
 }
 function openModal(
-  title,
-  content,
-  action,
-  { submit = "Continue", hideFooter = false, className = "" } = {},
+  title: string,
+  content: Node,
+  action: (() => unknown) | null,
+  { submit = "Continue", hideFooter = false, className = "" }: ModalOptions = {},
 ) {
   $("modal").className = className;
   $("modal-title").textContent = title;
@@ -53,7 +60,7 @@ function openModal(
   setTimeout(
     () =>
       (
-        $("modal-content").querySelector("input,button,select") ||
+        $("modal-content").querySelector<HTMLElement>("input,button,select") ||
         $("modal-close")
       ).focus(),
     30,
@@ -61,9 +68,9 @@ function openModal(
 }
 // A dialog stays open while its action runs, so nothing can be edited or
 // opened between the request and the screen catching up with it.
-function busyModal(busy) {
+function busyModal(busy: boolean) {
   modalBusy += busy ? 1 : -1;
-  for (const id of ["modal-submit", "modal-cancel", "modal-close"])
+  for (const id of ["modal-submit", "modal-cancel", "modal-close"] as const)
     $(id).disabled = modalBusy > 0;
 }
 function modalIsBusy() {
@@ -81,7 +88,7 @@ function closeModal() {
   modalAction = null;
   focusEditor();
 }
-function inputDialog(title, label, value, action, options = {}) {
+function inputDialog(title: string, label: string, value: string, action: (value: string) => unknown, options: InputOptions = {}) {
   const container = document.createElement("div");
   const text = document.createElement("label");
   text.className = "field-label";
@@ -134,7 +141,7 @@ function newNoteDialog() {
   openModal("New note", container, async () => {
     // Save before reading: the selected template might be the note being edited.
     await save();
-    const template = select.value ? await api("/api/note?id=" + encodeURIComponent(select.value)) : null;
+    const template = select.value ? await api<Note>("/api/note?id=" + encodeURIComponent(select.value)) : null;
     await createNote(input.value.trim(), template?.body || "");
   }, { submit: "Create note" });
 }
@@ -146,7 +153,8 @@ function renameDialog() {
     state.current.id,
     async (name) => {
       await save();
-      const result = await api("/api/rename", "POST", {
+      if (!state.current) return;
+      const result = await api<RenameResponse>("/api/rename", "POST", {
         id: state.current.id,
         name,
         revision: state.current.revision,
@@ -166,7 +174,7 @@ function renameDialog() {
 // moveNote moves note id into folder ("" is the vault's top level), keeping
 // its name. Editing pauses meanwhile, as links in other notes, perhaps the
 // open one, are rewritten to follow it.
-async function moveNote(id, folder) {
+async function moveNote(id: string, folder: string) {
   const name = (folder ? folder + "/" : "") + id.split("/").pop();
   const entry = state.notes.find((note) => note.id === id);
   if (!entry || name === id) return;
@@ -175,15 +183,15 @@ async function moveNote(id, folder) {
   applyEditability();
   try {
     const moving = state.current?.id === id;
-    const result = await api("/api/rename", "POST", {
+    const result = await api<RenameResponse>("/api/rename", "POST", {
       id,
       name,
-      revision: moving ? state.current.revision : entry.revision,
+      revision: moving && state.current ? state.current.revision : entry.revision,
     });
     await refresh();
-    const open = state.current && state.notes.find((n) => n.id === state.current.id);
+    const open = state.current && state.notes.find((n) => n.id === state.current?.id);
     if (moving) await openNote(result.note.id, { skipSave: true, pushBack: false });
-    else if (open && open.revision !== state.current.revision && !state.dirty)
+    else if (open && open.revision !== state.current?.revision && !state.dirty)
       await openNote(open.id, { skipSave: true, pushBack: false });
     showToast(
       [`Moved “${name.split("/").pop()}” to ${folder || "the top of the vault"}.`, ...result.warnings].join(" · "),
@@ -204,9 +212,10 @@ function deleteDialog() {
     content,
     async () => {
       await save();
+      if (!state.current) return;
       const id = state.current.id,
         key = draftKey();
-      const { trashId, warning } = await api("/api/note", "DELETE", {
+      const { trashId, warning } = await api<{ trashId: string; warning?: string }>("/api/note", "DELETE", {
         id,
         revision: state.current.revision,
       });
@@ -228,7 +237,7 @@ async function undoTrash() {
   const trashed = state.trash.at(-1);
   if (!trashed) return;
   await save();
-  const note = await api("/api/restore", "POST", {
+  const note = await api<Note>("/api/restore", "POST", {
     id: trashed.trashId,
     name: trashed.id,
   });
@@ -239,7 +248,7 @@ async function undoTrash() {
   showToast(["Note restored.", note.warning].filter(Boolean).join(" "));
 }
 async function trashDialog() {
-  const { notes } = await api("/api/trash");
+  const { notes } = await api<{ notes: TrashedNote[] }>("/api/trash");
   const container = document.createElement("div");
   container.className = "link-list trash-list";
   if (!notes.length) {
@@ -273,7 +282,7 @@ async function trashDialog() {
       busyModal(true);
       try {
         await save();
-        const restored = await api("/api/restore", "POST", { id: note.id });
+        const restored = await api<Note>("/api/restore", "POST", { id: note.id });
         state.trash = state.trash.filter((item) => item.trashId !== note.id);
         await refresh();
         busyModal(false);
@@ -283,9 +292,9 @@ async function trashDialog() {
       } catch (error) {
         if (modalBusy) busyModal(false);
         if ($("modal").open) {
-          $("modal-error").textContent = error.message;
+          $("modal-error").textContent = error instanceof Error ? error.message : String(error);
           restore.disabled = false;
-        } else showError(error);
+        } else showError(error instanceof Error ? error : new Error(String(error)));
       }
     };
     row.append(label, restore);
@@ -302,7 +311,7 @@ async function trashDialog() {
   openModal("Trash", container, null, { hideFooter: true });
 }
 // emptyTrashDialog confirms deleting every trashed note for good.
-function emptyTrashDialog(count) {
+function emptyTrashDialog(count: number) {
   const content = document.createElement("p");
   content.className = "dialog-description";
   const notes = count === 1 ? "1 note" : `${count} notes`;
@@ -311,7 +320,7 @@ function emptyTrashDialog(count) {
     "Delete all notes in the trash?",
     content,
     async () => {
-      const { deleted } = await api("/api/trash/empty", "POST", {});
+      const { deleted } = await api<{ deleted: number }>("/api/trash/empty", "POST", {});
       state.trash = [];
       $("undo-trash").hidden = true;
       showToast(deleted === 1 ? "Deleted 1 note for good." : `Deleted ${deleted} notes for good.`);
@@ -339,8 +348,8 @@ function themeDialog() {
   empty.setAttribute("role", "status");
   empty.textContent = "No matching themes";
   let active = -1;
-  let options = [];
-  function activate(index, preview = true, scroll = true) {
+  let options: HTMLButtonElement[] = [];
+  function activate(index: number, preview = true, scroll = true) {
     active = index;
     for (const [i, option] of options.entries()) {
       option.classList.toggle("chosen", i === active);
@@ -352,7 +361,7 @@ function themeDialog() {
       return;
     }
     search.setAttribute("aria-activedescendant", option.id);
-    if (preview) applyTheme(option.dataset.themeId);
+    if (preview) applyTheme(option.dataset.themeId || "");
     if (scroll) option.scrollIntoView({ block: "nearest" });
   }
   function render(preview = false) {
@@ -395,7 +404,7 @@ function themeDialog() {
           themeOriginal = null;
           closeModal();
         } catch (error) {
-          $("modal-error").textContent = error.message;
+          $("modal-error").textContent = error instanceof Error ? error.message : String(error);
         }
       };
       options.push(button);
@@ -451,8 +460,8 @@ function linkDialog(wiki = false) {
         button.type = "button";
         button.textContent = note.id;
         button.onclick = () => {
-          if (state.mode === "write") state.rich.insertWiki(note.id);
-          else state.source.insert(`[[${note.id}]]`);
+          if (state.mode === "write") state.rich?.insertWiki(note.id);
+          else state.source?.insert(`[[${note.id}]]`);
           closeModal();
         };
         list.append(button);
@@ -477,15 +486,15 @@ function linkDialog(wiki = false) {
       }
       if (!["http:", "https:", "mailto:"].includes(parsed.protocol))
         throw new Error("Use an http, https or mailto link.");
-      if (state.mode === "write") state.rich.command("link", url);
-      else state.source.wrap("[", `](${url})`);
+      if (state.mode === "write") state.rich?.command("link", url);
+      else state.source?.wrap("[", `](${url})`);
     },
     { submit: "Insert link" },
   );
 }
-async function followWiki(raw) {
+async function followWiki(raw: string) {
   await save();
-  const result = await api("/api/resolve", "POST", {
+  const result = await api<ResolveResponse>("/api/resolve", "POST", {
     id: state.current?.id || "",
     body: raw,
   });
@@ -551,7 +560,7 @@ $("modal-form").onsubmit = async (event) => {
     closeModal();
   } catch (error) {
     busyModal(false);
-    $("modal-error").textContent = error.message;
+    $("modal-error").textContent = error instanceof Error ? error.message : String(error);
   }
 };
 $("modal-close").onclick = dismissModal;

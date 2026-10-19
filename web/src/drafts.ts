@@ -1,3 +1,4 @@
+import type { Draft, Note } from "./types.js";
 // Browser drafts: per-tab identity, storing unsaved edits and recovering them.
 import { $, showError, showToast, state, storage } from "./core.js";
 import { api } from "./api.js";
@@ -5,11 +6,11 @@ import { excerpt } from "./list.js";
 import { openNote, refresh, save } from "./editor.js";
 import { busyModal, closeModal, modalIsBusy, openModal } from "./dialogs.js";
 
-let tabId;
+let tabId: string;
 try {
-  tabId = sessionStorage.getItem("coyote-tab");
-  if (!tabId) {
-    tabId = crypto.randomUUID();
+  const stored = sessionStorage.getItem("coyote-tab");
+  tabId = stored || crypto.randomUUID();
+  if (!stored) {
     sessionStorage.setItem("coyote-tab", tabId);
   }
 } catch {
@@ -18,12 +19,12 @@ try {
 // A duplicated tab, or a window opened from this one, copies sessionStorage
 // and with it the tab ID. Each page holds a lock named after its ID, so a
 // copy finds the ID taken and picks its own, while a reload keeps it.
-function holdTab(id) {
-  return new Promise((resolve, reject) =>
+function holdTab(id: string) {
+  return new Promise<boolean>((resolve, reject) =>
     navigator.locks
       .request("coyote-tab:" + id, { ifAvailable: true }, (lock) => {
         resolve(Boolean(lock));
-        if (lock) return new Promise(() => {});
+        if (lock) return new Promise<void>(() => {});
       })
       .catch(reject),
   );
@@ -44,13 +45,13 @@ async function liveTabs() {
   try {
     const { held } = await navigator.locks.query();
     return new Set(
-      held
-        .map((lock) => lock.name)
+      (held || [])
+        .map((lock) => lock.name || "")
         .filter((name) => name.startsWith("coyote-tab:"))
         .map((name) => name.slice("coyote-tab:".length)),
     );
   } catch {
-    return new Set();
+    return new Set<string>();
   }
 }
 // Storage keys keep the app's former name, coyote, so drafts and settings
@@ -58,7 +59,7 @@ async function liveTabs() {
 const draftPrefix = () => `coyote-draft:${state.vaultId}:`;
 // adoptFormerVault refiles drafts and settings kept under IDs the vault had
 // at an earlier path, before its folder moved, under its current ID.
-function adoptFormerVault(formerIds = []) {
+function adoptFormerVault(formerIds: string[] = []) {
   for (const former of formerIds) {
     if (former === state.vaultId) continue;
     const keys = [];
@@ -67,9 +68,10 @@ function adoptFormerVault(formerIds = []) {
     } catch {}
     for (const key of keys) {
       const match = /^(coyote-[a-z]+):([^:]+)(:.*)?$/.exec(key || "");
-      if (!match || match[2] !== former) continue;
+      if (!key || !match || match[2] !== former) continue;
       const renamed = `${match[1]}:${state.vaultId}${match[3] || ""}`;
-      if (storage.get(renamed) === null) storage.set(renamed, storage.get(key));
+      const value = storage.get(key);
+      if (storage.get(renamed) === null && value !== null) storage.set(renamed, value);
       storage.remove(key);
     }
   }
@@ -77,7 +79,7 @@ function adoptFormerVault(formerIds = []) {
 const draftKey = () => `${draftPrefix()}${tabId}:${state.current?.id}`;
 // releaseDraft forgets a stored draft unless another open tab wrote it:
 // that tab still has those edits and the draft is its only stored copy.
-async function releaseDraft(key) {
+async function releaseDraft(key: string) {
   const owner = key.slice(draftPrefix().length).split(":")[0];
   if (owner === tabId || !(await liveTabs()).has(owner)) storage.remove(key);
 }
@@ -102,15 +104,25 @@ function storeDraft() {
       { persistent: true },
     );
 }
-function findDraft(note) {
-  const candidates = [];
+// Invalid records stay in storage for recovery, but never enter editor state.
+function readDraft(key: string): Omit<Draft, "key"> | null {
+  const value: unknown = JSON.parse(localStorage.getItem(key) || "null");
+  if (!value || typeof value !== "object") return null;
+  const draft = value as Record<string, unknown>;
+  if (typeof draft.id !== "string" || typeof draft.body !== "string" ||
+      typeof draft.base !== "string" || typeof draft.time !== "number" ||
+      !Number.isFinite(draft.time)) return null;
+  return { id: draft.id, body: draft.body, base: draft.base, time: draft.time };
+}
+function findDraft(note: Note) {
+  const candidates: Draft[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key?.startsWith(draftPrefix())) continue;
       try {
-        const value = JSON.parse(localStorage.getItem(key));
-        if (value.id === note.id && value.body !== note.body)
+        const value = readDraft(key);
+        if (value && value.id === note.id && value.body !== note.body)
           candidates.push({ ...value, key });
       } catch {}
     }
@@ -124,7 +136,7 @@ async function orphanDrafts() {
   const ids = new Set(state.notes.map((note) => note.id));
   if (state.current) ids.add(state.current.id);
   const live = await liveTabs();
-  const drafts = [];
+  const drafts: Draft[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -132,8 +144,8 @@ async function orphanDrafts() {
       const owner = key.slice(draftPrefix().length).split(":")[0];
       if (owner !== tabId && live.has(owner)) continue;
       try {
-        const value = JSON.parse(localStorage.getItem(key));
-        if (!ids.has(value.id)) drafts.push({ ...value, key });
+        const value = readDraft(key);
+        if (value && !ids.has(value.id)) drafts.push({ ...value, key });
       } catch {}
     }
   } catch {}
@@ -190,7 +202,7 @@ function draftsDialog() {
     label.append(name, detail);
     const actions = document.createElement("div");
     actions.className = "draft-actions";
-    const button = (text, run) => {
+    const button = (text: string, run: () => unknown) => {
       const element = document.createElement("button");
       element.type = "button";
       element.textContent = text;
@@ -202,7 +214,7 @@ function draftsDialog() {
       busyModal(true);
       try {
         await save();
-        const note = await api("/api/note", "POST", {
+        const note = await api<Note>("/api/note", "POST", {
           id: draft.id,
           body: draft.body,
         });
@@ -214,8 +226,8 @@ function draftsDialog() {
         showToast("Draft saved as a note.");
       } catch (error) {
         if (modalIsBusy()) busyModal(false);
-        if ($("modal").open) $("modal-error").textContent = error.message;
-        else showError(error);
+        if ($("modal").open) $("modal-error").textContent = error instanceof Error ? error.message : String(error);
+        else showError(error instanceof Error ? error : new Error(String(error)));
       }
     });
     button("Download", () => downloadDraft(draft.id, draft.body));
@@ -223,7 +235,7 @@ function draftsDialog() {
       storage.remove(draft.key);
       row.remove();
       await updateOrphans();
-      if (!state.orphans.length) closeModal();
+      if (!state.orphans?.length) closeModal();
     });
     row.append(label, actions);
     container.append(row);

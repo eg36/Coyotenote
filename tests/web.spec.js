@@ -444,6 +444,25 @@ test("browser draft recovers after a reload while server writes fail", async ({
   await expect.poll(() => diskBody(page, id)).toBe(draft);
 });
 
+test("malformed browser drafts stay stored while a valid draft remains recoverable", async ({ page }) => {
+  const id = await openSeed(page, "Saved base.");
+  const state = await (await page.request.get("/api/state")).json();
+  const note = await (await page.request.get("/api/note?id=" + encodeURIComponent(id))).json();
+  const badKey = `coyote-draft:${state.vaultId}:fixture-invalid:${id}`;
+  const goodKey = `coyote-draft:${state.vaultId}:fixture-valid:${id}`;
+  const malformed = JSON.stringify({ id, body: 42, base: note.revision, time: Date.now() + 60_000 });
+  await page.evaluate(({ badKey, goodKey, malformed, id, revision }) => {
+    localStorage.setItem(badKey, malformed);
+    localStorage.setItem(goodKey, JSON.stringify({ id, body: "Recover valid text.", base: revision, time: Date.now() }));
+  }, { badKey, goodKey, malformed, id, revision: note.revision });
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  await page.locator("#restore-draft").click();
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("Recover valid text.");
+  expect(await page.evaluate((key) => localStorage.getItem(key), badKey)).toBe(malformed);
+});
+
 test("undoing back to the saved text during a save keeps the undo recoverable", async ({
   page,
 }) => {
