@@ -2350,3 +2350,22 @@ test("pins and recently opened notes survive reload and follow an app rename", a
   await expect(page.locator("#pinned-notes")).toBeHidden();
   expect(await diskBody(page, renamed)).toBe("Pinned body stays unchanged.");
 });
+
+test("folder breadcrumbs browse descendants without moving notes or changing the open document", async ({ page }) => {
+  const folder = `Breadcrumb ${Date.now()}`;
+  const id = await openSeed(page, "A document in a nested folder.", `${folder}/Ideas/First`);
+  await seed(page, `${folder}/Other/Second`, "A sibling folder.");
+  await seed(page, `Outside ${Date.now()}`, "Outside this folder.");
+  await page.reload();
+  await page.getByRole("button", { name: `Browse ${folder}`, exact: true }).click();
+  await expect(page.locator("#note-count")).toHaveText("2");
+  await expect(page.locator("#list-label")).toHaveText(folder);
+  await expect(page.locator("#document-title")).toHaveText("First");
+  await page.getByRole("button", { name: `Browse ${folder}/Ideas`, exact: true }).click();
+  await expect(page.locator("#note-count")).toHaveText("1");
+  await expect(page.locator("#note-list .note-row")).toHaveAttribute("data-note", id);
+  await page.locator("#clear-folder").click();
+  await expect(page.locator("#clear-folder")).toBeHidden();
+  await expect(page.locator("#list-label")).toHaveText("Notes");
+  expect(await diskBody(page, id)).toBe("A document in a nested folder.");
+});

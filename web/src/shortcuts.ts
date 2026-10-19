@@ -30,6 +30,7 @@ function showNotes() {
   setSidebar(true);
 }
 function findNotes() {
+  state.folder = null;
   showNotes();
   $("app").classList.add("search-open");
   $("sidebar-search").setAttribute("aria-expanded", "true");

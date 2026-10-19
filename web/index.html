@@ -32,7 +32,7 @@
           <div class="title-row">
             <span class="app-title" id="app-title">Labradorite</span>
             <div class="note-heading" id="document-head" hidden>
-              <span class="note-folder" id="note-folder"></span
+              <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
               ><button id="document-title" class="document-title" title="Rename note" aria-description="Rename or move this note">
                 Untitled
               </button>
@@ -232,6 +232,7 @@
         </details>
         <div class="list-heading">
           <span class="list-title"><span id="list-label">Notes</span> <span id="note-count">0</span></span>
+          <button id="clear-folder" class="text-button" hidden>All notes</button>
           <select id="note-sort" aria-label="Sort notes">
             <option value="modified">Recently edited</option>
             <option value="title-asc">Title A–Z</option>

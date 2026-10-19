@@ -1,6 +1,8 @@
 // Personal navigation lives in this browser, scoped to the vault, never in notes.
 import { $, showError, showToast, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
+import { icon } from "./icons.js";
+import { browseFolder } from "./list.js";
 import { setSidebar } from "./sidebar.js";
 
 type Collection = "pins" | "recent";
@@ -48,7 +50,33 @@ function fillCollection(kind: Collection, element: HTMLElement) {
     element.append(button);
   }
 }
+function renderBreadcrumbs() {
+  const container = $("note-folder");
+  container.replaceChildren();
+  if (!state.current) return;
+  const folders = state.current.id.split("/").slice(0, -1);
+  function crumb(label: string, folder: string | null) {
+    const button = document.createElement("button");
+    button.className = "breadcrumb";
+    button.title = folder || "All notes";
+    button.setAttribute("aria-label", folder ? `Browse ${folder}` : "Browse all notes");
+    if (folder) button.textContent = label;
+    else button.innerHTML = icon("folder");
+    button.onclick = () => browseFolder(folder);
+    container.append(button);
+  }
+  crumb("Notebook", null);
+  for (let i = 0; i < folders.length; i++) {
+    const separator = document.createElement("span");
+    separator.className = "breadcrumb-separator";
+    separator.textContent = "/";
+    separator.setAttribute("aria-hidden", "true");
+    container.append(separator);
+    crumb(folders[i], folders.slice(0, i + 1).join("/"));
+  }
+}
 function renderNavigation() {
+  renderBreadcrumbs();
   fillCollection("pins", $("pinned-list"));
   $("pinned-notes").hidden = !$("pinned-list").childElementCount;
   fillCollection("recent", $("recent-list"));

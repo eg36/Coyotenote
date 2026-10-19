@@ -6,6 +6,7 @@ interface AppElements {
   "recent-notes": HTMLButtonElement;
   "commands-button": HTMLButtonElement;
   "pin-note": HTMLButtonElement;
+  "clear-folder": HTMLButtonElement;
   "show-all-notes": HTMLButtonElement;
   "document-title": HTMLButtonElement;
   "search": HTMLInputElement;

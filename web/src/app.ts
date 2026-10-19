@@ -23,7 +23,7 @@ import {
   storeDraft,
   updateOrphans,
 } from "./drafts.js";
-import { filterTag, renderList, setupDragging, toggleAllFolders, visibleNotes } from "./list.js";
+import { browseFolder, filterTag, renderList, setupDragging, toggleAllFolders, visibleNotes } from "./list.js";
 import {
   applyEditability,
   buildBlockMenu,
@@ -210,7 +210,8 @@ $("sidebar-toggle").onclick = () => {
   else toggleSidebar();
 };
 $("recent-notes").onclick = showRecent;
-$("show-all-notes").onclick = showAllNotes;
+$("show-all-notes").onclick = () => { showAllNotes(); browseFolder(null); };
+$("clear-folder").onclick = () => browseFolder(null);
 $("pin-note").onclick = togglePin;
 $("commands-button").onclick = () => paletteDialog(">");
 $("sidebar-scrim").onclick = () => {

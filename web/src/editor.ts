@@ -171,7 +171,6 @@ async function openNote(
   state.restoring = false;
   $("document-title").textContent = note.title.split("/").pop() || note.title;
   $("document-title").title = note.id + " · Rename or move note";
-  $("note-folder").textContent = note.id.split("/").slice(0, -1).join(" / ");
   $("document-head").hidden = false;
   $("document-actions").hidden = false;
   $("find-replace").disabled = false;

@@ -2769,3 +2769,11 @@ dialog.danger #modal-submit {
 .navigation-note[aria-current="page"], #pin-note[aria-pressed="true"] { background: var(--selected); }
 .recent-panel { overflow-y: auto; }
 .show-recents .sidebar > :not(.recent-panel) { display: none !important; }
+.note-folder { display: flex; align-items: center; gap: 2px; max-width: 45%; overflow: hidden; }
+.note-folder::after { content: none; }
+.breadcrumb { display: flex; align-items: center; min-width: 18px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 3px; background: transparent; color: var(--muted); font-size: 12px; border-radius: 5px; }
+.breadcrumb svg { width: 15px; height: 15px; }
+.breadcrumb:hover { background: var(--hover); color: var(--text); }
+.breadcrumb-separator { font-size: 11px; color: var(--muted); }
+.tooltip { max-width: min(360px, calc(100vw - 16px)); overflow-wrap: anywhere; }
+@media (max-width: 530px) { .note-folder { display: none; } }

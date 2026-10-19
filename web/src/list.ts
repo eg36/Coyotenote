@@ -2,8 +2,9 @@ import type { Note } from "./types.js";
 // The sidebar note list: ordering, rows and search highlights.
 import { icon } from "./icons.js";
 import { $, showError, state, storage } from "./core.js";
-import { openNote } from "./editor.js";
+import { openNote, refresh } from "./editor.js";
 import { moveNote } from "./dialogs.js";
+import { showAllNotes } from "./navigation.js";
 import { setSidebar } from "./sidebar.js";
 
 // excerpt cleans a note's opening text for short previews, leaving out a leading
@@ -43,7 +44,8 @@ function visibleNotes() {
   const notes = state.notes.filter(
     (note) =>
       (!state.filteredIds || state.filteredIds.has(note.id)) &&
-      (!state.tag || hasTag(note, state.tag)),
+      (!state.tag || hasTag(note, state.tag)) &&
+      (!state.folder || note.id.startsWith(state.folder + "/")),
   );
   const folder = (note: Note) => note.id.slice(0, Math.max(0, note.id.lastIndexOf("/")));
   const title = (note: Note) => note.title.split("/").pop() || note.title;
@@ -215,7 +217,19 @@ function fillRow(button: HTMLButtonElement, note: Note) {
     button.append(text);
   }
 }
+function browseFolder(folder: string | null) {
+  state.folder = folder;
+  state.tag = "";
+  state.search = "";
+  $("search").value = "";
+  showAllNotes();
+  setSidebar(true);
+  refresh().catch(showError);
+}
 function renderList() {
+  $("list-label").textContent = state.folder?.split("/").pop() || "Notes";
+  $("list-label").title = state.folder || "All notes";
+  $("clear-folder").hidden = !state.folder;
   renderTags();
   updateFoldButton();
   const notes = visibleNotes();
@@ -233,7 +247,7 @@ function renderList() {
     list.replaceChildren(el);
     return;
   }
-  const collapsed = state.filteredIds || state.tag ? new Set() : collapsedFolders();
+  const collapsed = state.filteredIds || state.tag || state.folder ? new Set() : collapsedFolders();
   const shape = JSON.stringify([notes.map((n) => n.id), [...collapsed], Boolean(state.filteredIds)]);
   if (shape === listShape) {
     const byId = new Map(notes.map((n) => [n.id, n]));
@@ -341,6 +355,7 @@ function updateBacklinks() {
 }
 
 export {
+  browseFolder,
   excerpt,
   filterTag,
   renderList,
