@@ -838,6 +838,28 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   ).toBeTruthy();
 });
 
+test("start-page navigation stays together and status sits at the right edge", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#app")).toHaveClass(/at-home/);
+  for (const width of [1999, 1840, 1839, 1500, 1440, 1280, 900, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (let toggle = 0; toggle < 2; toggle++) {
+      const status = await page.locator("#save-state").boundingBox();
+      expect(width - status.x - status.width).toBeLessThanOrEqual(14);
+      const buttons = await page.locator(".nav-buttons").boundingBox();
+      const menus = await page.locator("#menu-bar").boundingBox();
+      expect(buttons.x).toBeGreaterThanOrEqual(menus.x + menus.width);
+      if (width > 530) expect(buttons.x - menus.x - menus.width).toBeLessThanOrEqual(24);
+      else expect(Math.abs(buttons.y + buttons.height / 2 - menus.y - menus.height / 2)).toBeLessThanOrEqual(5);
+      await expect(page.locator("#sidebar-toggle")).toBeInViewport();
+      await expect(page.locator("#history-back")).toBeInViewport();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+      if (width < 800 && toggle === 1) await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
+      else await page.locator("#sidebar-toggle").click();
+    }
+  }
+});
+
 test("collapsed sidebar and focus mode keep the workspace full width", async ({ page }) => {
   await openSeed(page, "# Room to write\n\nThe editor should use the available space.");
   await mode(page, "Markdown");
