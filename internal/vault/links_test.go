@@ -71,3 +71,38 @@ func TestRenameLinks(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 }
+
+func TestParseLinksSkipsCodeAsCommonMarkReadsIt(t *testing.T) {
+	body := strings.Join([]string{
+		"[[Real]] and \\[[Escaped]] and \\\\[[AfterBackslash]]",
+		"",
+		"    [[IndentedCode]]",
+		"",
+		"> ```",
+		"> [[QuotedFence]]",
+		"> ```",
+		"",
+		"- item",
+		"",
+		"  ```",
+		"  [[ListFence]]",
+		"  ```",
+		"",
+		"- item",
+		"",
+		"    continued [[ListParagraph]]",
+		"",
+		"Text with `[[Span]]` and ``a `[[Double]]` b`` then [[Last|alias]]",
+	}, "\n")
+	var got []string
+	for _, l := range ParseLinks(body) {
+		got = append(got, l.Target)
+		if body[l.Start:l.Start+2] != "[[" || body[l.End-2:l.End] != "]]" {
+			t.Fatalf("bad offsets for %+v", l)
+		}
+	}
+	want := []string{"Real", "AfterBackslash", "ListParagraph", "Last"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}

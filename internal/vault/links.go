@@ -3,6 +3,10 @@ package vault
 import (
 	"path"
 	"strings"
+
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/text"
 )
 
 // Link is one [[target#heading|alias]] in a note body. Offsets are bytes:
@@ -13,71 +17,89 @@ type Link struct {
 	Target, Heading, Alias             string
 }
 
-// ParseLinks finds wiki links outside fenced code blocks and inline code spans.
+// ParseLinks finds wiki links in a note's text. Like the preview, it reads
+// the note as CommonMark: links in code (fenced or indented blocks, in quotes
+// and lists too, and code spans) are text, as is [[ after a backslash.
 func ParseLinks(body string) []Link {
-	var links []Link
-	fence := byte(0)
-	fenceLen := 0
-	offset := 0
-	for _, line := range strings.SplitAfter(body, "\n") {
-		trimmed := strings.TrimLeft(line, " ")
-		indent := len(line) - len(trimmed)
-		ch, run := byte(0), 0
-		if len(trimmed) > 0 && (trimmed[0] == '`' || trimmed[0] == '~') {
-			ch = trimmed[0]
-			for run < len(trimmed) && trimmed[run] == ch {
-				run++
-			}
-		}
-		switch {
-		case fence != 0:
-			if indent <= 3 && ch == fence && run >= fenceLen && strings.TrimSpace(trimmed[run:]) == "" {
-				fence = 0
-			}
-		case indent <= 3 && run >= 3 && (ch != '`' || !strings.Contains(trimmed[run:], "`")):
-			fence, fenceLen = ch, run
-		default:
-			links = append(links, lineLinks(line, offset)...)
-		}
-		offset += len(line)
+	if !strings.Contains(body, "[[") {
+		return nil
 	}
-	return links
-}
-
-func lineLinks(line string, offset int) []Link {
+	code := codeRanges(body)
 	var links []Link
-	for i := 0; i < len(line); {
-		if line[i] == '`' {
-			run := len(line[i:]) - len(strings.TrimLeft(line[i:], "`"))
-			if end := strings.Index(line[i+run:], strings.Repeat("`", run)); end >= 0 {
-				i += run + end + run
-				continue
-			}
-			i += run
-			continue
+	for i := 0; i < len(body); {
+		at := strings.Index(body[i:], "[[")
+		if at < 0 {
+			break
 		}
-		if !strings.HasPrefix(line[i:], "[[") {
-			i++
-			continue
-		}
-		end := strings.Index(line[i+2:], "]]")
+		start := i + at
+		end := strings.Index(body[start+2:], "]]")
 		inner := ""
 		if end >= 0 {
-			inner = line[i+2 : i+2+end]
+			inner = body[start+2 : start+2+end]
 		}
-		if end < 0 || strings.ContainsAny(inner, "[]\n") {
-			i += 2
+		if end < 0 || strings.ContainsAny(inner, "[]\n") || inCode(code, start) || escaped(body, start) {
+			i = start + 2
 			continue
 		}
 		raw, alias, _ := strings.Cut(inner, "|")
 		rawTarget, heading, _ := strings.Cut(raw, "#")
 		if target := strings.TrimSpace(rawTarget); target != "" {
-			start := offset + i
 			links = append(links, Link{start, start + end + 4, start + 2, start + 2 + len(rawTarget), target, strings.TrimSpace(heading), strings.TrimSpace(alias)})
 		}
-		i += end + 4
+		i = start + end + 4
 	}
 	return links
+}
+
+// codeRanges lists the byte ranges of body that CommonMark reads as code.
+// Text without backticks, tildes or indentation has none, so it is not parsed.
+func codeRanges(body string) [][2]int {
+	if !strings.ContainsAny(body, "`~\t") && !strings.Contains(body, "    ") {
+		return nil
+	}
+	source := []byte(body)
+	var ranges [][2]int
+	_ = ast.Walk(parser.NewParser(parser.WithBlockParsers(parser.DefaultBlockParsers()...), parser.WithInlineParsers(parser.DefaultInlineParsers()...), parser.WithParagraphTransformers(parser.DefaultParagraphTransformers()...)).Parse(text.NewReader(source)), func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch n.Kind() {
+		case ast.KindFencedCodeBlock, ast.KindCodeBlock:
+			lines := n.Lines()
+			for i := 0; i < lines.Len(); i++ {
+				segment := lines.At(i)
+				ranges = append(ranges, [2]int{segment.Start, segment.Stop})
+			}
+			return ast.WalkSkipChildren, nil
+		case ast.KindCodeSpan:
+			for child := n.FirstChild(); child != nil; child = child.NextSibling() {
+				if t, ok := child.(*ast.Text); ok {
+					ranges = append(ranges, [2]int{t.Segment.Start, t.Segment.Stop})
+				}
+			}
+			return ast.WalkSkipChildren, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return ranges
+}
+
+func inCode(ranges [][2]int, at int) bool {
+	for _, r := range ranges {
+		if at >= r[0] && at < r[1] {
+			return true
+		}
+	}
+	return false
+}
+
+// escaped reports whether an odd run of backslashes precedes body[at].
+func escaped(body string, at int) bool {
+	run := 0
+	for at-run-1 >= 0 && body[at-run-1] == '\\' {
+		run++
+	}
+	return run%2 == 1
 }
 
 // Resolver maps link targets to note IDs the way Obsidian does: an exact path

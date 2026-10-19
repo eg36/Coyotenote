@@ -639,3 +639,21 @@ func TestManifestMakesTheAppInstallable(t *testing.T) {
 		t.Error("page does not link the manifest")
 	}
 }
+
+func TestRenameLeavesWikiSyntaxInCodeAlone(t *testing.T) {
+	a := testApp(t)
+	target := request(t, a, "POST", "/api/note", mutation{ID: "Target", Body: "x"}, 201)
+	guide := "Link with [[Target]].\n\n    Example: [[Target]]\n\nEscaped \\[[Target]]."
+	request(t, a, "POST", "/api/note", mutation{ID: "Guide", Body: guide}, 201)
+	state := request(t, a, "GET", "/api/state", nil, 200)
+	for _, raw := range state["notes"].([]any) {
+		if n := raw.(map[string]any); n["id"] == "Target" && len(n["backlinks"].([]any)) != 1 {
+			t.Fatalf("backlinks %v", n["backlinks"])
+		}
+	}
+	request(t, a, "POST", "/api/rename", mutation{ID: "Target", Name: "Renamed", Revision: target["revision"].(string)}, 200)
+	want := "Link with [[Renamed]].\n\n    Example: [[Target]]\n\nEscaped \\[[Target]]."
+	if body := request(t, a, "GET", "/api/note?id=Guide", nil, 200)["body"]; body != want {
+		t.Fatalf("got %q", body)
+	}
+}
