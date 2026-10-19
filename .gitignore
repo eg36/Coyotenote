@@ -4,3 +4,4 @@
 /test-results/
 /playwright-report/
 *.log
+/CODEX_HANDOFF.local.md
