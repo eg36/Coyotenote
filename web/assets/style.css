@@ -544,35 +544,12 @@ input[type="search"]::-webkit-search-cancel-button {
   line-height: 1.6;
   padding: 6px 8px;
 }
+/* Trash and Settings sit side by side as icons; tooltips name them. */
 .sidebar-bottom {
   display: flex;
-  flex-direction: column;
   gap: 2px;
   padding: 8px 0 10px;
   border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-}
-.theme-button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  height: 36px;
-  padding: 0 8px;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 14px;
-}
-.theme-button:hover {
-  background: var(--hover);
-}
-.theme-button > span:nth-child(2) {
-  flex: 1;
-  text-align: left;
-}
-.theme-button svg {
-  width: 18px;
-  height: 18px;
-  color: var(--muted);
 }
 .workspace {
   display: flex;
