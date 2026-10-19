@@ -591,12 +591,11 @@ test("unsupported Markdown is kept in source, without normalization", async ({
   expect(await diskBody(page, id)).toBe(body);
 });
 
-test("other front matter and link definitions also stay in source", async ({
+test("unclosed front matter and link definitions stay in source", async ({
   page,
 }) => {
   for (const body of [
-    "\uFEFF---\ntitle: Keep this metadata\n---\n\nText.\n",
-    '+++\ntitle = "Keep this metadata"\n+++\n\nText.\n',
+    "---\ntitle: never closed\n\nText.\n",
     "Text with a [reference][r].\n\n[r]: https://example.com\n[unused]: https://example.org\n",
   ]) {
     const id = await openSeed(page, body);
@@ -641,7 +640,7 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
   await page.route("**/api/note", (route) =>
     route.request().method() === "PUT" ? route.abort() : route.continue(),
   );
-  const draft = '+++\ntitle = "Draft metadata"\n+++\n\nDraft text.';
+  const draft = "Draft text.[^1]\n\n[^1]: A footnote Write cannot keep.";
   await page.locator(".cm-content").fill(draft);
   await expect(page.locator("#error-banner")).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());
@@ -1548,4 +1547,45 @@ test("note history shows earlier versions with changes marked and restores one",
   await openSeed(page, "");
   await page.getByRole("button", { name: "Note history" }).click();
   await expect(page.getByRole("dialog", { name: "Note history" })).toContainText("No earlier versions yet");
+});
+
+test("front matter shows as properties in Write and keeps its exact form", async ({
+  page,
+}) => {
+  for (const front of [
+    "---\ntitle: Keep this metadata\n# a YAML comment\n---\n\n",
+    "\uFEFF---\ntitle: With a byte order mark\n---\n\n",
+    '+++\ntitle = "TOML"\n+++\n\n',
+  ]) {
+    const id = await openSeed(page, front + "# Heading\n\nBody text.");
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    const box = page.getByLabel("Properties");
+    await expect(box).toHaveValue(front.replace(/^\uFEFF/, "").split("\n").slice(1, -3).join("\n"));
+    await page.locator(".tiptap p").click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" More.");
+    await expect.poll(() => diskBody(page, id)).toBe(front + "# Heading\n\nBody text. More.");
+  }
+  // The outline skips YAML comments, and properties can be edited.
+  const id = await openSeed(page, "---\ntitle: Old\n# not a heading\n---\n\n# Real heading\n\nText.");
+  await page.keyboard.press("Alt+o");
+  await expect(page.locator("#outline-list button")).toHaveText(["Real heading"]);
+  await page.keyboard.press("Alt+o");
+  await page.getByLabel("Properties").fill("title: New\ntags: [travel, plans]");
+  await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nText.");
+  await page.locator(".tiptap p").click();
+  await page.keyboard.press("Home");
+  await page.keyboard.type("Typed ");
+  await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nTyped Text.");
+
+  // A note without front matter can start some.
+  const plain = await openSeed(page, "Plain text.");
+  await expect(page.getByLabel("Properties")).toBeHidden();
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type(">add properties");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Properties")).toBeFocused();
+  await page.keyboard.type("journal");
+  await expect.poll(() => diskBody(page, plain)).toBe("---\ntags: journal\n---\n\nPlain text.");
 });

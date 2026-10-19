@@ -15,6 +15,7 @@ import { findDraft, storeDraft, updateOrphans } from "./drafts.js";
 import { renderList, revealNote, updateBacklinks } from "./list.js";
 import { applyTheme, followWiki } from "./dialogs.js";
 import { renderOutline } from "./outline.js";
+import { splitFrontMatter, withProperties } from "./frontmatter.js";
 import { addImages, fileUrl, imageFiles } from "./attachments.js";
 
 function changed(body, from) {
@@ -209,7 +210,7 @@ async function ensureRich() {
   if (!state.rich) {
     const { createRich } = await import("./rich.js");
     state.rich = createRich($("rich-editor"), {
-      onChange: (body) => changed(body, "rich"),
+      onChange: (text) => changed((state.front?.prefix || "") + text, "rich"),
       onSelection: updateToolbar,
       onWarning: showToast,
       onWiki: (raw) => followWiki(raw).catch(showError),
@@ -227,13 +228,17 @@ async function setMode(mode, { focus = true } = {}) {
   }
   if (mode === "write") {
     const { supportsRich } = await import("./rich.js");
-    const reason = supportsRich(state.body);
+    const front = splitFrontMatter(state.body);
+    const text = front ? front.rest : state.body;
+    const reason = supportsRich(text);
     if (reason) {
       showToast(reason, { persistent: true });
       mode = "source";
     } else {
+      state.front = front;
+      showProperties();
       const rich = await ensureRich();
-      rich.set(state.body, state.current.id);
+      rich.set(text, state.current.id);
     }
   }
   state.mode = mode;
@@ -255,8 +260,26 @@ async function setMode(mode, { focus = true } = {}) {
   updateToolbar();
   renderOutline(true);
 }
+// showProperties fills the properties box with the open note's front matter
+// in Write, or hides it when there is none.
+function showProperties() {
+  const box = $("properties-text");
+  $("properties").hidden = !state.front;
+  if (state.front && box.value !== state.front.inner) box.value = state.front.inner;
+  box.style.height = "auto";
+  box.style.height = box.scrollHeight + 2 + "px";
+}
+// editProperties rebuilds the note from the edited properties and its text.
+function editProperties(inner) {
+  const text = state.body.slice(state.front?.prefix.length || 0);
+  const body = withProperties(state.front, inner, text);
+  state.front = splitFrontMatter(body);
+  changed(body, "properties");
+  showProperties();
+}
 function applyEditability() {
   const editable = !state.pendingDraft && !state.busy;
+  $("properties-text").readOnly = !editable;
   state.source.readOnly(!editable);
   state.rich?.editor?.setEditable(editable, false);
   for (const button of document.querySelectorAll("[data-format], #block-type"))
@@ -386,6 +409,7 @@ export {
   chooseBlock,
   closeBlockMenu,
   createNote,
+  editProperties,
   emptyNotebook,
   focusEditor,
   highlightBlock,

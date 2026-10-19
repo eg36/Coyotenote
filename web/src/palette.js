@@ -5,8 +5,16 @@ import { $, showError, state } from "./core.js";
 import { draftsDialog } from "./drafts.js";
 import { chooseImages } from "./attachments.js";
 import { historyDialog } from "./history.js";
+import { splitFrontMatter } from "./frontmatter.js";
 import { shortDate } from "./list.js";
-import { createNote, openNote, refresh, save, setMode } from "./editor.js";
+import {
+  createNote,
+  editProperties,
+  openNote,
+  refresh,
+  save,
+  setMode,
+} from "./editor.js";
 import {
   backlinksDialog,
   closeModal,
@@ -70,6 +78,16 @@ function marked(element, text, at) {
   flush(hits.has(text.length - 1));
 }
 
+// addProperties starts front matter with a tags field, ready to fill in.
+function addProperties() {
+  editProperties("tags: ");
+  if (state.mode === "write") {
+    const box = $("properties-text");
+    box.focus();
+    box.setSelectionRange(box.value.length, box.value.length);
+  }
+}
+
 // Commands name what they do; those needing an open note hide without one.
 const commands = [
   ["New note", "Ctrl N", newNoteDialog],
@@ -78,6 +96,7 @@ const commands = [
   ["Save now", "Ctrl S", () => save().catch(showError), true],
   ["Show notes linking here", "", backlinksDialog, true],
   ["Insert image", "", chooseImages, true],
+  ["Add properties (front matter)", "", addProperties, true, () => !splitFrontMatter(state.body)],
   ["Show note history", "", () => historyDialog().catch(showError), true],
   ["Download note as Markdown", "", () => $("export-note").click(), true],
   ["Write view", "", () => setMode("write").catch(showError), true],

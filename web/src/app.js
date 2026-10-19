@@ -26,6 +26,7 @@ import {
   changed,
   chooseBlock,
   closeBlockMenu,
+  editProperties,
   emptyNotebook,
   highlightBlock,
   openBlockMenu,
@@ -131,6 +132,7 @@ $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
 $("outline-button").onclick = () => toggleOutline();
 $("history-button").onclick = () => historyDialog().catch(showError);
+$("properties-text").oninput = () => editProperties($("properties-text").value);
 $("focus-button").onclick = toggleFocus;
 for (const button of document.querySelectorAll("[data-mode]"))
   button.onclick = () => setMode(button.dataset.mode).catch(showError);

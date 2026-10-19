@@ -116,7 +116,13 @@ custom Markdown node. Click a rendered wiki link to follow it; use the toolbar t
 insert one, or finish typing `[[a note]]`. The source editor suggests existing notes
 while typing `[[`. Missing notes can be created from a link.
 
-Write deliberately falls back to Markdown for front matter (YAML or TOML),
+**Front matter** (a YAML `---` or TOML `+++` block opening the note) shows in
+Write as an editable **Properties** box above the text. Write edits only the text
+below it, so untouched front matter is saved byte for byte; edited properties keep
+the block's delimiter and byte order mark. "Add properties" in Quick open starts
+front matter with a `tags` field.
+
+Write deliberately falls back to Markdown for unclosed front matter,
 footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
 round-trip intact, including when a browser draft is restored. Use source mode for

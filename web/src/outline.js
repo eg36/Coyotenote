@@ -1,12 +1,17 @@
 // The open note's headings, for the outline panel and the quick switcher.
 import { $, state, storage } from "./core.js";
+import { splitFrontMatter } from "./frontmatter.js";
 
 // headings lists a note's Markdown headings outside fenced code, with the
 // line each starts on.
 function headings(body) {
   const found = [];
   let fence = "";
+  // Front matter holds properties, where # starts a comment.
+  const front = splitFrontMatter(body);
+  const skip = front ? front.prefix.split("\n").length - 1 : 0;
   for (const [index, line] of body.split("\n").entries()) {
+    if (index < skip) continue;
     const opening = /^\s{0,3}(`{3,}|~{3,})/.exec(line);
     if (opening) {
       if (!fence) fence = opening[1];
