@@ -1613,3 +1613,13 @@ test("tags from properties and text filter the note list", async ({ page }) => {
   await expect(page.locator("#note-list .note-row")).toHaveCount(3);
   await filter.selectOption("");
 });
+
+test("Chromium reads the manifest that makes the app installable", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#vault-name")).not.toBeEmpty();
+  const client = await page.context().newCDPSession(page);
+  const manifest = await client.send("Page.getAppManifest");
+  expect(manifest.url).toMatch(/\/assets\/manifest\.webmanifest$/);
+  expect(manifest.errors).toEqual([]);
+  expect(JSON.parse(manifest.data)).toMatchObject({ name: "coyotenote", display: "standalone" });
+});

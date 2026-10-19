@@ -29,6 +29,10 @@ vault path too. Keep that process running while
 using the app; Ctrl+C stops it. There is no account, cloud sync, telemetry,
 database or remote access mode.
 
+**Install it as an app:** Chrome and Edge offer *Install coyotenote* in the
+address bar or menu. The installed app opens in its own window with the
+coyotenote icon; it still needs `coyotenote` running to work.
+
 ### Choose a vault
 
 ```sh

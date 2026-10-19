@@ -616,3 +616,26 @@ func TestFrontMatterIsPropertiesNotText(t *testing.T) {
 		t.Fatalf("render: %s", html)
 	}
 }
+
+func TestManifestMakesTheAppInstallable(t *testing.T) {
+	a := testApp(t)
+	w := raw(t, a, "GET", "/assets/manifest.webmanifest", nil, nil)
+	var manifest struct {
+		Name, StartURL, Display string
+		Icons                   []struct{ Src, Sizes string }
+	}
+	if w.Code != 200 || w.Header().Get("Content-Type") != "application/manifest+json" || json.Unmarshal(w.Body.Bytes(), &manifest) != nil {
+		t.Fatalf("manifest: %d %s", w.Code, w.Header().Get("Content-Type"))
+	}
+	if manifest.Name != "coyotenote" || len(manifest.Icons) != 2 {
+		t.Fatalf("manifest %+v", manifest)
+	}
+	for _, icon := range manifest.Icons {
+		if w := raw(t, a, "GET", icon.Src, nil, nil); w.Code != 200 || w.Header().Get("Content-Type") != "image/png" {
+			t.Errorf("%s: %d", icon.Src, w.Code)
+		}
+	}
+	if page := raw(t, a, "GET", "/", nil, nil).Body.String(); !strings.Contains(page, `rel="manifest" href="/assets/manifest.webmanifest"`) {
+		t.Error("page does not link the manifest")
+	}
+}

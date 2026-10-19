@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -78,6 +79,11 @@ type apiError struct {
 }
 
 func (e *apiError) Error() string { return e.message }
+
+func init() {
+	// Browsers read the manifest that makes the app installable by this type.
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}
 
 func newWebApp(s *vault.Store) (*webApp, error) {
 	var token [32]byte
