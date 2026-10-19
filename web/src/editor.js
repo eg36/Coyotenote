@@ -161,6 +161,8 @@ async function openNote(
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
   $("note-stats").hidden = false;
+  $("view-switch").hidden = false;
+  $("app-title").hidden = true;
   if (state.pendingDraft) setSaveState("dirty", "Unsaved draft found");
   else setSaveState("saved", "All changes saved");
   updateCounts();
@@ -186,6 +188,8 @@ function emptyNotebook() {
     : "Capture a thought. Connect an idea. Make something worth keeping.";
   $("first-note-label").textContent = hasNotes ? "New note" : "Create your first note";
   $("note-stats").hidden = true;
+  $("view-switch").hidden = true;
+  $("app-title").hidden = false;
   state.current = null;
   state.body = "";
   state.savedBody = "";

@@ -128,11 +128,21 @@ input::placeholder {
 input[type="search"]::-webkit-search-cancel-button {
   cursor: pointer;
 }
+/* The top bar spans the page; the notes sidebar and the writing area sit
+   below it, like a document editor. */
 .app {
   display: grid;
-  grid-template-columns: 256px 1fr;
+  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "top top" "side main";
   height: 100dvh;
   min-height: 0;
+}
+.sidebar {
+  grid-area: side;
+}
+.workspace {
+  grid-area: main;
 }
 .sidebar {
   background: var(--chrome);
@@ -150,14 +160,13 @@ input[type="search"]::-webkit-search-cancel-button {
   align-self: center;
   text-decoration: none;
   color: var(--text);
-  padding: 2px 4px;
-  margin-bottom: 10px;
+  padding: 2px;
   border-radius: 8px;
 }
 .brand-mark {
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   object-fit: contain;
   border-radius: 7px;
@@ -479,13 +488,100 @@ input[type="search"]::-webkit-search-cancel-button {
   background: var(--surface);
 }
 .topbar {
-  height: 52px;
-  min-height: 52px;
+  grid-area: top;
+  min-height: 58px;
+  background: var(--chrome);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 6px 12px 6px 14px;
   gap: 2px;
+}
+.title-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  min-width: 0;
+}
+.app-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.menu-bar {
+  display: flex;
+  gap: 1px;
+  margin-left: -7px;
+}
+.menu-bar button {
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+.menu-bar button:hover,
+.menu-bar button[aria-expanded="true"] {
+  background: var(--hover);
+}
+.menu-popup {
+  position: fixed;
+  z-index: 30;
+  min-width: 240px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px #0005;
+  outline: none;
+  animation: block-menu-in 0.12s ease-out;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible {
+  background: var(--selected);
+  outline: none;
+}
+.menu-item:disabled {
+  color: var(--muted);
+  opacity: 0.6;
+}
+.menu-item kbd {
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+.menu-separator {
+  height: 1px;
+  margin: 5px 6px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+}
+.bar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px 0 4px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
 }
 .note-heading {
   flex: 1;
@@ -493,7 +589,6 @@ input[type="search"]::-webkit-search-cancel-button {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: 8px;
   font-size: 14px;
 }
 .note-folder {
@@ -1853,7 +1948,7 @@ dialog.danger #modal-submit {
 }
 .sidebar-hidden,
 .focus-mode {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 .sidebar-hidden .sidebar,
 .focus-mode .sidebar {
@@ -1868,7 +1963,7 @@ dialog.danger #modal-submit {
   }
   .sidebar-hidden,
   .focus-mode {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 0 minmax(0, 1fr);
   }
   .sidebar {
     padding-left: 22px;
@@ -1885,12 +1980,15 @@ dialog.danger #modal-submit {
   }
   .sidebar-hidden,
   .focus-mode {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 0 minmax(0, 1fr);
   }
 }
 @media (max-width: 799px) {
-  .app {
-    grid-template-columns: 1fr;
+  .app,
+  .sidebar-hidden,
+  .focus-mode {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "top" "main";
   }
   .sidebar {
     position: fixed;
@@ -1931,10 +2029,12 @@ dialog.danger #modal-submit {
     padding-bottom: 4px;
   }
   .view-switch {
-    flex: 1 1 100%;
+    flex: 1 1 0;
+    min-width: 0;
   }
   .view-switch button {
     flex: 1;
+    padding: 0 6px;
   }
   .editor-toolbar {
     flex-basis: 100%;
@@ -1965,6 +2065,9 @@ dialog.danger #modal-submit {
   }
 }
 @media (max-width: 530px) {
+  .menu-bar {
+    display: none;
+  }
   .topbar {
     padding: 0 6px;
   }

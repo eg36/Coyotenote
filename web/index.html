@@ -15,76 +15,27 @@
   </head>
   <body>
     <div class="app" id="app">
-      <aside class="sidebar" id="sidebar" aria-label="Notes">
+      <header class="topbar">
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite"
-          ><img class="brand-mark" src="/assets/logo.png" alt="" width="44" height="44"
+          ><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40"
         /></a>
-        <button class="new-button" id="new-note">
-          <span data-icon="plus"></span>New note<kbd data-keys="N">Ctrl N</kbd>
-        </button>
-        <label class="search"
-          ><span data-icon="search"></span
-          ><input
-            id="search"
-            type="search"
-            placeholder="Search notes"
-            autocomplete="off"
-            aria-label="Search notes"
-          /><kbd data-keys="⇧E">Ctrl ⇧E</kbd></label
-        >
-        <select id="tag-filter" class="tag-filter" aria-label="Show notes with a tag" hidden></select>
-        <div class="list-heading">
-          <span class="list-title">Notes <span id="note-count">0</span></span>
-          <select id="note-sort" aria-label="Sort notes">
-            <option value="modified">Recently edited</option>
-            <option value="title-asc">Title A–Z</option>
-            <option value="title-desc">Title Z–A</option>
-          </select>
-        </div>
-        <nav class="note-list" id="note-list" aria-label="Notebook notes"></nav>
-        <div class="sidebar-bottom">
-          <button id="trash-button" class="theme-button">
-            <span data-icon="trash"></span><span>Trash</span>
-          </button>
-          <button id="theme-button" class="theme-button">
-            <span class="theme-orb"></span
-            ><span id="theme-name">Labradorite Dark</span
-            ><span data-icon="chevronDown"></span>
-          </button>
-        </div>
-      </aside>
-      <button
-        id="sidebar-scrim"
-        class="sidebar-scrim"
-        aria-label="Close notes"
-      ></button>
-      <main class="workspace">
-        <header class="topbar">
-          <button
-            id="sidebar-toggle"
-            class="icon-button"
-            title="Show or hide notes"
-            aria-label="Toggle notes"
-          >
-            <span data-icon="sidebar"></span></button
-          ><button
-            id="history-back"
-            class="icon-button"
-            title="Go back to previous note"
-            aria-label="Go back to previous note"
-            disabled
-          >
-            <span data-icon="back"></span></button
-          ><div class="note-heading" id="document-head" hidden>
-            <span class="note-folder" id="note-folder"></span
-            ><button
-              id="document-title"
-              class="document-title"
-              title="Rename note"
-            >
-              Untitled</button
-            >
+        <div class="title-block">
+          <div class="title-row">
+            <span class="app-title" id="app-title">Labradorite</span>
+            <div class="note-heading" id="document-head" hidden>
+              <span class="note-folder" id="note-folder"></span
+              ><button id="document-title" class="document-title" title="Rename note">
+                Untitled
+              </button>
+            </div>
           </div>
+          <nav class="menu-bar" id="menu-bar" aria-label="Menu">
+            <button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button
+            ><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button
+            ><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button
+            ><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>
+          </nav>
+        </div>
           <span class="save-state" id="save-state" role="status"
             ><span class="save-dot"></span
             ><span id="save-label">Ready when you are</span></span
@@ -145,51 +96,66 @@
           >
             <span data-icon="focus"></span>
           </button>
-        </header>
-        <section
-          id="error-banner"
-          class="banner error-banner"
-          role="alert"
-          hidden
+      </header>
+      <aside class="sidebar" id="sidebar" aria-label="Notes">
+        <button class="new-button" id="new-note">
+          <span data-icon="plus"></span>New note<kbd data-keys="N">Ctrl N</kbd>
+        </button>
+        <label class="search"
+          ><span data-icon="search"></span
+          ><input
+            id="search"
+            type="search"
+            placeholder="Search notes"
+            autocomplete="off"
+            aria-label="Search notes"
+          /><kbd data-keys="⇧E">Ctrl ⇧E</kbd></label
         >
-          <span data-icon="alert"></span>
-          <p>
-            <strong id="error-title">Your latest edits are not saved.</strong>
-            <span id="error-text"></span>
-          </p>
-          <div class="banner-actions">
-            <button id="compare-versions" class="primary" hidden>
-              Compare versions</button
-            ><button id="retry-save" class="primary">Retry save</button
-            ><button id="download-draft">Download edits</button
-            ><button id="recovery-copy">Save recovery copy</button
-            ><button id="reload-note">Reload from disk</button>
-          </div>
-        </section>
-        <section id="draft-banner" class="banner draft-banner" hidden>
-          <span data-icon="history"></span>
-          <p>
-            <strong>Unsaved edits to this note were found in this browser.</strong>
-            Editing is paused until you restore or discard them.
-          </p>
-          <div class="banner-actions">
-            <button id="restore-draft" class="primary">Restore draft</button
-            ><button id="discard-draft">Discard draft</button>
-          </div>
-        </section>
-        <section id="orphan-banner" class="banner draft-banner" hidden>
-          <span data-icon="history"></span>
-          <p>
-            <strong id="orphan-title"></strong>
-            They stay in this browser until you save, download or discard them.
-          </p>
-          <div class="banner-actions">
-            <button id="review-drafts" class="primary">Review drafts</button>
-          </div>
-        </section>
-        <div class="editor-frame" id="editor-frame" hidden>
+        <select id="tag-filter" class="tag-filter" aria-label="Show notes with a tag" hidden></select>
+        <div class="list-heading">
+          <span class="list-title">Notes <span id="note-count">0</span></span>
+          <select id="note-sort" aria-label="Sort notes">
+            <option value="modified">Recently edited</option>
+            <option value="title-asc">Title A–Z</option>
+            <option value="title-desc">Title Z–A</option>
+          </select>
+        </div>
+        <nav class="note-list" id="note-list" aria-label="Notebook notes"></nav>
+        <div class="sidebar-bottom">
+          <button id="trash-button" class="theme-button">
+            <span data-icon="trash"></span><span>Trash</span>
+          </button>
+          <button id="theme-button" class="theme-button">
+            <span class="theme-orb"></span
+            ><span id="theme-name">Labradorite Dark</span
+            ><span data-icon="chevronDown"></span>
+          </button>
+        </div>
+      </aside>
+      <button
+        id="sidebar-scrim"
+        class="sidebar-scrim"
+        aria-label="Close notes"
+      ></button>
+      <main class="workspace">
         <div class="editor-bar">
-        <div class="view-switch" role="group" aria-label="Editor view">
+          <button
+            id="sidebar-toggle"
+            class="icon-button"
+            title="Show or hide notes"
+            aria-label="Toggle notes"
+          >
+            <span data-icon="sidebar"></span></button
+          ><button
+            id="history-back"
+            class="icon-button"
+            title="Go back to previous note"
+            aria-label="Go back to previous note"
+            disabled
+          >
+            <span data-icon="back"></span></button
+          ><span class="bar-divider"></span>
+        <div class="view-switch" id="view-switch" role="group" aria-label="Editor view">
           <button data-mode="write" class="active">Write</button
           ><button data-mode="source">Markdown</button
           ><button data-mode="preview">Preview</button
@@ -275,6 +241,48 @@
           </button>
         </section>
         </div>
+        <section
+          id="error-banner"
+          class="banner error-banner"
+          role="alert"
+          hidden
+        >
+          <span data-icon="alert"></span>
+          <p>
+            <strong id="error-title">Your latest edits are not saved.</strong>
+            <span id="error-text"></span>
+          </p>
+          <div class="banner-actions">
+            <button id="compare-versions" class="primary" hidden>
+              Compare versions</button
+            ><button id="retry-save" class="primary">Retry save</button
+            ><button id="download-draft">Download edits</button
+            ><button id="recovery-copy">Save recovery copy</button
+            ><button id="reload-note">Reload from disk</button>
+          </div>
+        </section>
+        <section id="draft-banner" class="banner draft-banner" hidden>
+          <span data-icon="history"></span>
+          <p>
+            <strong>Unsaved edits to this note were found in this browser.</strong>
+            Editing is paused until you restore or discard them.
+          </p>
+          <div class="banner-actions">
+            <button id="restore-draft" class="primary">Restore draft</button
+            ><button id="discard-draft">Discard draft</button>
+          </div>
+        </section>
+        <section id="orphan-banner" class="banner draft-banner" hidden>
+          <span data-icon="history"></span>
+          <p>
+            <strong id="orphan-title"></strong>
+            They stay in this browser until you save, download or discard them.
+          </p>
+          <div class="banner-actions">
+            <button id="review-drafts" class="primary">Review drafts</button>
+          </div>
+        </section>
+        <div class="editor-frame" id="editor-frame" hidden>
         <div class="editor-area" id="editor-area" hidden>
           <section
             class="source-pane"
@@ -369,6 +377,7 @@
         </footer>
       </form>
     </dialog>
+    <div id="menu-popup" class="menu-popup" role="menu" tabindex="-1" hidden></div>
     <div
       id="block-menu"
       class="block-menu"

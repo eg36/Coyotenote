@@ -752,7 +752,7 @@ test("writing starts below one header and one editor bar, even when zoomed", asy
   await openSeed(page, "# Close to the top\n\nThe first paragraph should be in view.");
   for (const [width, height] of [[1440, 900], [720, 450], [390, 844]]) {
     await page.setViewportSize({ width, height });
-    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 145 : 105);
+    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 150 : 120);
     await expect(page.locator(".tiptap p")).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }

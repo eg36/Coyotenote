@@ -56,6 +56,7 @@ import { navigate, shortcutChords, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
+import { setupMenus } from "./menus.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 
 async function initialize() {
@@ -80,6 +81,7 @@ async function initialize() {
   });
   setupOutline();
   setupDragging();
+  setupMenus();
   const data = await refresh();
   adoptFormerVault(data.formerVaultIds);
   updateOrphans();
