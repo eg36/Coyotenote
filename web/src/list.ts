@@ -17,13 +17,19 @@ function excerpt(text: string, title = "") {
     : plain;
 }
 // shortDate names the day a note changed, adding the year only when it is
-// not the current one.
+// not the current one. The formatters are shared: building one per row
+// took most of the list's render time in large vaults.
+const dayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+const dayYearFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 function shortDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return "";
-  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
-  return date.toLocaleDateString(undefined, options);
+  const thisYear = date.getFullYear() === new Date().getFullYear();
+  return (thisYear ? dayFormat : dayYearFormat).format(date);
 }
 const noteCollator = new Intl.Collator(undefined, {
   numeric: true,
