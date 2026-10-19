@@ -269,6 +269,33 @@ programs or tabs appear within a few seconds while the tab is visible (it checks
 small fingerprint of the vault every 3 seconds), and at once when you return to the
 tab, search or open a note; a note with unsaved edits is never replaced.
 
+## Your notes across versions
+
+From 1.0, every 1.x release keeps this format, so you can upgrade by replacing
+the binary, go back to an earlier 1.x, or open the same folder in other tools.
+A change that needed converting a vault would only come with a 2.0, with notes
+on how to move.
+
+What Labradorite stores in a vault:
+
+- **Notes**: `Name.md` or `Folder/Name.md`, UTF-8 Markdown, with your line
+  endings. The file name is the title. A note's file changes only when you edit,
+  rename, move or trash it; Labradorite adds no headers, IDs or metadata.
+- **`.trash/`**: deleted notes, under their names (with a number when a name
+  repeats). Nothing is emptied automatically.
+- **`.history/<note path>.md/`**: earlier versions of each note, one file per
+  version.
+- **`attachments/`**: images added from the editor, linked from notes by path.
+- **`.lock`**, and after an interrupted write `.pending-*` or `.recovery-*`
+  files, which are kept for you to inspect.
+- **`theme`**: the chosen theme ID, in the default data folder (or the
+  `-data-dir` folder). Theme IDs never change.
+
+Hidden folders are never read as notes, so `.git` or `.obsidian` can share the
+folder. In the browser, drafts, view, sort order and collapsed folders keep their
+storage keys across versions; drafts belong to the vault's folder path, so move
+a vault only after its drafts are saved.
+
 ## How it works
 
 The server is Go's standard `net/http` with an `embed.FS` holding

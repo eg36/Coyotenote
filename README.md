@@ -4,10 +4,10 @@
 
 # Labradorite
 
-> **AI-made software.** Labradorite was built with AI coding agents, Claude and
-> Codex, as an experiment to test what modern agents can do. It is not intended
-> to be used as a notepad for daily use; keep important notes in a tool built for
-> that.
+> **AI-made software.** Labradorite was built by AI coding agents, Claude and
+> Codex, to see how far modern agents can take a real app. Your notes stay plain
+> Markdown files that any editor can open; as with any notes app, keep backups
+> of the ones that matter.
 
 A small, local-first Markdown notebook that runs in your browser: folders of
 plain `.md` files, a WYSIWYG editor and Markdown source, `[[wiki links]]`,
@@ -63,6 +63,15 @@ moves the old default folder, `~/.local/share/coyotenote-web`, to
 - Files Labradorite can't edit safely (over 10,000 lines or 4 MiB, not UTF-8,
   symlinks, control characters) are skipped with a warning and left untouched.
 - Line endings (LF or CRLF) and tabs are preserved.
+
+## Your notes across versions
+
+From 1.0, every 1.x release reads and writes vaults exactly as 1.0 does:
+plain `.md` files, never converted or given extra headers, with the trash,
+history and attachments in the same folders. Settings and browser drafts carry
+over. Upgrading means replacing the binary. See
+[the guide](docs/GUIDE.md#your-notes-across-versions) for what Labradorite
+stores and where.
 
 ## Development
 
