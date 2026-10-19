@@ -130,7 +130,7 @@ outside this alpha.
 | Alt+Up / Alt+Down | Previous / next note |
 | Ctrl/⌘+B / I | Bold / italic in Write |
 | Ctrl/⌘+Z / Shift+Z | Undo / redo edits |
-| F1 or help button | All shortcuts |
+| F1 or bottom “all keys” button | All shortcuts |
 | Escape | Close a dialog or drawer |
 
 Browsers and operating systems reserve some combinations. Ctrl+T/P/R/W and the

@@ -345,7 +345,7 @@ test("keyboard hints, source editing, selection undo and no runtime remote reque
   await page.keyboard.press("Control+s");
   await expect.poll(() => diskBody(page, id)).toBe("First edit");
   await page
-    .getByRole("button", { name: "Keyboard shortcuts", exact: true })
+    .locator("#hint-help")
     .click();
   await expect(page.locator("#modal")).toContainText("Browser shortcuts");
   await page.keyboard.press("Escape");

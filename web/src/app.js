@@ -997,7 +997,6 @@ $("sidebar-scrim").onclick = () => {
 };
 $("theme-button").onclick = themeDialog;
 $("hint-theme").onclick = themeDialog;
-$("help-button").onclick = helpDialog;
 $("hint-help").onclick = helpDialog;
 $("focus-button").onclick = () => {
   $("app").classList.toggle("focus-mode");
