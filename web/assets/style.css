@@ -1389,7 +1389,7 @@ dialog.theme-picker::backdrop {
 }
 .sidebar-hidden,
 .focus-mode {
-  grid-template-columns: 0 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 .sidebar-hidden .sidebar,
 .focus-mode .sidebar {
@@ -1418,7 +1418,7 @@ dialog.theme-picker::backdrop {
   }
   .sidebar-hidden,
   .focus-mode {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
     padding-left: 22px;
@@ -1509,7 +1509,7 @@ dialog.theme-picker::backdrop {
   }
   .sidebar-hidden,
   .focus-mode {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .document-head {
     padding-top: 26px;
