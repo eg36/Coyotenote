@@ -19,7 +19,7 @@
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
 
         <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
-            <button id="format-toggle" class="icon-button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
+            <button id="format-toggle" class="icon-button" title="Editing panel" aria-label="Editing panel" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
         <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
         <button id="recent-notes" class="icon-button" aria-label="Recently opened notes" title="Recently opened notes" aria-pressed="false"><span data-icon="history"></span></button>
         <button id="new-note" class="icon-button" aria-label="New note" title="New note · Ctrl/⌘ N" ><span data-icon="newNote"></span></button>
@@ -47,21 +47,7 @@
 
         </div>
         <div class="header-tools">
-        <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>        <div class="view-switch" id="view-switch">
-          <button
-            id="view-type"
-            class="view-type"
-            type="button"
-            title="Editor view · Alt M"
-            aria-haspopup="listbox"
-            aria-controls="view-menu"
-            aria-expanded="false"
-          >
-            <span id="view-type-label">Write</span
-            ><span data-icon="chevronDown"></span>
-          </button>
-        </div>
-        <div class="editor-bar">
+        <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>        <div class="editor-bar">
 
           <div class="document-actions" id="document-actions" hidden>
 
@@ -169,8 +155,24 @@
         class="sidebar-scrim"
         aria-label="Close notes"
       ></button>
-      <aside id="format-panel" class="format-panel" aria-label="Text formatting" hidden>
-        <div class="format-heading"><h2>Text</h2><button id="close-formatting" class="icon-button" aria-label="Close text formatting" title="Close text formatting"><span data-icon="close"></span></button></div>
+      <aside id="format-panel" class="format-panel" aria-label="Editing" hidden>
+        <div class="format-heading"><h2>Editing</h2><button id="close-formatting" class="icon-button" aria-label="Close editing panel" title="Close editing panel"><span data-icon="close"></span></button></div>
+        <h3 class="format-label">Editor view</h3>
+        <div class="view-switch" id="view-switch">
+          <button
+            id="view-type"
+            class="view-type"
+            type="button"
+            title="Editor view · Alt M"
+            aria-haspopup="listbox"
+            aria-controls="view-menu"
+            aria-expanded="false"
+          >
+            <span id="view-type-label">Write</span
+            ><span data-icon="chevronDown"></span>
+          </button>
+        </div>
+        <p class="format-hint" id="format-hint" hidden>Formatting tools appear in Write view.</p>
         <section
           class="editor-toolbar"
           id="editor-toolbar"
@@ -252,7 +254,7 @@
           </button>
         </section>
       </aside>
-      <button id="formatting-scrim" class="formatting-scrim" aria-label="Close text formatting panel" hidden></button>
+      <button id="formatting-scrim" class="formatting-scrim" aria-label="Close editing panel" hidden></button>
       <main class="workspace">
         <section
           id="error-banner"

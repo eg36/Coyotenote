@@ -78,10 +78,9 @@ Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order.
 
 The note title and folder breadcrumbs sit above the centered menu row. Hover or
 focus a truncated title to read its full path. The start page leaves the title
-area blank. **File / Edit / View / Insert**, followed by the **Write / Markdown /
-Preview / Split** selector, stay centered below the title. The menus remain
-available on the start page; note-only commands and the view selector need an
-open note. Use ↑/↓ within a menu, ←/→ to switch menus, and Escape to close.
+area blank. **File / Edit / View / Insert** stay centered below the title. The
+menus remain available on the start page; note-only commands need an open note.
+Use ↑/↓ within a menu, ←/→ to switch menus, and Escape to close.
 
 Pin, outline, history, download and trash are grouped with the centered menu.
 A status dot before the note title shows save state; hover for details. It is
@@ -89,9 +88,12 @@ hidden on the start page. On phones,
 note actions wrap onto their own row within the menu. At home the menu is
 centered vertically and horizontally in the header.
 
-**Text formatting** in the left rail opens a panel between Notes and the document.
-It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,
-and undo/redo. It is available in Write, and closes in source or preview modes.
+The **editing panel** button in the left rail opens a panel between Notes and the
+document. Its **Write / Markdown / Preview / Split** selector sits at the top
+whenever a note is open. In Write, the panel also groups paragraph styles,
+bold/italic/strike/code, lists and quotes, inserts, and undo/redo; Markdown,
+Preview and Split show only the selector. With the panel closed, switch views
+from the **View** menu or with Alt+M.
 The close button or Escape hides it; this browser remembers the choice separately
 for desktop and smaller screens. On smaller screens it opens over the content;
 click outside to close. Focus mode temporarily hides it too.
