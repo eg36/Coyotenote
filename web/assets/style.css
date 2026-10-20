@@ -1512,9 +1512,15 @@ input[type="search"]::-webkit-search-cancel-button {
   gap: 11px;
   padding: 0;
 }
+/* The checkbox sits on the middle of the first line's lowercase letters:
+   the label is one line tall, nudged down to the x-height's middle. */
 .prose ul[data-type="taskList"] > li > label {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  padding-top: 3px;
+  box-sizing: content-box;
+  height: 1.55em;
+  padding-top: 0.08em;
   cursor: pointer;
 }
 .prose input[type="checkbox"] {

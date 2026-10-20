@@ -3048,3 +3048,19 @@ test("image sizes after a | apply in Write and Preview and stay in the Markdown"
   await expect(page.locator('#preview img[alt="Sunrise"]')).toHaveAttribute("width", "80");
   await expect(page.locator('#preview img[alt="Wide"]')).toHaveAttribute("height", "40");
 });
+
+test("checklist boxes in Write sit on the middle of their text", async ({ page }) => {
+  await openSeed(page, "- [ ] First task\n- [x] Second task");
+  for (const size of ["14px", "18px", "24px"]) {
+    await page.evaluate((value) => document.documentElement.style.setProperty("--writing-size", value), size);
+    const offset = await page.locator(".tiptap li").first().evaluate((li) => {
+      const box = li.querySelector("input").getBoundingClientRect();
+      const range = document.createRange(); range.selectNodeContents(li.querySelector("p")); const line = range.getClientRects()[0];
+      const ctx = document.createElement("canvas").getContext("2d"); ctx.font = getComputedStyle(li.querySelector("p")).font;
+      const m = ctx.measureText("x");
+      const baseline = line.y + (line.height - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      return box.y + box.height / 2 - (baseline - m.actualBoundingBoxAscent / 2);
+    });
+    expect(Math.abs(offset), `at ${size}`).toBeLessThan(1.5);
+  }
+});
