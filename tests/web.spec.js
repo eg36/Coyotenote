@@ -3623,8 +3623,109 @@ test("Mermaid code in Write keeps its exact fenced source on body edits", async 
   const id = await openSeed(page, diagram + "\n\nBody.");
   await mode(page, "Write");
   await expect(page.locator("#rich-pane")).toBeVisible();
-  await page.locator(".tiptap p").last().click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
+  await expect(page.locator(".write-diagram-drawing svg")).toHaveCount(1);
+  await page.locator(".tiptap > p").filter({ hasText: "Body." }).click();
+  await expect(page.locator(".tiptap .ProseMirror-selectednode")).toHaveCount(0);
+  await page.keyboard.press("End"); await page.keyboard.type(" More.");
   await expect.poll(() => diskBody(page, id)).toBe(diagram + "\n\nBody. More.");
+});
+
+test("Write renders Mermaid lazily and edits source with cancel, validation and undo", async ({ page }) => {
+  const remote = [], assets = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.origin !== "http://127.0.0.1:4289") remote.push(request.url());
+    if (url.pathname.startsWith("/assets/")) assets.push(url.pathname);
+  });
+  await openSeed(page, "Plain."); await mode(page, "Write");
+  await expect(page.locator(".tiptap")).toContainText("Plain.");
+  expect(assets.some(path => path.includes("preview-diagrams"))).toBe(false);
+  const diagram = '  ~~~~mermaid   extra-info  \n  flowchart LR\n    A --> B\n  ~~~~~  ';
+  const body = "Before.\n\n" + diagram + "\n \nAfter.\n";
+  const id = await openSeed(page, body); await mode(page, "Write");
+  const drawing = page.getByRole("button", { name: "Edit Mermaid diagram", exact: true });
+  await expect(drawing.locator("svg")).toHaveCount(1);
+  await drawing.focus(); await drawing.press("Enter");
+  const field = page.getByLabel("Mermaid source", { exact: true });
+  await expect(field).toHaveValue("  flowchart LR\n    A --> B");
+  await field.fill("flowchart LR\n A --> Cancelled"); await field.press("Escape");
+  await expect(field).toBeHidden(); expect(await diskBody(page, id)).toBe(body);
+  await drawing.click(); await field.fill("flowchart LR\n A --> Cancelled");
+  await page.locator(".write-diagram").getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await diskBody(page, id)).toBe(body);
+  await drawing.click(); await field.fill("flowchart LR\n~~~~");
+  await page.locator(".write-diagram").getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(field).toHaveAttribute("aria-invalid", "true"); expect(await diskBody(page, id)).toBe(body);
+  await field.fill("  flowchart LR\n    A --> Edited");
+  await expect(page.locator(".write-diagram-preview svg")).toContainText("Edited");
+  await field.press("Control+Enter");
+  const edited = body.replace("A --> B", "A --> Edited");
+  await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await drawing.click(); await field.fill("  flowchart LR\n    A --> Applied");
+  await page.locator(".write-diagram").getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(() => diskBody(page, id)).toBe(body.replace("A --> B", "A --> Applied"));
+  await page.locator(".tiptap > p").last().click(); await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await page.keyboard.press("Control+z"); await expect.poll(() => diskBody(page, id)).toBe(body);
+  await page.keyboard.press("Control+Shift+z"); await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await mode(page, "Markdown"); await mode(page, "Write");
+  await expect(drawing.locator("svg")).toContainText("Edited");
+  expect(remote).toEqual([]);
+});
+
+test("Write keeps invalid and blocked Mermaid readable offline on phones", async ({ page }) => {
+  const requests = [];
+  page.on("request", request => { if (request.url().includes("must-not-load") || !request.url().startsWith("http://127.0.0.1:4289/")) requests.push(request.url()); });
+  const sources = ["not a diagram", 'flowchart LR\n A@{ img: "./must-not-load.png" }', '%%{init: {"securityLevel":"loose"}}%%\nflowchart LR\n A --> B', "flowchart LR\n classDef danger fill:red\n A --> B"];
+  const body = sources.map(source => "```mermaid\n" + source + "\n```").join("\n\n") + "\n\nBody.";
+  const id = await openSeed(page, body); await mode(page, "Write");
+  await expect(page.locator(".write-diagram-drawing p.render-error")).toHaveCount(4);
+  for (let i = 0; i < sources.length; i++) await expect(page.locator(".write-diagram-drawing pre").nth(i)).toHaveText(sources[i]);
+  const first = page.locator(".write-diagram").first();
+  await first.getByRole("button", { name: "Edit Mermaid diagram" }).click();
+  const field = first.getByLabel("Mermaid source"); await field.fill("still invalid"); await field.press("Control+Enter");
+  await expect.poll(() => diskBody(page, id)).toBe(body.replace("not a diagram", "still invalid"));
+  await page.setViewportSize({ width: 320, height: 720 });
+  await first.getByRole("button", { name: "Edit Mermaid diagram" }).click();
+  await field.fill("flowchart LR\n Start --> A_very_long_node_name --> Another_long_node_name --> End");
+  await expect(first.locator(".write-diagram-preview svg")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await field.press("Control+Enter");
+  await expect(first.locator(".write-diagram-drawing svg")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(requests).toEqual([]);
+});
+
+test("Write keeps Mermaid fences and nested sources exact through edits", async ({ page }) => {
+  test.setTimeout(60_000);
+  const cases = ['  ```mermaid  \n  flowchart LR\n    A --> B\n  ```` ', '~~~~mermaid\nflowchart LR\n A --> B\n~~~~', '> ```mermaid\n> flowchart LR\n>  A --> B\n> ```', '- Item\n\n  ```mermaid\n  flowchart LR\n    A --> B\n  ```', '- Item\n  ```mermaid\n  flowchart LR\n    A --> B\n  ```', '- Item\n\n    ```mermaid\n    flowchart LR\n      A --> B\n    ```', '1) Item\n\n   ```mermaid\n   flowchart LR\n     A --> B\n   ```'];
+  for (const diagram of cases) {
+    const body = diagram + "\n\nBody.";
+    const id = await openSeed(page, body); await mode(page, "Write");
+    await expect(page.locator(".write-diagram-drawing svg")).toHaveCount(1);
+    await page.locator(".tiptap > p").filter({ hasText: "Body." }).click();
+    await expect(page.locator(".tiptap .ProseMirror-selectednode")).toHaveCount(0);
+    await page.keyboard.press("End"); await page.keyboard.type(" More.");
+    await expect.poll(() => diskBody(page, id)).toBe(body + " More.");
+    await page.getByRole("button", { name: "Edit Mermaid diagram", exact: true }).click();
+    const field = page.getByLabel("Mermaid source", { exact: true });
+    await field.fill((await field.inputValue()).replace("A --> B", "A --> Changed"));
+    await field.press("Control+Enter");
+    await expect.poll(() => diskBody(page, id)).toBe(body.replace("A --> B", "A --> Changed") + " More.");
+  }
+});
+
+test("Write preserves Mermaid at EOF with empty or unclosed fences", async ({ page }) => {
+  for (const body of ["```mermaid\n```", "```mermaid\n\n```\n", "```mermaid\nflowchart LR\n A --> B", "```mermaid\nflowchart LR\n A --> B\n"]) {
+    const id = await openSeed(page, body); await mode(page, "Write");
+    await page.getByRole("button", { name: "Edit Mermaid diagram", exact: true }).click();
+    const field = page.getByLabel("Mermaid source", { exact: true });
+    const old = await field.inputValue();
+    await field.fill(old.includes("A --> B") ? old.replace("A --> B", "A --> Edited") : "flowchart LR\n A --> Edited");
+    await field.press("Control+Enter");
+    const expected = old.includes("A --> B") ? body.replace("A --> B", "A --> Edited") : body.replace(/\n(?:\n)?```/, "\nflowchart LR\n A --> Edited\n```");
+    await expect.poll(() => diskBody(page, id)).toBe(expected);
+  }
 });
 
 test("Write saves blocks it did not change exactly as they were written", async ({ page }) => {

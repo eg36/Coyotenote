@@ -27,6 +27,7 @@ import { SourceBlocks, stampSources } from "./source-blocks.js";
 import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
 import { Callout, continuedCallout } from "./write-callout.js";
 import { InlineMath, MathBlock, NumberedList, splitLazyFormulas, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
+import { MermaidBlock } from "./write-diagrams.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -392,6 +393,7 @@ export function createRich(
         Highlight,
         InlineMath,
         MathBlock,
+        MermaidBlock,
         NumberedList,
         MathListItem,
         MathBlockquote,

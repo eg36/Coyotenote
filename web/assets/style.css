@@ -3081,6 +3081,13 @@ dialog.danger #modal-submit {
 .write-math-panel:not([hidden]) { display: block; margin: 12px 0; padding: 12px 0; white-space: normal; text-align: left; }
 .write-math-panel textarea { max-height: 40vh; overflow: auto; resize: vertical; font-family: var(--mono, ui-monospace, monospace); }
 .write-math-preview { display: block; overflow-x: auto; min-height: 1.5em; margin-top: 8px; }
+.write-diagram { margin: 1.25em 0; min-width: 0; }
+.write-diagram-drawing { cursor: pointer; border-radius: 4px; overflow-x: auto; }
+.write-diagram-drawing:hover { background: var(--hover); }
+.write-diagram-drawing:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.write-diagram-drawing .mermaid-diagram { margin: 0; }
+.write-diagram-preview { overflow-x: auto; min-width: 0; }
+.write-diagram pre { white-space: pre; overflow-x: auto; }
 
 .write-task-status { width: 44px; height: 28px; margin: 0 4px 0 0; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--chrome); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .write-task-status:hover { background: var(--hover); }

@@ -7,7 +7,7 @@ import { MarkdownManager } from "@tiptap/markdown";
 // block therefore remembers the Markdown it was read from, and a fingerprint
 // of what it looked like then. While a block is unchanged, saving writes that
 // Markdown back as it was; only blocks someone edits are written anew.
-const types = ["paragraph", "heading", "blockquote", "callout", "bulletList", "orderedList", "taskList", "codeBlock", "horizontalRule", "table"];
+const types = ["paragraph", "heading", "blockquote", "callout", "bulletList", "orderedList", "taskList", "codeBlock", "mermaidBlock", "horizontalRule", "table"];
 
 export const SourceBlocks = Extension.create({
   name: "sourceBlocks",

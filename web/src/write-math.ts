@@ -228,7 +228,7 @@ export function maskFormulas(masked: string) {
 // A display formula keeps sitting directly below a line of text, or after a
 // blank line, inside a bullet or a quote as at the top level.
 export function attachedBelow(previous: JSONContent | undefined, child: JSONContent) {
-  return child.type === "mathBlock" && !!child.attrs?.attached
+  return ["mathBlock", "mermaidBlock"].includes(child.type || "") && !!child.attrs?.attached
     && ["paragraph", "heading", "bulletList", "orderedList", "blockquote"].includes(previous?.type || "");
 }
 
@@ -257,10 +257,10 @@ reader.parseTokens = function (tokens, top) {
   return parseTokens.call(this, top ? splitLazyFormulas(tokens, text => this.createLexer().lex(text)) : tokens, top);
 };
 function tightAfter(previous: JSONContent | undefined) {
-  return previous?.type === "mathBlock" && previous.attrs?.after === "\n";
+  return ["mathBlock", "mermaidBlock"].includes(previous?.type || "") && previous?.attrs?.after === "\n";
 }
 type Helpers = { renderChild?: (node: JSONContent, index: number) => string; renderChildren: (nodes: JSONContent[]) => string; indent: (text: string) => string };
-const hasFormula = (node: JSONContent): boolean => (node.content || []).some(child => child.type === "mathBlock" || hasFormula(child));
+const hasFormula = (node: JSONContent): boolean => (node.content || []).some(child => ["mathBlock", "mermaidBlock"].includes(child.type || "") || hasFormula(child));
 
 // Numbered lists are read like bullet lists, by the standard CommonMark list
 // rules, as the preview reads them. The editor's own numbered-list reader
@@ -285,8 +285,8 @@ export const MathListItem = ListItem.extend({
       const text = helpers.renderChild?.(child, i + 1) ?? helpers.renderChildren([child]);
       // Blank lines stay blank, as they were written, rather than indented.
       const lines = text.split("\n").map(line => line ? indent + line : "").join("\n");
-      const gap = child.type === "mathBlock" ? (attachedBelow(previous, child) ? "\n" : "\n\n")
-        : previous.type === "mathBlock" ? (tightAfter(previous) ? "\n" : "\n\n")
+      const gap = ["mathBlock", "mermaidBlock"].includes(child.type || "") ? (attachedBelow(previous, child) ? "\n" : "\n\n")
+        : ["mathBlock", "mermaidBlock"].includes(previous.type || "") ? (tightAfter(previous) ? "\n" : "\n\n")
         : child.type === "paragraph" ? "\n\n" : "\n";
       output += gap + lines;
     });

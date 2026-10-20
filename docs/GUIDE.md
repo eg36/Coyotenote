@@ -288,11 +288,14 @@ flowchart LR
 ```
 ````
 
-Diagrams use strict rendering and theme colours. Their fenced source remains
-editable in Write. Invalid diagrams keep their source with an error message.
+Diagrams use strict rendering and theme colours in Preview and Write. Click a
+diagram in Write (or focus it and press Enter) to edit its Mermaid source below
+it, with a live rendering. Apply or Ctrl/⌘ Enter saves, Escape cancels, and undo
+works as usual. Its fence, language line and source indentation stay as written.
+Invalid diagrams keep their source with an error message and remain editable.
 Images, URLs, custom configuration and CSS styling directives are disabled so
 rendering stays offline. Both renderers and the math fonts are bundled; their
-code loads only when Preview needs it, with no CDN or other network service.
+code loads only when a note needs it, with no CDN or other network service.
 
 ### Markdown editor
 
