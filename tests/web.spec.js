@@ -2670,6 +2670,12 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   expect(toggleBox.x - viewBox.x - viewBox.width).toBeLessThan(10);
   expect(Math.abs(toggleBox.y + toggleBox.height / 2 - viewBox.y - viewBox.height / 2)).toBeLessThan(2);
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  // Labelled like the view selector beside it, with the same height and border.
+  await expect(toggle).toHaveText("Format");
+  await expect(toggle).toHaveAttribute("aria-label", "Text formatting");
+  expect(toggleBox.height).toBe(viewBox.height);
+  expect(await toggle.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe(
+    await page.locator("#view-type").evaluate((el) => getComputedStyle(el).borderTopWidth));
   const sidebar = await page.locator("#sidebar").boundingBox(), panel = await pane.boundingBox();
   expect(panel.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width);
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).click();

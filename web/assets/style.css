@@ -2840,20 +2840,22 @@ dialog.danger #modal-submit {
 /* The editor view selector and the text formatting toggle hold the header's
    left end, beside the logo; the centered title and menus keep an equal gutter
    on both sides to clear them. */
-.topbar { --view-gutter: 172px; }
+.topbar { --view-gutter: 224px; }
 .topbar > .view-tools { display: flex; align-items: center; gap: 6px; grid-column: 1; grid-row: 1 / -1; justify-self: start; align-self: center; z-index: 1; }
 .view-tools .view-type { width: auto; height: 32px; gap: 6px; padding: 0 6px 0 8px; border: 1px solid var(--line); color: var(--text); }
 .view-tools .view-type svg { color: var(--muted); }
 .view-tools .view-type svg:first-child { width: 16px; height: 16px; }
-.view-tools #format-toggle { width: 32px; height: 32px; border: 1px solid var(--line); }
+.view-tools #format-toggle { padding: 0 10px 0 8px; }
 .view-tools #format-toggle[aria-expanded="true"] { background: var(--selected); border-color: transparent; color: var(--accent-text); }
+.view-tools #format-toggle[aria-expanded="true"] svg { color: currentColor; }
 .app:not(.at-home) .topbar .title-block { max-width: min(680px, calc(100% - 2 * var(--view-gutter))); }
 .app:not(.at-home) .topbar .header-tools { padding: 0 var(--view-gutter); }
 /* Narrower headers show the current view as an icon only. */
 @media (max-width: 999px) {
   .topbar { --view-gutter: 90px; }
   .view-tools .view-type { gap: 0; padding: 0 2px 0 6px; }
-  .view-tools #view-type-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .view-tools #format-toggle { width: 32px; padding: 0; justify-content: center; }
+  .view-tools .view-tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
 /* Phones: the view selector starts the title row and formatting ends it. */
 @media (max-width: 680px) {
