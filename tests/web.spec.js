@@ -2359,10 +2359,22 @@ test("pins and recently opened notes survive reload and follow an app rename", a
   await expect(page.locator("#document-title")).toHaveText(first.split("/").pop());
   await page.locator("#show-all-notes").click();
   const renamed = first + " renamed";
+  let release, held = false;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route("**/api/note?**", async route => {
+    if (new URL(route.request().url()).searchParams.get("id") !== renamed || held) return route.fallback();
+    held = true;
+    const response = await route.fetch();
+    await gate;
+    await route.fulfill({ response }).catch(() => {});
+  });
   await page.locator("#document-title").click();
   await page.getByLabel("Note path").fill(renamed);
   await page.getByRole("button", { name: "Rename note", exact: true }).click();
   await expect(page.locator("#pinned-list .navigation-note")).toHaveAttribute("data-note", renamed);
+  await expect.poll(() => held).toBe(true);
+  await expect.poll(() => new URL(page.url()).searchParams.get("note")).toBe(renamed);
+  release();
   await page.reload();
   await expect(page.getByRole("button", { name: "Unpin note", exact: true })).toBeVisible();
   await page.locator("#recent-notes").click();

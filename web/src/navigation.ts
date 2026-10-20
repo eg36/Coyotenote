@@ -22,6 +22,14 @@ function rememberNote(id: string) {
   keep("recent", [id, ...ids("recent").filter((entry) => entry !== id)].slice(0, 30));
 }
 function renameNavigation(before: string, after: string) {
+  // Publish the new address before any asynchronous list/editor refresh.
+  const url = new URL(location.href);
+  if (url.searchParams.get("note") === before) {
+    url.searchParams.set("note", after);
+    history.replaceState(null, "", url);
+  }
+  state.back = state.back.map(id => id === before ? after : id);
+  state.forward = state.forward.map(id => id === before ? after : id);
   for (const kind of ["pins", "recent"] as const)
     keep(kind, [...new Set(ids(kind).map((id) => id === before ? after : id))]);
 }

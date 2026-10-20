@@ -163,7 +163,7 @@ function renameDialog() {
       });
       renameNavigation(previousId, result.note.id);
       await refresh();
-      await openNote(result.note.id, { skipSave: true });
+      await openNote(result.note.id, { skipSave: true, pushBack: false });
       if (result.warnings.length)
         showToast(result.warnings.join(" · "), { persistent: true });
     },
