@@ -2642,6 +2642,12 @@ test("note actions stay in the writing toolbar and the save dot precedes the not
     expect(title.x - status.x - status.width).toBeGreaterThanOrEqual(3);
     expect(Math.abs(status.y + status.height / 2 - title.y - title.height / 2)).toBeLessThan(2);
     await expect(page.locator(".header-divider")).toHaveCount(0);
+    // A thin divider sits between Insert and the action icons while they share a row.
+    const divider = await page.locator(".editor-bar").evaluate((el) => {
+      const style = getComputedStyle(el, "::before");
+      return style.content !== "none" && style.display !== "none" ? parseFloat(style.width) : 0;
+    });
+    expect(divider).toBe(width <= 680 ? 0 : 1);
     expect(await page.locator("#menu-bar #document-actions").count()).toBe(1);
     const label = await page.locator("#save-label").boundingBox();
     expect(label.width).toBeLessThanOrEqual(1);
