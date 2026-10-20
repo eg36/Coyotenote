@@ -41,7 +41,10 @@ export const StatusTaskItem = TaskItem.extend({
   },
   parseMarkdown(token, helpers) {
     const content = [helpers.createNode("paragraph", {}, helpers.parseInline(token.tokens || [])), ...helpers.parseChildren(token.nestedTokens || [])];
-    return helpers.createNode("taskItem", { checked: /[xX]/.test(token.marker || ""), marker: token.marker, before: token.before, after: token.after }, content);
+    // Tasks read from a list that also holds plain bullets arrive with only
+    // a checked state, not their marker.
+    const marker = token.marker ?? (token.checked ? "x" : " ");
+    return helpers.createNode("taskItem", { checked: /[xX]/.test(marker), marker, before: token.before, after: token.after }, content);
   },
   renderMarkdown(node, helpers) {
     return renderNestedMarkdownContent(node, helpers, `${node.attrs?.before || "- ["}${node.attrs?.marker ?? (node.attrs?.checked ? "x" : " ")}${node.attrs?.after || "] "}`);

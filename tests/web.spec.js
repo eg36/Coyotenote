@@ -3451,6 +3451,16 @@ test("edited lists, code blocks and headings keep their markers, fences and unde
   }
 });
 
+test("tasks after plain bullets in the same list keep their checked state", async ({ page }) => {
+  const body = "Body. intro\n\n- **Flat:** under.\n- **No ear:** score.\n\n- [x] First (see [[Note]])\n- [ ] Try rye";
+  const id = await openSeed(page, body);
+  await mode(page, "Write");
+  await expect(page.locator(".tiptap li[data-checked='true']")).toHaveCount(1);
+  await page.locator(".tiptap p").filter({ hasText: "Body." }).click({ position: { x: 2, y: 8 } });
+  await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+  await expect.poll(() => diskBody(page, id)).toBe(body.replace("Body.", "Edited Body."));
+});
+
 test("characters typed in Write are escaped only where they would become formatting", async ({ page }) => {
   const id = await openSeed(page, "Start.");
   await mode(page, "Write");
