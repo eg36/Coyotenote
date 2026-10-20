@@ -31,8 +31,8 @@ this document does not authorize a release tag.
 - Reserve room for the larger title and full-title tooltip; keep the editor
   toolbar centered without shifting when note names change.
 - The rail provides Commands (the existing searchable command palette).
-  One Menu sits before Write in the editor toolbar, with desktop flyouts and
-  inline phone categories; it remains available at home.
+  File / Edit / View / Insert form a row above the writing toolbar. The menu
+  row remains at home; note editing controls appear only with an open note.
 - Search scope switching should preserve the query; existing full-text result
   previews remain available. This note retains case, whole-word, regex and
   replacement controls, and restores the prior writing mode when closed.

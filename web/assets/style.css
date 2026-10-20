@@ -2824,37 +2824,31 @@ dialog.danger #modal-submit {
 @media (max-width: 360px) {
   #hint-help > span { display: none; }
 }
-/* Menu is part of the writing controls, and remains available at home. */
-.header-tools .menu-bar { margin: 0; flex-shrink: 0; }
-.header-tools .menu-bar button { width: 32px; height: 32px; padding: 0; justify-content: center; }
-.header-tools .menu-bar button svg { width: 22px; height: 22px; }
-.app.at-home .header-tools, .app.at-home .editor-bar { display: flex; }
-.app.at-home .header-tools { position: static; transform: none; margin: 0 auto 0 12px; }
-.app.at-home .editor-bar { order: 0; flex: 0 0 auto; margin: 0; padding: 0; border: 0; }
-.app.at-home .editor-bar > :not(.menu-bar) { display: none !important; }
-.menu-item[aria-expanded="true"] { background: var(--selected); }
-.menu-inline { margin: 4px 6px 8px 12px; padding-left: 8px; border-left: 1px solid var(--line); }
-@media (max-width: 639px) {
-  .menu-item[aria-expanded="true"] .menu-chevron { transform: none; }
+/* Document menus sit above the writing controls, with a steady title column. */
+.header-tools {
+  display: flex;
+  flex: 1 1 0;
+  max-width: 1120px;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0 auto;
+  padding: 0;
+  gap: 4px;
+  background: transparent;
 }
-@media (max-width: 530px) {
-  .app.at-home .header-tools { grid-column: 1; grid-row: 2; justify-self: start; margin: 0; }
+.header-tools .menu-bar { display: flex; gap: 2px; margin: 0; padding: 0; }
+.header-tools .menu-bar button { width: auto; height: 26px; padding: 0 10px; font-size: 13px; }
+.header-tools .editor-bar {
+  order: 0;
+  flex: 0 1 auto;
+  margin: 0;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
 }
-/* Reserve the title's space so note names cannot shift the writing controls. */
-@media (min-width: 1280px) {
-  .topbar .title-block {
-    flex: 0 0 calc(var(--notes-width) - 16px);
-    min-width: 0;
-    max-width: none;
-  }
-  .header-tools, .app.at-home .header-tools {
-    position: static;
-    transform: none;
-    margin: 0 auto;
-  }
-  .app.at-home .header-tools { margin-left: 0; }
-}
-/* Status stays at the outer edge; note commands belong to the writing bar. */
+.app.at-home .header-tools { display: flex; margin: 0 auto 0 12px; }
+.app.at-home .editor-bar { display: none; }
 .topbar #save-state { margin-left: auto; flex-shrink: 0; }
 .topbar #save-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .header-tools .document-actions { border-left: 1px solid var(--line); padding-left: 6px; margin-left: 4px; }
@@ -2863,14 +2857,18 @@ dialog.danger #modal-submit {
 .header-divider { display: none; }
 .app-title { white-space: nowrap; flex-shrink: 0; }
 @media (min-width: 1280px) {
+  .topbar .title-block { flex: 0 0 calc(var(--notes-width) - 16px); min-width: 0; max-width: none; }
+  .header-tools { position: static; transform: none; }
   .header-divider { display: block; position: absolute; top: 0; bottom: 0; left: calc(var(--notes-width) - 1px); width: 1px; background: color-mix(in srgb, var(--line) 60%, transparent); pointer-events: none; }
   .topbar #save-state { margin-left: 0; }
-  .app.at-home .title-block { flex: 0 0 auto; min-width: 0; max-width: calc(var(--notes-width) - 72px); }
-  .app.at-home .header-tools { margin: 0 auto 0 12px; }
+  .app.at-home .header-tools { margin: 0 auto; }
 }
-
+@media (max-width: 1279px) {
+  .header-tools { flex: 1 1 100%; order: 10; margin: 2px 0 0; }
+  .app.at-home .header-tools { flex: 0 1 auto; order: 0; margin: 0 auto 0 12px; }
+}
 @media (max-width: 530px) {
-  .app.at-home .topbar { grid-template-columns: max-content 44px minmax(0, 1fr) auto; }
-  .app.at-home .header-tools { grid-column: 2; grid-row: 1; margin: 0; }
-  .app.at-home .topbar #save-state { grid-column: 4; grid-row: 1; }
+  .topbar .header-tools { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+  .topbar #save-state { grid-column: 2; grid-row: 1; }
+  .app.at-home .header-tools { grid-column: 1 / -1; grid-row: 2; margin: 0; }
 }

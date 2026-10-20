@@ -40,9 +40,7 @@ async function mode(page, name) {
   await expect(page.locator("#view-menu")).toBeHidden();
 }
 async function menu(page, section) {
-  await page.locator('[data-menu="workspace"]').click();
-  const names = { file: "Notes and files…", edit: "Editing…", view: "View options…", insert: "Insert…" };
-  await page.getByRole("menuitem", { name: names[section], exact: true }).click();
+  await page.locator(`[data-menu="${section}"]`).click();
 }
 async function diskBody(page, id) {
   return (
@@ -82,30 +80,28 @@ test("empty notebook, create a note, WYSIWYG writing and autosave", async ({
   await expect(editor).toContainText("A thought worth keeping.");
 });
 
-test("one menu opens categories, supports keyboard return and disables note actions at home", async ({ page }) => {
+test("document menus sit above writing controls and support keyboard navigation at home", async ({ page }) => {
   await page.goto("/");
-  const trigger = page.locator('[data-menu="workspace"]');
   const popup = page.locator("#menu-popup");
-  await expect(page.locator("#menu-bar button")).toHaveCount(1);
+  await expect(page.locator("#menu-bar button")).toHaveCount(4);
   await menu(page, "file");
   await expect(page.getByRole("menuitem", { name: "Rename or move…" })).toBeDisabled();
-  await page.keyboard.press("ArrowLeft");
-  await expect(popup.getByRole("menuitem", { name: "View options…" })).toBeVisible();
-  await popup.getByRole("menuitem", { name: "View options…" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(popup).toHaveAttribute("aria-label", "Edit");
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("menuitem", { name: "Split", exact: true })).toBeDisabled();
   await page.keyboard.press("Escape");
-  await expect(popup).toBeHidden();
-  await expect(trigger).toBeFocused();
+  await expect(page.locator('[data-menu="view"]')).toBeFocused();
+  const homeMenus = await page.locator("#menu-bar").boundingBox();
   await openSeed(page, "A document with menus.");
+  const menus = await page.locator("#menu-bar").boundingBox();
+  expect(Math.abs(menus.x - homeMenus.x)).toBeLessThan(1);
+  const writing = await page.locator(".editor-bar").boundingBox();
+  expect(menus.y + menus.height).toBeLessThanOrEqual(writing.y);
   await menu(page, "view");
   await page.getByRole("menuitem", { name: "Split", exact: true }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
   await expect(popup).toBeHidden();
-  await trigger.click();
-  await page.keyboard.press("Escape");
-  await expect(popup).toBeHidden();
-  await expect(trigger).toBeFocused();
 });
 
 test("rich formatting and Markdown survive source, split and preview modes", async ({
@@ -872,10 +868,8 @@ test("start-page navigation stays together and status sits at the right edge", a
       expect(width - status.x - status.width).toBeLessThanOrEqual(14);
       const title = await page.locator("#app-title").boundingBox();
       expect(title.x + title.width).toBeLessThanOrEqual(status.x);
-      const menuButton = await page.locator('[data-menu="workspace"]').boundingBox();
-      expect(menuButton.x).toBeGreaterThanOrEqual(title.x + title.width);
-      expect(menuButton.x - title.x - title.width).toBeLessThan(140);
-      expect(Math.abs(menuButton.y + menuButton.height / 2 - title.y - title.height / 2)).toBeLessThan(8);
+      for (const name of ["file", "edit", "view", "insert"])
+        await expect(page.locator(`[data-menu="${name}"]`)).toBeInViewport();
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
       const logo = await page.locator("#brand").boundingBox();
       expect(sidebarToggle.y).toBeGreaterThanOrEqual(logo.y + logo.height);
@@ -988,11 +982,11 @@ test("writing starts right below the header, which holds the editor controls on 
   await openSeed(page, "# Close to the top\n\nThe first paragraph should be in view.");
   for (const [width, height] of [[1440, 900], [1280, 800], [1100, 800], [720, 450], [390, 844]]) {
     await page.setViewportSize({ width, height });
-    // From 1280 px the toolbar shares the header row; below, it takes a second one.
+    // Menus sit above the writing controls, with compact wrapping on phones.
     const top = (await page.locator(".topbar").boundingBox()).height;
-    if (width >= 1280) expect(top).toBeLessThanOrEqual(70);
+    if (width >= 1280) expect(top).toBeLessThanOrEqual(100);
     await expect(page.locator("#save-state")).toHaveAttribute("title", "All changes saved");
-    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 220 : width < 800 ? 170 : width < 1280 ? 120 : 72);
+    expect((await page.locator("#rich-editor").boundingBox()).y).toBeLessThanOrEqual(width < 700 ? 220 : width < 800 ? 170 : width < 1280 ? 150 : 100);
     await expect(page.locator(".tiptap p")).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }

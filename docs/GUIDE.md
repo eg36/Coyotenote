@@ -77,15 +77,15 @@ Drag rail icons to reorder them within the main shortcuts or bottom utility grou
 Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order.
 
 The top bar holds the clickable note title and folder breadcrumbs. Hover or focus
-a truncated title to read its full path. The **Menu** button lives immediately
-before **Write / Markdown / Preview / Split** in the editor toolbar; it remains
-available on the start page. Categories open alongside the menu on desktop and
-expand inside it on phones. Use ↑/↓ within a menu, → to enter a category, ← to
-return, and Escape to close. Note-only commands are disabled at home.
+a truncated title to read its full path. **File / Edit / View / Insert** sit
+in a row above the writing toolbar. The menus remain available on the start page;
+writing controls appear when a note is open. Use ↑/↓ within a menu, ←/→ to switch
+menus, and Escape to close. Note-only commands are disabled at home.
 The toolbar stays centered as titles change, with note actions inside it and a
 status dot at the far right of the header. Hover the dot for save details.
-The vertical header divider aligns with the notes panel below. Below 1280 px it takes a second row;
-phones also give formatting its own scrollable row.
+The vertical header divider aligns with the notes panel below. On smaller
+screens the menus and writing controls wrap below the title, and phones give
+formatting its own scrollable row.
 
 The rail's **Search** button (or Ctrl/⌘ Shift E) opens one query field with
 **All notes / This note** scopes. Switching scope keeps the query. Escape clears
@@ -96,7 +96,7 @@ The interface and writing pane use locally bundled **Lexend**. The writing size
 defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints
 are at least 12 px.
 
-**Settings** (the button at the bottom of the rail, Menu → Settings…, Quick
+**Settings** (the button at the bottom of the rail, View → Settings…, Quick
 open or Ctrl/⌘ Shift T) holds the theme and, under Writing, text sizes from
 14–24 px, Narrow/Standard/Wide line widths for Write and Preview, and spellcheck
 in Write. Markdown text stays 2 px smaller than the chosen size. Every change
@@ -122,7 +122,7 @@ not change the Markdown files or follow the vault to another browser.
   `![[photo.png]]` show in Preview.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
-- **Find and replace** (Menu → Editing or Quick open command) searches the open
+- **Find and replace** (Edit or Quick open command) searches the open
   note with case, whole-word and regular-expression controls under **Search options**. It opens Markdown
   view from Write or Preview; Split stays split. Replace one match or all,
   then close search to restore the previous writing view. Choosing a view yourself
@@ -156,7 +156,7 @@ not change the Markdown files or follow the vault to another browser.
   Start with `#` to jump to a heading of the open note, or `>` to run a command
   such as a view change, rename or theme. Anything typed can also become a
   content search or a new note.
-- **Today's note** (Menu, Quick open command, or Alt+J) opens
+- **Today's note** (File menu, Quick open command, or Alt+J) opens
   `Journal/YYYY-MM-DD` using your computer's local date, creating an empty note
   when it does not exist. Repeating the command keeps the same note and its text.
 - **Templates:** keep reusable notes in a `Templates/` folder. The New note
@@ -172,7 +172,7 @@ not change the Markdown files or follow the vault to another browser.
   the notes sidebar when you use it. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
-  **Alt+Up / Alt+Down** (or Menu → View options → Previous / Next note) cycles the visible sorted notes; the sidebar arrows move backward and forward
+  **Alt+Up / Alt+Down** (or View → Previous / Next note) cycles the visible sorted notes; the sidebar arrows move backward and forward
   through visited notes. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
 - **Settings → Appearance → Theme** opens a list of all **14 palettes**, including the four Catppuccin
@@ -182,7 +182,7 @@ not change the Markdown files or follow the vault to another browser.
   kept theme. Palettes stay as
   published; where one of their text colors would fall below WCAG AA contrast (as in
   Ayu Light or Nord), the app darkens or lightens just that text until it passes.
-- **Menu → View options → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
+- **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 
 ### WYSIWYG round trips
