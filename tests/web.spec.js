@@ -744,7 +744,7 @@ test("unsupported Markdown is kept in source, without normalization", async ({
   page,
 }) => {
   const body =
-    "---\ntitle: untouched\n---\n\nText with an inline footnote.^[Keep this aside.]\n";
+    "---\ntitle: untouched\n---\n\nText with <u>raw HTML</u>.\n";
   const id = await openSeed(page, body);
   await mode(page, "Write");
   await expect(page.locator("#source-pane")).toBeVisible();
@@ -804,7 +804,7 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
   await page.route("**/api/note", (route) =>
     route.request().method() === "PUT" ? route.abort() : route.continue(),
   );
-  const draft = "Draft text.^[An inline aside Write cannot keep.]";
+  const draft = "Draft text with <u>raw HTML Write cannot keep</u>.";
   await page.locator(".cm-content").fill(draft);
   await expect(page.locator("#error-banner")).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());
@@ -2952,13 +2952,87 @@ test("footnotes render in Preview and jump between reference and note", async ({
   expect(page.url()).toBe(before);
 });
 
-test("inline footnotes keep the note in Markdown until Write edits footnotes", async ({ page }) => {
-  const text = "A thought^[with a side note] here.\n\nNext line.";
-  const id = await openSeed(page, text);
-  await mode(page, "Write");
-  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
-  await expect(page.locator("#toast-text")).toContainText("footnotes");
-  expect(await diskBody(page, id)).toBe(text);
+test("Write keeps inline footnotes exact through body edits and view changes", async ({ page }) => {
+  for (const aside of [
+    "with a side note", "  **bold** and [a link](https://example.com)  ",
+    "nested [square [brackets]] and \\[escaped\\]", "first line\nsecond line",
+    "<u>raw</u> &copy; $\\alpha$ ![[literal]]",
+  ]) {
+    const text = `A thought^[${aside}] here. Another^[second].\n\nNext line.`;
+    const id = await openSeed(page, text); await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Edit inline footnote", exact: true })).toHaveCount(2);
+    await page.locator(".tiptap > p").last().click();
+    await page.keyboard.press("End"); await page.keyboard.type(" More.");
+    await expect.poll(() => diskBody(page, id)).toBe(text + " More.");
+    await mode(page, "Markdown"); await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    await page.reload(); await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    expect(await diskBody(page, id)).toBe(text + " More.");
+  }
+});
+
+test("inline footnotes retain final newlines on body edits", async ({ page }) => {
+  for (const ending of ["\n", "\n\n"]) {
+    const text = "A thought^[Keep this aside.] here." + ending;
+    const id = await openSeed(page, text); await mode(page, "Write");
+    await page.locator(".tiptap > p").first().click(); await page.keyboard.press("Home");
+    await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id)).toBe("Edited " + text);
+  }
+});
+
+test("Write edits inline footnotes with validation, cancel, undo and Preview", async ({ page }) => {
+  const text = "A claim^[  Original [link](https://example.com).  ] and a reference[^a].\n\n[^a]: Keep this.\n";
+  const id = await openSeed(page, text); await mode(page, "Write");
+  const trigger = page.getByRole("button", { name: "Edit inline footnote", exact: true });
+  await trigger.focus(); await page.keyboard.press("Enter");
+  const input = page.getByRole("textbox", { name: "Inline footnote Markdown", exact: true });
+  await expect(input).toBeFocused(); await expect(input).toHaveValue("  Original [link](https://example.com).  ");
+  for (const invalid of ["", "unbalanced ] bracket", "two\n\nparagraphs", "a trailing \\"]) {
+    await input.fill(invalid); await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(await diskBody(page, id)).toBe(text);
+  }
+  await input.fill("A cancelled edit."); await page.keyboard.press("Escape");
+  await expect(input).toBeHidden(); await expect(trigger).toBeFocused();
+  await trigger.click(); await expect(input).toHaveValue("  Original [link](https://example.com).  ");
+  const revised = "Revised **bold** [nested [brackets]] and \\[literal\\].\nNext line.";
+  await input.fill(revised); await page.keyboard.press("Control+Enter");
+  const edited = text.replace("  Original [link](https://example.com).  ", revised);
+  await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await page.locator(".tiptap > p").first().click({ position: { x: 2, y: 8 } });
+  await page.keyboard.press("Control+z"); await expect.poll(() => diskBody(page, id)).toBe(text);
+  await page.keyboard.press("Control+Shift+z"); await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await page.reload(); await mode(page, "Preview");
+  await expect(page.locator("#preview .footnotes")).toContainText("Revised bold");
+  await expect(page.locator("#preview .footnotes")).toContainText("Keep this.");
+  await mode(page, "Write"); await trigger.click(); await expect(input).toHaveValue(revised);
+});
+
+test("Write creates inline footnotes by typing and keeps code examples literal", async ({ page }) => {
+  const text = "`^[literal]` and code.\n\nBody.";
+  const id = await openSeed(page, text); await mode(page, "Write");
+  await expect(page.getByRole("button", { name: "Edit inline footnote", exact: true })).toHaveCount(0);
+  await page.locator(".tiptap > p").last().click(); await page.keyboard.press("End");
+  await page.keyboard.type("^[New **aside**]");
+  await expect(page.getByRole("button", { name: "Edit inline footnote", exact: true })).toHaveCount(1);
+  await expect.poll(() => diskBody(page, id)).toBe(text + "^[New **aside**]");
+});
+
+test("inline footnote fields work on phones and in structured text", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const text = "# Heading^[heading aside]\n\n- Item^[list aside]\n\n> Quote^[quote aside]\n\nBody.";
+  const id = await openSeed(page, text); await mode(page, "Write");
+  const triggers = page.getByRole("button", { name: "Edit inline footnote", exact: true });
+  await expect(triggers).toHaveCount(3); await triggers.nth(1).click();
+  const input = page.getByRole("textbox", { name: "Inline footnote Markdown", exact: true });
+  await expect(input).toHaveValue("list aside"); await input.fill("Phone [edit].");
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("list aside", "Phone [edit]."));
+  const width = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, view: innerWidth }));
+  expect(width.page).toBeLessThanOrEqual(width.view);
 });
 
 test("callouts render in Preview with icons and folding, and keep the note in Markdown for Write", async ({ page }) => {
@@ -3360,7 +3434,12 @@ test("unsupported footnote layouts fall back and unresolved references stay exac
   for (const text of [
     "Text[^a].\n\n[^a]: One.\n\n[^a]: Duplicate.",
     "Text[^my label].\n\n[^my label]: A spaced label.",
-    "Text^[inline aside].",
+    "**Text^[inline aside].**",
+    "[Link^[aside]](https://example.com).",
+    "Text^[unfinished.",
+    "Text^[two\n\nparagraphs].",
+    "| Cell |\n| --- |\n| Text^[a \\| b] |",
+    "Escaped \\^[literal aside].",
     "Escaped \\[^a].",
     "**Bold[^a] text.**\n\n[^a]: Note.",
   ]) {

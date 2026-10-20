@@ -295,7 +295,7 @@ front matter with a `tags` field. Preview shows front matter as a properties
 block above the text, and note excerpts and word counts leave it out.
 
 Write deliberately falls back to Markdown for unclosed front matter,
-inline footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named
+reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
 round-trip intact, including when a browser draft is restored; a short message says
 which syntax kept the note in Markdown. Use source mode for
@@ -313,9 +313,19 @@ to the rest of the note. Definition edits support undo and autosave.
 
 To add or rename a definition, use Markdown with `[^source]: Definition`.
 Typing `[^source]` in Write creates a reference. A reference without a definition
-stays intact and explains how to add one. Inline `^[asides]`, duplicate or
+stays intact and explains how to add one. Duplicate or
 unsupported definitions, escaped references and formatting spanning a reference
-keep the Markdown fallback, with a message explaining why.
+keep the Markdown fallback, with a message explaining why. Inline footnotes
+in tables or inside link text also keep this fallback.
+
+Inline `^[asides]` also work in Write. Click the superscript **note** button
+(or focus it and press Enter) to open its Markdown field. **Apply** or
+Ctrl/⌘ Enter saves the change; **Cancel** or Escape discards the field's edits.
+The body keeps its original Markdown, spaces, escaped brackets and single
+line breaks. Balanced nested brackets are supported; empty bodies, unbalanced
+brackets and blank lines show a message before applying. Literal brackets can
+be escaped with a backslash. Typing `^[an aside]` creates an inline footnote.
+Applied edits support undo, and Preview renders the footnote normally.
 
 ### Typed properties in Write
 Simple YAML front matter appears as named fields: text, numbers, checkboxes,

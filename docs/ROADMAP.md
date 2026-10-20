@@ -78,6 +78,8 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 - Align the breadcrumb folder icon with the folder name in every browser.
 
 ### 1.5.0 — Smooth everything, then release
+- Inline `^[…]` footnotes in Write: edit their Markdown in place, preserve
+  nested brackets and escapes, and validate changes before applying.
 - Rename a note in place: clicking the title turns it into a text field
   (Enter renames, Escape cancels, a folder path moves the note), instead of
   opening the rename dialog.

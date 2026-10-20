@@ -12,7 +12,7 @@ interface RichOptions {
   imageFiles(transfer: DataTransfer | null): File[];
 }
 
-import { marked } from "marked";
+import { marked, Marked } from "marked";
 import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -21,7 +21,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
-import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions } from "./footnotes.js";
+import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes } from "./footnotes.js";
 import { writingSettings } from "./preferences.js";
 
 const WikiLink = Node.create({
@@ -211,6 +211,10 @@ const ImageParagraph = Paragraph.extend({
   },
 });
 
+const richMarkdown = new Marked({ gfm: true, extensions: [{
+  name: "inlineFootnote", level: "inline", start: text => text.indexOf("^["), tokenizer: inlineFootnoteToken,
+}] });
+
 export function supportsRich(body: string) {
   // YAML (---) or TOML (+++) front matter, possibly after a byte order mark.
   if (/^\uFEFF?(---|\+\+\+)\r?\n/.test(body))
@@ -221,10 +225,12 @@ export function supportsRich(body: string) {
     return "Showing Markdown: Write would change duplicate footnote definitions.";
   body = withoutFootnoteDefinitions(body);
   let reason = "";
-  marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
+  marked.walkTokens(richMarkdown.lexer(body), (token) => {
     if (token.type === "paragraph" || token.type === "text") {
-      const text = token.raw.replace(/(`+)[\s\S]*?\1/g, "");
+      const text = withoutInlineFootnotes(token.raw.replace(/(`+)[\s\S]*?\1/g, ""));
       if (/\\\[\^/.test(text)) reason = "Showing Markdown: Write would change this escaped footnote reference.";
+      if (/\\\^\[/.test(text)) reason = "Showing Markdown: Write would change this escaped inline footnote.";
+      if (/\^\[/.test(text)) reason = "Showing Markdown: Write would change this unfinished inline footnote.";
       for (const math of text.matchAll(/(?<!\\)\$(?:\$|(?=\S)(?:\\.|[^$\n])*?\S?\$(?!\d))/g)) {
         // Plain equations are literal text in Write. TeX commands, display
         // blocks and Markdown punctuation need source editing to stay exact.
@@ -239,8 +245,6 @@ export function supportsRich(body: string) {
         "Showing Markdown: Write would drop this note's reference-style link definitions.";
     if (token.type === "text" && !token.tokens && /!\[\[[^\]\n]+\]\]/.test(token.raw))
       reason = "Showing Markdown: Write would change this note's ![[…]] file embeds.";
-    if (token.type === "text" && /\^\[[^\]]+\]/.test(token.raw))
-      reason = "Showing Markdown: Write would change this note's footnotes.";
     // Write keeps &amp;, &lt;, &gt; and &quot; but would show other named
     // references such as &copy; as literal text and save them escaped.
     if (
@@ -256,13 +260,16 @@ export function supportsRich(body: string) {
   // Write closes bold, italic, strikethrough and highlights before a wiki
   // link or image and reopens them after it, which would rewrite the text.
   const split = "Showing Markdown: Write would split formatting around a link or image in this note.";
-  marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
-    if (["strong", "em", "del"].includes(token.type) && /\[\[|!\[|\[\^/.test(token.raw)) reason = split;
+  marked.walkTokens(richMarkdown.lexer(body), (token) => {
+    if (["strong", "em", "del"].includes(token.type) && /\[\[|!\[|\[\^|\^\[/.test(token.raw)) reason = split;
+    if (token.type === "link" && /\^\[/.test(token.raw)) reason = split;
+    if (token.type === "table" && /\^\[/.test(token.raw))
+      reason = "Showing Markdown: Write would change inline footnotes in this table.";
     if (token.type === "list_item" && /^\s*(?:[-*+]|\d+[.)])[ \t]+\[[^\sxX[\]\\]\][ \t]/.test(token.raw))
       reason = "Showing Markdown: Write would change this note's custom task marks, such as [?].";
     if (token.type === "text" || token.type === "paragraph")
       for (const match of token.raw.matchAll(highlightPattern))
-        if (/\[\[|!\[|\[\^/.test(match[2])) reason = split;
+        if (/\[\[|!\[|\[\^|\^\[/.test(match[2])) reason = split;
   });
   return reason;
 }

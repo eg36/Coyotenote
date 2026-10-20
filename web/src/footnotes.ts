@@ -1,4 +1,5 @@
 import { Node, InputRule } from "@tiptap/core";
+import { Plugin } from "@tiptap/pm/state";
 
 interface Definition {
   label: string;
@@ -69,6 +70,134 @@ export const FootnoteReference = Node.create({
     return [new InputRule({ find: /\[\^([^\]\s]+)\]$/, handler: ({ range, match, commands }) => {
       commands.insertContentAt(range, { type: this.name, attrs: { label: match[1] } });
     } })];
+  },
+});
+
+// Match the preview parser's balanced brackets, escapes and paragraph limit.
+// The body stays opaque: its own Markdown never passes through serialization.
+export function inlineFootnoteToken(source: string) {
+  if (!source.startsWith("^[")) return undefined;
+  let depth = 1;
+  for (let i = 2; i < source.length; i++) {
+    if (source[i] === "\\") { i++; continue; }
+    if (source[i] === "\n" && source[i + 1] === "\n") return undefined;
+    if (source[i] === "[") depth++;
+    if (source[i] === "]" && --depth === 0) {
+      const body = source.slice(2, i);
+      if (body.trim()) return { type: "inlineFootnote", raw: source.slice(0, i + 1), body };
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+export function withoutInlineFootnotes(source: string) {
+  let result = "";
+  for (let i = 0; i < source.length; i++) {
+    if (source[i] === "\\") { result += source.slice(i, i + 2); i++; continue; }
+    const token = inlineFootnoteToken(source.slice(i));
+    if (token) { result += " "; i += token.raw.length - 1; }
+    else result += source[i];
+  }
+  return result;
+}
+
+let inlineFieldId = 0;
+const InlineFootnote = Node.create({
+  name: "inlineFootnote", group: "inline", inline: true, atom: true,
+  addAttributes() { return { body: { default: "" } }; },
+  parseHTML() { return [{ tag: "span[data-inline-footnote]", getAttrs: el => ({ body: el.getAttribute("data-inline-footnote") }) }]; },
+  renderHTML({ node }) { return ["span", { "data-inline-footnote": node.attrs.body }, `^[${node.attrs.body}]`]; },
+  renderText({ node }) { return `^[${node.attrs.body}]`; },
+  markdownTokenName: "inlineFootnote",
+  markdownTokenizer: { name: "inlineFootnote", level: "inline", start: "^[", tokenize: inlineFootnoteToken },
+  parseMarkdown(token) { return { type: "inlineFootnote", attrs: { body: token.body } }; },
+  renderMarkdown(node) { return `^[${node.attrs?.body || ""}]`; },
+  priority: 1100,
+  addProseMirrorPlugins() {
+    return [new Plugin({ props: {
+      handleTextInput(view, from, to, text) {
+        const at = view.state.doc.resolve(from);
+        if (at.parent.type.spec.code || at.marks().some(mark => mark.type.name === "code")) return false;
+        const prefix = at.parent.textBetween(0, at.parentOffset, "", "\ufffc");
+        const candidate = prefix + text;
+        for (let i = 0; i < candidate.length; i++) {
+          if (candidate[i] === "\\") { i++; continue; }
+          if (!candidate.startsWith("^[", i)) continue;
+          const token = inlineFootnoteToken(candidate.slice(i));
+          if (token && i + token.raw.length < candidate.length) { i += token.raw.length - 1; continue; }
+          const tr = view.state.tr;
+          if (token) {
+            const start = from - prefix.length + i;
+            tr.replaceWith(start, to, view.state.schema.nodes.inlineFootnote.create({ body: token.body }));
+          } else tr.insertText(text, from, to);
+          view.dispatch(tr);
+          return true;
+        }
+        return false;
+      },
+    } })];
+  },
+  addNodeView() {
+    return ({ node, editor, getPos }) => {
+      let current = node;
+      const dom = document.createElement("span"); dom.className = "write-inline-footnote";
+      const trigger = document.createElement("sup"); trigger.className = "write-footnote-ref";
+      trigger.textContent = "note"; trigger.setAttribute("role", "button"); trigger.tabIndex = 0;
+      trigger.setAttribute("aria-label", "Edit inline footnote"); trigger.setAttribute("aria-expanded", "false");
+      const panel = document.createElement("span"); panel.className = "write-inline-footnote-panel write-footnote-definition"; panel.hidden = true;
+      const label = document.createElement("label"); label.textContent = "Inline footnote (Markdown)";
+      const input = document.createElement("textarea"); input.rows = 3; input.setAttribute("aria-label", "Inline footnote Markdown");
+      const error = document.createElement("span"); error.className = "write-footnote-error"; error.setAttribute("role", "alert");
+      error.id = `inline-footnote-error-${++inlineFieldId}`; input.setAttribute("aria-describedby", error.id);
+      const actions = document.createElement("span"); actions.className = "write-footnote-actions";
+      const apply = document.createElement("button"); apply.type = "button"; apply.textContent = "Apply";
+      const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
+      apply.className = "primary-button"; cancel.className = "secondary-button";
+      function close() {
+        panel.hidden = true; trigger.setAttribute("aria-expanded", "false");
+        trigger.focus();
+      }
+      function open() {
+        if (!editor.isEditable) return;
+        input.value = current.attrs.body; error.textContent = ""; input.removeAttribute("aria-invalid");
+        panel.hidden = false; trigger.setAttribute("aria-expanded", "true"); input.focus();
+        panel.scrollIntoView({ block: "nearest" });
+      }
+      function commit() {
+        if (!editor.isEditable) return;
+        const raw = `^[${input.value}]`;
+        if (inlineFootnoteToken(raw)?.raw !== raw) {
+          error.textContent = "Use nonempty Markdown with balanced brackets and no blank lines. Escape literal brackets with a backslash.";
+          input.setAttribute("aria-invalid", "true"); input.focus(); return;
+        }
+        const pos = getPos(); if (pos === undefined) return;
+        if (input.value !== current.attrs.body)
+          editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { body: input.value }));
+        close();
+      }
+      trigger.onclick = () => panel.hidden ? open() : close();
+      trigger.onkeydown = event => {
+        if (["Enter", " "].includes(event.key)) { event.preventDefault(); panel.hidden ? open() : close(); }
+      };
+      panel.onkeydown = event => {
+        if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); }
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); commit(); }
+      };
+      apply.onclick = commit; cancel.onclick = close;
+      label.append(input); actions.append(apply, cancel); panel.append(label, error, actions); dom.append(trigger, panel);
+      function sync() {
+        dom.dataset.inlineFootnote = current.attrs.body;
+        trigger.title = current.attrs.body;
+        trigger.setAttribute("aria-disabled", String(!editor.isEditable));
+        input.readOnly = !editor.isEditable; apply.disabled = !editor.isEditable;
+      }
+      sync();
+      return {
+        dom, stopEvent: () => true, ignoreMutation: () => true,
+        update(next) { if (next.type !== current.type) return false; current = next; sync(); return true; },
+      };
+    };
   },
 });
 
@@ -173,8 +302,11 @@ export function footnoteExtensions(source: () => string) {
       });
       const last = nodes.at(-1);
       if (last?.type === "footnoteDefinition") result += last.attrs?.after || "";
+      // A final paragraph has no visible newline node. Retain the source's
+      // terminator when editing text or an inline footnote in that paragraph.
+      else if (!result.endsWith("\n")) result += /(?:\n[ \t]*)+$/.exec(source())?.[0] || "";
       return result;
     },
   });
-  return [documentNode, definition, FootnoteReference];
+  return [documentNode, definition, FootnoteReference, InlineFootnote];
 }
