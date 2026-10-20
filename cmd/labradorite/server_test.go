@@ -757,3 +757,26 @@ func TestEmptyTrashDeletesForGood(t *testing.T) {
 		t.Fatalf("emptied without the token: %d", w.Code)
 	}
 }
+
+func TestHighlightsRender(t *testing.T) {
+	a := testApp(t)
+	render := func(body string) string {
+		return request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Note"}, 200)["html"].(string)
+	}
+	for body, want := range map[string]string{
+		"A ==marked== word.":        "<p>A <mark>marked</mark> word.</p>",
+		"==🔴Red== and ==🟣purple==":  `<p><mark class="hl-red">Red</mark> and <mark class="hl-purple">purple</mark></p>`,
+		"==**bold** inside==":       "<p><mark><strong>bold</strong> inside</mark></p>",
+		"a = b and a == b":          "<p>a = b and a == b</p>",
+		"===not three===":           "<p>===not three===</p>",
+		"`==code==` stays":          "<p><code>==code==</code> stays</p>",
+		"\\==escaped==":             "<p>==escaped==</p>",
+		"Title\n==":                 "<h1",
+		"==🔵== empty colour":        `<p><mark class="hl-blue"></mark> empty colour</p>`,
+		"==unclosed and ~~struck~~": "<p>==unclosed and <del>struck</del></p>",
+	} {
+		if got := render(body); !strings.Contains(got, want) {
+			t.Errorf("render(%q) = %q, want it to contain %q", body, got, want)
+		}
+	}
+}

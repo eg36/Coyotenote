@@ -199,6 +199,14 @@ not change the Markdown files or follow the vault to another browser.
 - **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 
+### Extended syntax
+
+Beyond GitHub Flavored Markdown, Preview understands:
+
+- **Highlights:** `==marked text==`. Start with a colour emoji for a coloured
+  highlight: `==🔴red==`, 🟠 orange, 🟡 yellow, 🟢 green, 🔵 blue, 🟣 purple.
+  Write keeps the `==` markers as typed.
+
 ### WYSIWYG round trips
 
 Merely opening Write or switching views **does not save or normalize a note**.

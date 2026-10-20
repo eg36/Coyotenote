@@ -39,8 +39,9 @@ function readable(color: RGB, toward: RGB, backgrounds: RGB[], target = 4.5) {
 }
 
 // readableRoles returns CSS custom properties that override a theme's text
-// roles where they would fall below AA, and the text color for search
-// highlights on their 30% warn tint.
+// roles where they would fall below AA, and the text color for highlights:
+// search matches on their 30% warn tint, and ==marked== text on 30% tints of
+// the red, orange, yellow, green, blue and purple highlight colours.
 function readableRoles(colors: Record<string, string>) {
   const [surface, chrome, accent, warn] = [
     colors.surface,
@@ -64,7 +65,11 @@ function readableRoles(colors: Record<string, string>) {
   const focus = readable(accent, extreme, [surface, chrome, ...tinted], 3);
   const pill = rgb(colors.onPill || "#000000");
   const onPill = readable(pill, luminance(pill) < luminance(accent) ? black : white, [accent]);
-  const marked = [surface, chrome, mix(accent, chrome, 0.16)].map((b) => mix(warn, b, 0.3));
+  const [danger, good, blue, pink] = [colors.danger, colors.good, colors.blue, colors.pink].map((c) =>
+    rgb(c || colors.warn || "#000000"),
+  ) as RGB[];
+  const tints = [warn, danger, mix(danger, warn, 0.5), good, blue, pink];
+  const marked = [surface, chrome, mix(accent, chrome, 0.16)].flatMap((b) => tints.map((t) => mix(t, b, 0.3)));
   const markText = readable(text, extreme, marked);
   return {
     text: hex(text),

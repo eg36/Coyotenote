@@ -263,6 +263,10 @@ test("every theme draws text, accents, pills and focus rings at AA contrast", as
         accentText: Math.min(...plain.map((b) => ratio(rgb("accent-text"), b))),
         onPill: ratio(rgb("onPill"), rgb("accent")),
         focus: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("focus"), b))),
+        // ==Highlights== in every colour, on 30% tints like the stylesheet's.
+        highlight: Math.min(...plain.flatMap((b) =>
+          [rgb("warn"), rgb("danger"), mix(rgb("danger"), rgb("warn"), 0.5), rgb("good"), rgb("blue"), rgb("pink")]
+            .map((c) => ratio(rgb("mark-text"), mix(c, b, 0.3))))),
       };
     });
     // Text needs 4.5:1; focus rings, like other non-text cues, 3:1.
@@ -2780,4 +2784,21 @@ test("pin sits right after the note title and pins the open note", async ({ page
   await expect(page.locator("#pinned-list .navigation-note")).toHaveAttribute("data-note", id);
   await page.goto("/");
   await expect(pin).toBeHidden();
+});
+
+test("highlights render in Preview and Write keeps their == markers", async ({ page }) => {
+  const id = await openSeed(page, "Plain ==marked== and ==🟢green== words.\n\nSecond line.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview mark")).toHaveCount(2);
+  await expect(page.locator("#preview mark").first()).toHaveText("marked");
+  await expect(page.locator("#preview mark.hl-green")).toHaveText("green");
+  const tint = await page.locator("#preview mark").first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(tint).not.toBe("rgba(0, 0, 0, 0)");
+  // Editing elsewhere in Write saves the highlights unchanged.
+  await mode(page, "Write");
+  await page.getByRole("textbox", { name: "WYSIWYG editor" }).locator("p").last().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Added.");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("Plain ==marked== and ==🟢green== words.\n\nSecond line. Added.");
 });
