@@ -10,6 +10,13 @@
   require `npm run build`, followed by a Go rebuild.
 - Preserve plain Markdown vaults, the original theme IDs and named upstream palettes, atomic writes,
   revision conflict checks and recoverable browser drafts.
+- Work is tracked as GitHub issues in eg36/Labradorite. Before starting a
+  feature or fix, find its issue or create one with `gh issue create`: a
+  plain title, what and why, and how to tell it is done. A bug found along the
+  way gets its own issue before it is fixed. Commits reference their issue,
+  and the commit that completes it says `Fixes #N` in its message. When it is
+  done, comment on the issue with what changed and how it was verified. Keep
+  committing to main until the user switches to branches and pull requests.
 - Give each feature, fix or independent change its own focused commit. Include
   its relevant tests and generated bundle changes; do not bundle unrelated work.
 - Validate relevant changes with `go vet ./...`, `go test -race ./...`,
