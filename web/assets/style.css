@@ -3005,12 +3005,12 @@ dialog.danger #modal-submit {
 .tiptap .write-callout .callout-content > :last-child { margin-bottom: 0; }
 /* Custom task marks in the preview, such as [?] or [-]: a small box the
    size of a checkbox showing the mark, tinted by what it usually means. */
-#preview .task-mark { --task: var(--accent); display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin: 0 8px 0 0; vertical-align: middle; border: 1.5px solid var(--task); border-radius: 3px; color: var(--task); font: 700 10px/1 var(--font-ui); }
-#preview li[data-task="?"] > .task-mark { --task: var(--warn); }
-#preview li[data-task="!"] > .task-mark { --task: var(--danger); }
-#preview li[data-task=">"] > .task-mark { --task: var(--blue); }
-#preview li[data-task="/"] > .task-mark { --task: var(--good); }
-#preview li[data-task="-"] > .task-mark { --task: var(--muted); }
+.prose .task-mark { --task: var(--accent-text); display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin: 0 8px 0 0; vertical-align: middle; border: 1.5px solid var(--task); border-radius: 3px; color: var(--task); font: 700 10px/1 var(--font-ui); }
+.prose li[data-task="?"] > .task-mark, .prose li[data-task="?"] > .write-task-controls .task-mark { --task: var(--task-question); }
+.prose li[data-task="!"] > .task-mark, .prose li[data-task="!"] > .write-task-controls .task-mark { --task: var(--task-important); }
+.prose li[data-task=">"] > .task-mark, .prose li[data-task=">"] > .write-task-controls .task-mark { --task: var(--task-deferred); }
+.prose li[data-task="/"] > .task-mark, .prose li[data-task="/"] > .write-task-controls .task-mark { --task: var(--task-progress); }
+.prose li[data-task="-"] > .task-mark, .prose li[data-task="-"] > .write-task-controls .task-mark { --task: var(--muted); }
 #preview li[data-task="-"] { color: var(--muted); text-decoration: line-through; }
 /* An image given both a width and a height, as in ![alt|120x40](…), takes
    exactly that size; with only a width it keeps its proportions. */
@@ -3089,11 +3089,19 @@ dialog.danger #modal-submit {
 .write-diagram-preview { overflow-x: auto; min-width: 0; }
 .write-diagram pre { white-space: pre; overflow-x: auto; }
 
-.write-task-status { width: 44px; height: 28px; margin: 0 4px 0 0; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--chrome); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
-.write-task-status:hover { background: var(--hover); }
+.write-task-controls { display: inline-flex; align-items: center; flex: none; gap: 2px; box-sizing: content-box; height: 1.55em; padding-top: 0.08em; }
+.write-task-checkbox, .write-task-glyph { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: 0; }
+.write-task-checkbox { cursor: pointer; }
+.write-task-checkbox input[type="checkbox"], .write-task-glyph .task-mark { margin: 0; }
+.write-task-menu { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 4px; color: var(--muted); }
+.write-task-menu svg { width: 14px; height: 14px; pointer-events: none; }
+.write-task-status { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
+.write-task-status option { background: var(--chrome); color: var(--text); }
+.write-task-menu:hover { background: var(--hover); }
+.write-task-menu:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+.write-task-menu:has(select:disabled) { opacity: 0.5; }
 .prose li[data-marker="-"] > div { color: var(--muted); text-decoration: line-through; }
-
-.prose ul[data-type="taskList"] > li > label:has(.write-task-status) { min-width: 70px; justify-content: flex-end; }
+#preview li[data-task], #preview li:has(> input[type="checkbox"]), #preview li:has(> p:first-child > input[type="checkbox"]) { list-style-type: none; padding-left: 0; }
 
 /* Renaming in place: the title becomes a field holding only its name. */
 .note-heading.renaming .document-title { display: none; }

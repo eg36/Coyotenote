@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 import { InputRule, parseIndentedBlocks, renderNestedMarkdownContent } from "@tiptap/core";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -62,38 +63,51 @@ export const StatusTaskItem = TaskItem.extend({
     return ({ node, editor, getPos }) => {
       let current = node;
       const dom = document.createElement("li"); dom.dataset.type = "taskItem";
-      const label = document.createElement("label"); label.contentEditable = "false";
+      const controls = document.createElement("span"); controls.className = "write-task-controls"; controls.contentEditable = "false";
+      const label = document.createElement("label"); label.className = "write-task-checkbox";
       const box = document.createElement("input"); box.type = "checkbox";
+      label.append(box);
+      const glyphBox = document.createElement("span"); glyphBox.className = "write-task-glyph";
+      const glyph = document.createElement("span"); glyph.className = "task-mark"; glyph.setAttribute("role", "img");
+      glyphBox.append(glyph);
+      const menu = document.createElement("span"); menu.className = "write-task-menu";
+      menu.innerHTML = icon("chevronDown");
       box.onmousedown = event => event.preventDefault();
       const select = document.createElement("select"); select.className = "write-task-status";
       for (const [mark, name] of statuses) {
-        const option = document.createElement("option"); option.value = mark; option.textContent = `[${mark}] ${name}`; select.append(option);
+        const option = document.createElement("option"); option.value = mark; option.textContent = name; select.append(option);
       }
       const content = document.createElement("div");
       const sync = () => {
         const mark = current.attrs.marker ?? (current.attrs.checked ? "x" : " ");
         select.querySelectorAll("option[data-original]").forEach(option => option.remove());
         if (mark !== "X" && !statuses.some(([value]) => value === mark)) {
-          const option = document.createElement("option"); option.value = mark; option.textContent = `[${mark}] Custom`; option.dataset.original = "true"; select.append(option);
+          const option = document.createElement("option"); option.value = mark; option.textContent = "Custom"; option.dataset.original = "true"; select.append(option);
         }
-        dom.dataset.marker = mark; dom.dataset.checked = String(current.attrs.checked);
+        dom.dataset.marker = mark; dom.dataset.task = mark; dom.dataset.checked = String(current.attrs.checked);
         dom.dataset.before = current.attrs.before; dom.dataset.after = current.attrs.after;
-        box.checked = current.attrs.checked; box.hidden = !/[ xX]/.test(mark);
+        const ordinary = /^[ xX]$/.test(mark);
+        box.checked = current.attrs.checked; box.disabled = !editor.isEditable;
+        label.hidden = !ordinary; glyphBox.hidden = ordinary;
+        glyph.textContent = mark;
+        const status = statuses.find(([value]) => value === mark)?.[1].toLowerCase() || `marked ${mark}`;
+        glyph.setAttribute("aria-label", `Task ${status}`);
         const title = current.firstChild?.textContent || "empty task item";
         box.setAttribute("aria-label", `Task item checkbox for ${title}`);
         select.value = mark === "X" ? "x" : mark;
         select.disabled = !editor.isEditable;
         select.setAttribute("aria-label", `Task status for ${title}`);
-        select.title = select.selectedOptions[0]?.textContent || "Task status";
+        select.title = `Task status: ${select.selectedOptions[0]?.textContent || "Custom"}`;
       };
       select.onchange = () => {
         if (!editor.isEditable) { sync(); return; }
         const pos = getPos(); if (pos === undefined) return;
         editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, marker: select.value, checked: select.value === "x" }));
       };
-      label.append(box, select); dom.append(label, content); sync();
+      menu.append(select); controls.append(label, glyphBox, menu); dom.append(controls, content); sync();
       return { dom, contentDOM: content,
-        stopEvent: event => event.target === select,
+        stopEvent: event => controls.contains(event.target as globalThis.Node),
+        ignoreMutation: mutation => controls.contains(mutation.target),
         update(next) { if (next.type !== current.type) return false; current = next; sync(); return true; },
       };
     };

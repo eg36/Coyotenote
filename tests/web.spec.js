@@ -322,6 +322,7 @@ test("every theme draws text, accents, pills and focus rings at AA contrast", as
         text: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("text"), b))),
         muted: Math.min(...plain.map((b) => ratio(rgb("muted"), b))),
         accentText: Math.min(...plain.map((b) => ratio(rgb("accent-text"), b))),
+        taskMarks: Math.min(...plain.flatMap(b => ["task-question", "task-important", "task-deferred", "task-progress"].map(role => ratio(rgb(role), b)))),
         onPill: ratio(rgb("onPill"), rgb("accent")),
         focus: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("focus"), b))),
         // ==Highlights== in every colour, on 30% tints like the stylesheet's.
@@ -3521,6 +3522,41 @@ test("custom task marks work in Write and render in Preview", async ({ page }) =
   await openSeed(page, "- [ ] Plain\n- [x] Done");
   await mode(page, "Write");
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+});
+
+test("task marks match between views, keep plain bullets and work by keyboard", async ({ page }) => {
+  const text = "- [ ] Open\n- [X] Done\n- [?] Question\n- [/] Working\n- [-] Cancelled\n- [>] Later\n- [!] Important\n- [z] Custom\n\nParagraph.\n\n- Plain bullet";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  const tasks = page.locator('.tiptap li[data-type="taskItem"]');
+  await expect(tasks).toHaveCount(8);
+  for (const item of await tasks.all()) {
+    await expect(item.locator('input[type="checkbox"]:visible, .task-mark:visible')).toHaveCount(1);
+    expect(await item.locator(".write-task-status option").allTextContents()).not.toContain("[/] In progress");
+  }
+  const appearance = await page.locator(".tiptap .task-mark:visible").evaluateAll(marks => marks.map(mark => {
+    const css = getComputedStyle(mark); return [mark.textContent, css.color, css.width, css.height, css.borderRadius];
+  }));
+  await mode(page, "Preview");
+  expect(await page.locator("#preview .task-mark").evaluateAll(marks => marks.map(mark => {
+    const css = getComputedStyle(mark); return [mark.textContent, css.color, css.width, css.height, css.borderRadius];
+  }))).toEqual(appearance);
+  const previewTasks = page.locator('#preview li[data-task], #preview li:has(> input[type="checkbox"])');
+  await expect(previewTasks).toHaveCount(8);
+  for (const task of await previewTasks.all()) await expect(task).toHaveCSS("list-style-type", "none");
+  await expect(page.locator("#preview li").filter({ hasText: "Plain bullet" })).toHaveCSS("list-style-type", "disc");
+  await mode(page, "Write");
+  const status = page.getByRole("combobox", { name: "Task status for Question", exact: true });
+  await status.focus(); await expect(status).toBeFocused();
+  await page.keyboard.press("Space"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("[?]", "[/]"));
+  await expect(tasks.nth(2).locator(".task-mark")).toHaveText("/");
+  await page.getByRole("checkbox", { name: "Task item checkbox for Open", exact: true }).check();
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("[?]", "[/]").replace("[ ]", "[x]"));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await status.selectOption("!");
+  await expect(tasks.nth(2).locator(".task-mark")).toHaveText("!");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("image sizes after a | apply in Write and Preview and stay in the Markdown", async ({ page }) => {

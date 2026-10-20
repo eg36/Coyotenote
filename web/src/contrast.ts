@@ -78,6 +78,10 @@ function readableRoles(colors: Record<string, string>) {
     focus: hex(focus),
     onPill: hex(onPill),
     "mark-text": hex(markText),
+    "task-question": hex(readable(warn, extreme, plain)),
+    "task-important": hex(readable(danger, extreme, plain)),
+    "task-deferred": hex(readable(blue, extreme, plain)),
+    "task-progress": hex(readable(good, extreme, plain)),
   };
 }
 

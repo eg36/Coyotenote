@@ -239,9 +239,11 @@ Beyond GitHub Flavored Markdown, Preview understands:
   with an escaped pipe: `[[Note\|label]]`.
 - **Task marks:** besides `- [ ]` and `- [x]`, any single character marks a task:
   `[?]` question, `[!]` important, `[>]` deferred, `[/]` in progress and `[-]`
-  cancelled (struck through) get their own colour in Preview. In Write, use the
-  status picker beside a task to switch between these states, Open and Done.
-  Ordinary tasks also keep their checkbox. Untouched markers (including `[X]`),
+  cancelled (struck through) show the same coloured marks in Write and Preview.
+  Tasks have no list bullet; ordinary bullet lists keep theirs. In Write, the
+  chevron beside a mark opens a status picker with readable names, available
+  with mouse, touch or keyboard. Clicking an Open or Done checkbox toggles it.
+  Untouched markers (including `[X]`),
   bullet spacing and nested task indentation stay exact; changes support undo.
   Type `- [?] ` to start a question task. Tight bullet task lists are supported.
   Custom-status tasks mixed with plain bullets, ordered custom tasks, loose
