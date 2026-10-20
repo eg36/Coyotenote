@@ -2,7 +2,7 @@
 import { $, showError, showToast, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
 import { icon } from "./icons.js";
-import { browseFolder, shortDate } from "./list.js";
+import { browseFolder, shortDate, updateFoldButton } from "./list.js";
 import { setSidebar } from "./sidebar.js";
 
 type Collection = "pins" | "recent";
@@ -23,6 +23,14 @@ function rememberNote(id: string) {
 function renameNavigation(before: string, after: string) {
   for (const kind of ["pins", "recent"] as const)
     keep(kind, [...new Set(ids(kind).map((id) => id === before ? after : id))]);
+}
+function hasPins() {
+  const existing = new Set(state.notes.map((note) => note.id));
+  return ids("pins").some((id) => existing.has(id));
+}
+function setPinsOpen(open: boolean) {
+  $("pinned-notes").open = open;
+  if (state.vaultId) storage.set(`labradorite-pins-open:${state.vaultId}`, String(open));
 }
 function togglePin() {
   const id = state.current?.id;
@@ -107,6 +115,7 @@ function renderNavigation() {
   $("pin-note").setAttribute("aria-pressed", String(pinned));
   $("pin-note").title = pinned ? "Unpin note" : "Pin note";
   $("pin-note").setAttribute("aria-label", pinned ? "Unpin note" : "Pin note");
+  updateFoldButton();
 }
 function showRecent() {
   $("app").classList.add("show-recents");
@@ -121,4 +130,4 @@ function showAllNotes() {
   $("recent-panel").hidden = true;
   $("recent-notes").setAttribute("aria-pressed", "false");
 }
-export { rememberNote, renameNavigation, renderNavigation, showAllNotes, showRecent, togglePin };
+export { hasPins, setPinsOpen, rememberNote, renameNavigation, renderNavigation, showAllNotes, showRecent, togglePin };

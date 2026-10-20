@@ -2425,3 +2425,28 @@ test("pinned notes sit below tags, match normal rows and remember their collapse
   await page.keyboard.press("Enter");
   await expect(pinnedRow).toBeVisible();
 });
+
+test("collapse and expand all includes pinned notes and restores both after reload", async ({ page }) => {
+  const id = await openSeed(page, "Fold this note and its pinned entry.", `Fold pins ${Date.now()}/Note`);
+  await page.getByRole("button", { name: "Pin note", exact: true }).click();
+  const pinned = page.locator("#pinned-list .navigation-note");
+  const row = page.locator(`#note-list [data-note="${id}"]`);
+  const fold = page.locator("#fold-folders");
+  await fold.click();
+  await expect(pinned).toBeHidden();
+  await expect(row).toHaveCount(0);
+  await expect(fold).toHaveAttribute("aria-label", "Expand all folders");
+  await page.reload();
+  await expect(pinned).toBeHidden();
+  // Opening the current note reveals its folder; the combined action must
+  // collapse the open folder before it offers to expand everything.
+  await expect(fold).toHaveAttribute("aria-label", "Collapse all folders");
+  await fold.click();
+  await fold.click();
+  await expect(pinned).toBeVisible();
+  await expect(row).toBeVisible();
+  await expect(fold).toHaveAttribute("aria-label", "Collapse all folders");
+  await page.locator("#pinned-notes summary").click();
+  await expect(pinned).toBeHidden();
+  await expect(fold).toHaveAttribute("aria-label", "Collapse all folders");
+});

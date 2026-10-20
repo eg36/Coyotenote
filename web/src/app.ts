@@ -70,7 +70,7 @@ import { settingsDialog } from "./settings.js";
 import { dailyNote } from "./daily.js";
 import { setupTooltips } from "./tooltip.js";
 import { setupSearch } from "./search.js";
-import { showAllNotes, showRecent, togglePin } from "./navigation.js";
+import { setPinsOpen, showAllNotes, showRecent, togglePin } from "./navigation.js";
 import { restoreSidebar, setSidebar, toggleSidebar } from "./sidebar.js";
 
 function isMode(value: unknown): value is AppState["mode"] {
@@ -192,8 +192,8 @@ $("clear-folder").onclick = () => browseFolder(null);
 $("pin-note").onclick = togglePin;
 $("pinned-notes").querySelector("summary")?.addEventListener("click", (event) => {
   event.preventDefault();
-  $("pinned-notes").open = !$("pinned-notes").open;
-  if (state.vaultId) storage.set(`labradorite-pins-open:${state.vaultId}`, String($("pinned-notes").open));
+  setPinsOpen(!$("pinned-notes").open);
+  renderList();
 });
 $("commands-button").onclick = () => paletteDialog(">");
 $("sidebar-scrim").onclick = () => {

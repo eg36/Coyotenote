@@ -4,7 +4,7 @@ import { icon } from "./icons.js";
 import { $, showError, state, storage } from "./core.js";
 import { openNote, refresh } from "./editor.js";
 import { moveNote } from "./dialogs.js";
-import { showAllNotes } from "./navigation.js";
+import { hasPins, setPinsOpen, showAllNotes } from "./navigation.js";
 import { setSidebar } from "./sidebar.js";
 
 // excerpt cleans a note's opening text for short previews, leaving out a leading
@@ -110,11 +110,12 @@ const folderNames = () => [...new Set(state.notes.map((n) => n.id.split("/").sli
 function allCollapsed() {
   const folders = collapsedFolders();
   const names = folderNames();
-  return names.length > 0 && names.every((name) => folders.has(name));
+  return (names.length > 0 || hasPins()) && names.every((name) => folders.has(name)) && (!hasPins() || !$("pinned-notes").open);
 }
 function toggleAllFolders() {
   const expand = allCollapsed();
   storage.set(collapsedKey(), JSON.stringify(expand ? [] : folderNames()));
+  if (hasPins()) setPinsOpen(expand);
   renderList();
 }
 function updateFoldButton() {
@@ -124,7 +125,7 @@ function updateFoldButton() {
   button.title = label;
   button.setAttribute("aria-label", label);
   button.innerHTML = icon(expand ? "expand" : "collapse");
-  button.disabled = folderNames().length === 0;
+  button.disabled = folderNames().length === 0 && !hasPins();
 }
 // revealNote expands the folder holding id, so the open note is listed.
 function revealNote(id: string) {
@@ -365,6 +366,7 @@ export {
   setupDragging,
   shortDate,
   toggleAllFolders,
+  updateFoldButton,
   updateBacklinks,
   visibleNotes,
 };
