@@ -248,14 +248,21 @@ Beyond GitHub Flavored Markdown, Preview understands:
   and pictures from other computers are removed. As elsewhere, Markdown inside
   an HTML block is shown as written, and Write shows such notes in Markdown.
 
-#### Math and Mermaid in Preview
+#### Math and Mermaid
 Write inline formulas as `$x^2 + y^2 = z^2$`; the dollar signs must touch the
 formula. Money such as `$5 and $6` stays text. Put `$$` on its own lines around
 a display formula (or write `$$x^2$$` on one line). Code and escaped dollar
 signs stay literal. KaTeX renders the TeX locally; invalid formulas remain
-readable with a short explanation on hover. Simple inline equations remain
-literal text in Write. TeX commands, display math and formulas with Markdown
-punctuation open in Markdown with a message, to preserve their source exactly.
+readable with a short explanation on hover.
+
+Write shows formulas rendered too. Click one (or focus it and press Enter) to
+edit its TeX in a field below it, with a live rendering; Apply or Ctrl/⌘ Enter
+saves, Escape cancels, and undo works as usual. Typing `$a+b$` makes an inline
+formula; typing `$$` on an empty line and pressing Enter starts a display
+formula. Delimiters, spacing and the TeX itself are saved exactly as written.
+Formulas inside bold, italic, strikethrough, highlights or links, display
+formulas inside lists, quotes or tables, and display formulas directly below a
+line of text without a blank line open in Markdown with a message instead.
 
 Use a fenced code block with the language `mermaid` for a diagram:
 

@@ -82,6 +82,8 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   spacing and nested tasks; unsupported list layouts keep the source fallback.
 - Inline `^[…]` footnotes in Write: edit their Markdown in place, preserve
   nested brackets and escapes, and validate changes before applying.
+- Math in Write: inline and display formulas render with the bundled KaTeX,
+  open their TeX for editing in place, and keep delimiters and spacing exact.
 - Rename a note in place: clicking the title turns it into a text field
   (Enter renames, Escape cancels, a folder path moves the note), instead of
   opening the rename dialog.

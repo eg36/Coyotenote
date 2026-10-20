@@ -3042,6 +3042,17 @@ dialog.danger #modal-submit {
 .write-footnote-error { display: block; color: var(--text); font-size: var(--font-small); white-space: normal; }
 .write-footnote-error:not(:empty) { margin-top: 8px; }
 
+/* Formulas render in Write; activating one opens its TeX below it. */
+.write-math-formula { cursor: pointer; border-radius: 4px; padding: 0 2px; }
+.write-math-formula:hover { background: var(--hover); }
+.write-math-formula:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.write-math-formula.empty, .write-math-formula.render-error { color: var(--muted); text-decoration: underline dotted; text-underline-offset: 4px; }
+.write-math-block { margin: 1.25em 0; }
+.write-math-block > .write-math-formula { display: block; overflow-x: auto; padding: 4px 0; text-align: center; }
+.write-math-panel:not([hidden]) { display: block; margin: 12px 0; padding: 12px 0; white-space: normal; text-align: left; }
+.write-math-panel textarea { max-height: 40vh; overflow: auto; resize: vertical; font-family: var(--mono, ui-monospace, monospace); }
+.write-math-preview { display: block; overflow-x: auto; min-height: 1.5em; margin-top: 8px; }
+
 .write-task-status { width: 44px; height: 28px; margin: 0 4px 0 0; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--chrome); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .write-task-status:hover { background: var(--hover); }
 .prose li[data-marker="-"] > div { color: var(--muted); text-decoration: line-through; }

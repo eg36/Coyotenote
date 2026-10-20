@@ -3333,8 +3333,10 @@ test("math and Mermaid load locally only when needed and preserve source", async
   expect(remote).toEqual([]);
   expect(await diskBody(page, id)).toBe(body);
   await mode(page, "Write");
-  await expect(page.locator("#source-pane")).toBeVisible();
-  await expect(page.locator("#toast-text")).toContainText("math");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await expect(page.locator(".tiptap .katex")).toHaveCount(2);
+  await expect(page.locator(".tiptap")).toContainText("Money $5 and $6.");
+  expect(remote).toEqual([]);
   expect(await diskBody(page, id)).toBe(body);
   await page.setViewportSize({ width: 390, height: 844 });
   await mode(page, "Preview");
@@ -3373,13 +3375,83 @@ test("Mermaid code in Write keeps its exact fenced source on body edits", async 
   await expect.poll(() => diskBody(page, id)).toBe(diagram + "\n\nBody. More.");
 });
 
-test("plain inline equations stay exact as text in Write", async ({ page }) => {
-  const body = 'Distance $d=vt$. A square $a^2 + b^2 = c^2$.\n\nBody.';
+test("Write keeps inline and display formulas exact through body edits", async ({ page }) => {
+  const cases = [
+    'Distance $d=vt$. A square $a^2 + b^2 = c^2$.\n\nBody.',
+    'Inline $\\frac{a}{b}_{i}*x*$ and $\\$ 5$ and `$code$`. Money $5 and $6, $x $y$ and $$not$$.\n\nBody.',
+    'Before.\n\n$$\n\\int_0^1 x^2 \\, dx = \\frac{1}{3}\n$$\n\nBody.',
+    'Before.\n\n  $$ E = mc^2 $$  \nBody.',
+    'Before.\n\n$$  \na\n\nb\n  $$\n\n\nBody.',
+    '# Heading $h_1$\n\n- item $x$\n- other $z$\n\n> quote $q$\n\nBody.',
+    'Body.\n\n$$\n$$\n',
+    'Price \\$5 and \\$6 or \\$x$ here.\n\nBody.',
+    'Body.\n\n$$\n\\sqrt{2}\n$$',
+  ];
+  for (const body of cases) {
+    const id = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane"), body).toBeVisible();
+    const paragraph = page.locator(".tiptap > p").filter({ hasText: "Body." }).first();
+    await paragraph.click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id), body).toBe(body.replace("Body.", "Edited Body."));
+  }
+});
+
+test("Write edits formulas in place with live rendering, validation and undo", async ({ page }) => {
+  const body = 'Area $\\pi r^2$ here.\n\n$$\nx = 1\n$$\n\nAfter.';
   const id = await openSeed(page, body);
   await mode(page, "Write");
-  await expect(page.locator("#rich-pane")).toBeVisible();
-  await page.locator(".tiptap p").last().click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
-  await expect.poll(() => diskBody(page, id)).toBe(body + " More.");
+  await expect(page.locator(".tiptap .katex")).toHaveCount(2);
+  const inline = page.locator(".write-math .write-math-formula");
+  await inline.click();
+  const field = page.getByLabel("Formula TeX", { exact: true });
+  await expect(field).toHaveValue("\\pi r^2");
+  await field.fill(" bad ");
+  await page.locator(".write-math").getByRole("button", { name: "Apply" }).click();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  expect(await diskBody(page, id)).toBe(body);
+  await field.fill("\\tau r^2");
+  await expect(page.locator(".write-math .write-math-preview .katex")).toHaveCount(1);
+  await field.press("Control+Enter");
+  await expect.poll(() => diskBody(page, id)).toBe(body.replace("\\pi", "\\tau"));
+  await page.locator(".write-math-block .write-math-formula").click();
+  const display = page.getByLabel("Display formula TeX", { exact: true });
+  await display.fill("x = 1\n$$\ny");
+  await page.locator(".write-math-block").getByRole("button", { name: "Apply" }).click();
+  await expect(display).toHaveAttribute("aria-invalid", "true");
+  await display.fill("x = 2\n+ 3");
+  await display.press("Escape");
+  expect(await diskBody(page, id)).toBe(body.replace("\\pi", "\\tau"));
+  await page.locator(".write-math-block .write-math-formula").click();
+  await display.fill("x = 2\n+ 3");
+  await display.press("Control+Enter");
+  const edited = body.replace("\\pi", "\\tau").replace("x = 1", "x = 2\n+ 3");
+  await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await page.locator(".tiptap > p").last().click();
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toBe(body.replace("\\pi", "\\tau"));
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .katex")).toHaveCount(2);
+});
+
+test("Write creates formulas by typing and keeps unsupported math layouts in Markdown", async ({ page }) => {
+  const id = await openSeed(page, "Start.");
+  await mode(page, "Write");
+  await page.locator(".tiptap p").click(); await page.keyboard.press("End");
+  await page.keyboard.type(" Costs $5 and $6. Then $a+b$ done.");
+  await expect(page.locator(".tiptap .write-math")).toHaveCount(1);
+  await page.keyboard.press("Enter"); await page.keyboard.type("$$"); await page.keyboard.press("Enter");
+  const display = page.getByLabel("Display formula TeX", { exact: true });
+  await expect(display).toBeFocused();
+  await display.fill("c^2"); await display.press("Control+Enter");
+  await expect.poll(() => diskBody(page, id)).toBe("Start. Costs $5 and $6. Then $a+b$ done.\n\n$$\nc^2\n$$");
+  for (const body of ["**bold $x$** text", "- item\n\n  $$\n  x\n  $$", "Text\n$$\nx\n$$"]) {
+    const other = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#source-pane"), body).toBeVisible();
+    expect(await diskBody(page, other)).toBe(body);
+  }
 });
 
 test("Write keeps numbered and named footnote definitions exact through body edits", async ({ page }) => {

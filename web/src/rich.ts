@@ -13,6 +13,7 @@ interface RichOptions {
 }
 
 import { marked, Marked } from "marked";
+import type { Token, Tokens } from "marked";
 import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -22,6 +23,7 @@ import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes } from "./footnotes.js";
 import { writingSettings } from "./preferences.js";
+import { InlineMath, MathBlock, EscapedDollar, inlineMathToken, mathBlockToken } from "./write-math.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -212,7 +214,63 @@ const ImageParagraph = Paragraph.extend({
 
 const richMarkdown = new Marked({ gfm: true, extensions: [{
   name: "inlineFootnote", level: "inline", start: text => text.indexOf("^["), tokenizer: inlineFootnoteToken,
+}, {
+  name: "inlineMath", level: "inline", start: text => text.indexOf("$"),
+  tokenizer: (text, tokens) => inlineMathToken(text, tokens.at(-1)?.raw.slice(-1)),
+}, {
+  name: "mathBlock", level: "block", start: text => /^ {0,3}\$\$/m.exec(text)?.index, tokenizer: mathBlockToken,
 }] });
+
+// The inline formulas the preview finds in a paragraph's source.
+function previewFormulas(text: string) {
+  text = withoutInlineFootnotes(text.replace(/(`+)[\s\S]*?\1/g, code => "\ufffc".repeat(code.length)));
+  const found: string[] = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\") { i++; continue; }
+    const token = text[i] === "$" && inlineMathToken(text.slice(i), text[i - 1]);
+    if (token) { found.push(token.raw); i += token.raw.length - 1; }
+  }
+  return found;
+}
+
+// Formulas stay exact when Write finds the same ones as the preview, outside
+// formatting (which Write would split around them) and display formulas sit
+// at the top level, after a blank line.
+function mathReason(tokens: Token[]) {
+  let reason = "";
+  const changed = "Showing Markdown: Write would change this note's math. Edit its TeX in Markdown.";
+  function formulas(list: Token[] | undefined, formatted: boolean, found: string[]) {
+    for (const token of list || []) {
+      if (token.type === "inlineMath") {
+        found.push(token.raw);
+        if (formatted) reason = "Showing Markdown: Write would split formatting around a formula in this note.";
+      }
+      formulas((token as Tokens.Generic).tokens, formatted || ["strong", "em", "del", "link", "highlight"].includes(token.type), found);
+    }
+    return found;
+  }
+  function inline(raw: string, list: Token[] | undefined) {
+    if (formulas(list, false, []).join("\n") !== previewFormulas(raw).join("\n")) reason = changed;
+  }
+  function walk(list: Token[], top: boolean) {
+    let before = "";
+    for (const token of list) {
+      if (token.type === "mathBlock") {
+        if (!top) reason = "Showing Markdown: Write would change display math inside a list, quote or table. Edit it in Markdown.";
+        else if (before && !/(?:^|[^\n])\n\n$/.test(before))
+          reason = "Showing Markdown: Write would change the spacing before this display formula.";
+      }
+      before += token.raw;
+      if (token.type === "paragraph" || token.type === "heading" || (token.type === "text" && token.tokens)) inline(token.raw, token.tokens);
+      else if (token.type === "table")
+        for (const cell of [...token.header, ...token.rows.flat()] as Tokens.TableCell[]) inline(cell.text, cell.tokens);
+      else if (token.type === "list") for (const item of token.items as Tokens.ListItem[]) walk(item.tokens, false);
+      else if ((token as Tokens.Generic).tokens && token.type !== "inlineFootnote") walk((token as Tokens.Generic).tokens!, false);
+    }
+  }
+  walk(tokens, true);
+  return reason;
+}
 
 export function supportsRich(body: string) {
   // YAML (---) or TOML (+++) front matter, possibly after a byte order mark.
@@ -230,12 +288,6 @@ export function supportsRich(body: string) {
       if (/\\\[\^/.test(text)) reason = "Showing Markdown: Write would change this escaped footnote reference.";
       if (/\\\^\[/.test(text)) reason = "Showing Markdown: Write would change this escaped inline footnote.";
       if (/\^\[/.test(text)) reason = "Showing Markdown: Write would change this unfinished inline footnote.";
-      for (const math of text.matchAll(/(?<!\\)\$(?:\$|(?=\S)(?:\\.|[^$\n])*?\S?\$(?!\d))/g)) {
-        // Plain equations are literal text in Write. TeX commands, display
-        // blocks and Markdown punctuation need source editing to stay exact.
-        if (!/^\$[A-Za-z0-9 +\-=^(),.\/]+\$$/.test(math[0]))
-          reason = "Showing Markdown: Write would change this note's math. Edit its TeX in Markdown.";
-      }
     }
     if (token.type === "html")
       reason = "Showing Markdown: Write would change the HTML in this note.";
@@ -254,6 +306,7 @@ export function supportsRich(body: string) {
       reason =
         "Showing Markdown: Write would show codes such as &copy; as text instead of the symbol (©) and save them that way.";
   });
+  reason = mathReason(richMarkdown.lexer(body)) || reason;
   if (/^ {0,3}>[ \t]*\[![^\]\s]+\]/m.test(body))
     reason = "Showing Markdown: Write would change this note's callouts.";
   // Write closes bold, italic, strikethrough and highlights before a wiki
@@ -324,6 +377,9 @@ export function createRich(
         ImageParagraph,
         WikiLink,
         Highlight,
+        InlineMath,
+        MathBlock,
+        EscapedDollar,
         imageNode(fileUrl),
       ],
       editorProps: {
