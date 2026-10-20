@@ -41,6 +41,8 @@ this document does not authorize a release tag.
 - Search scope switching should preserve the query; existing full-text result
   previews remain available. This note retains case, whole-word, regex and
   replacement controls, and restores the prior writing mode when closed.
+- Folder breadcrumb glyphs use the text baseline and font cap height, with
+  measured font metrics as a fallback for older browsers.
 - Browser preferences stay scoped to the vault where appropriate. Renaming,
   moving and trashing notes must not leave broken pins or recent-note entries.
 

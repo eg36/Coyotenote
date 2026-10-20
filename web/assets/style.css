@@ -2794,16 +2794,17 @@ dialog.danger #modal-submit {
 .show-recents .sidebar > :not(.recent-panel) { display: none !important; }
 /* Folders take their natural width up to a share of the window, so a short
    title never squeezes them; long paths shrink their crumbs with an ellipsis. */
-.note-folder { display: flex; align-items: center; flex: 0 1 auto; gap: 2px; min-width: 0; max-width: min(40vw, 360px); overflow: hidden; }
+.note-folder { display: flex; align-items: baseline; flex: 0 1 auto; gap: 2px; min-width: 0; max-width: min(40vw, 360px); overflow: hidden; }
 .note-folder .breadcrumb { display: block; flex: 0 1 auto; min-width: 3.5ch; }
-.note-folder .breadcrumb:has(svg) { display: flex; flex: none; min-width: 0; }
+.note-folder .breadcrumb:has(svg) { display: block; flex: none; min-width: 0; }
 .note-folder .breadcrumb-separator { flex: none; }
 .note-folder:not(:empty) + .document-title { margin-left: 2px; }
 .note-folder::after { content: none; }
 /* Folder breadcrumbs share the title's size, muted and in normal weight. */
 .breadcrumb { display: flex; align-items: center; min-width: 18px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 4px; background: transparent; color: var(--muted); font-size: 18px; font-weight: 400; line-height: 1.3; border-radius: 5px; }
-/* The folder glyph spans the capitals' height, as the "L" of "Lab" does. */
-.breadcrumb svg { width: 21px; height: 21px; }
+/* Inline SVG shares the text baseline; font metrics supply a cap-height fallback. */
+.breadcrumb svg { display: inline-block; vertical-align: baseline; width: calc(var(--breadcrumb-cap, .72em) * 1.2); height: var(--breadcrumb-cap, .72em); }
+@supports (height: 1cap) { .breadcrumb svg { width: 1.2cap; height: 1cap; } }
 .breadcrumb:hover { background: var(--hover); color: var(--text); }
 /* A thin slash reads lighter than the letters beside it; a little weight evens it out. */
 .breadcrumb-separator { font-size: 18px; font-weight: 500; line-height: 1.3; color: var(--muted); }

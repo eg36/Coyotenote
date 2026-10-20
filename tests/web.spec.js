@@ -3354,3 +3354,26 @@ test("unsupported footnote layouts fall back and unresolved references stay exac
   await expect(page.locator("#toast-text")).toContainText("has no definition yet");
   expect(await diskBody(page, id)).toBe("Unresolved[^missing].\n\nBody.");
 });
+
+test("breadcrumb folder glyph follows the text baseline across font sizes and zoom", async ({ page }) => {
+  await openSeed(page, "A nested note.", `Lab/Baseline ${Date.now()}`);
+  await page.evaluate(() => document.fonts.ready);
+  for (const fontSize of [18, 22]) {
+    for (const zoom of [0.8, 1, 1.25, 1.5]) {
+      const fit = await page.evaluate(({ fontSize, zoom }) => {
+        document.body.style.zoom = String(zoom);
+        document.querySelectorAll(".breadcrumb").forEach(el => { el.style.fontSize = `${fontSize}px`; });
+        const name = document.querySelector(".breadcrumb:not(:has(svg))");
+        const marker = document.createElement("span");
+        marker.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
+        name.append(marker); const baseline = marker.getBoundingClientRect().top; marker.remove();
+        const context = document.createElement("canvas").getContext("2d"); context.font = getComputedStyle(name).font;
+        const metrics = context.measureText("H");
+        const glyph = document.querySelector(".breadcrumb svg path").getBoundingClientRect();
+        return { top: (glyph.y - baseline) / zoom + metrics.actualBoundingBoxAscent, bottom: (glyph.bottom - baseline) / zoom };
+      }, { fontSize, zoom });
+      expect(Math.abs(fit.top), `top at ${fontSize}px, ${zoom} zoom`).toBeLessThan(1.5);
+      expect(Math.abs(fit.bottom), `baseline at ${fontSize}px, ${zoom} zoom`).toBeLessThan(1);
+    }
+  }
+});

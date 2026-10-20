@@ -89,7 +89,11 @@ function renderBreadcrumbs() {
     button.title = folder || "All notes";
     button.setAttribute("aria-label", folder ? `Browse ${folder}` : "Browse all notes");
     if (folder) button.textContent = label;
-    else button.innerHTML = icon("folder");
+    else {
+      button.innerHTML = icon("folder");
+      // Crop the glyph's view box to its path so its bottom is the baseline.
+      button.querySelector("svg")?.setAttribute("viewBox", "3 4 18 15");
+    }
     button.onclick = () => browseFolder(folder);
     container.append(button);
   }
@@ -102,6 +106,15 @@ function renderBreadcrumbs() {
     container.append(separator);
     crumb(folders[i], folders.slice(0, i + 1).join("/"));
   }
+  void document.fonts.ready.then(() => {
+    const name = container.querySelector<HTMLElement>(".breadcrumb:not(:has(svg))");
+    if (!name) return;
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) return;
+    context.font = getComputedStyle(name).font;
+    const capHeight = context.measureText("H").actualBoundingBoxAscent;
+    if (capHeight) container.style.setProperty("--breadcrumb-cap", `${capHeight}px`);
+  });
 }
 let pinnedVault = "";
 function renderNavigation() {
