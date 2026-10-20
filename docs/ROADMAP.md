@@ -75,8 +75,6 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   longer fall back to Markdown view.
 
 ### 1.5.0 — Smooth everything, then release
-- Callouts in Write: edit callouts visually, with their type, title and
-  folding kept exactly, so notes with callouts no longer open in Markdown.
 - Rename a note in place: clicking the title turns it into a text field
   (Enter renames, Escape cancels, a folder path moves the note), instead of
   opening the rename dialog.
@@ -85,6 +83,11 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   working across groups.
 - User-led polish and fixes across all of the above, full regression runs,
   guide and release notes; release only on the user's word.
+
+## 1.6.0 — Callouts in Write
+
+- Edit callouts visually, with their type, title and folding kept exactly,
+  so notes with callouts no longer open in Markdown.
 
 ## 2.0.0 and later
 
