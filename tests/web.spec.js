@@ -2961,8 +2961,20 @@ test("folder breadcrumbs match the note title's size", async ({ page }) => {
   const title = await size("#document-title");
   expect(await size(".breadcrumb:not(:has(svg))")).toBe(title);
   expect(await size(".breadcrumb-separator")).toBe(title);
-  const icon = await page.locator(".breadcrumb svg").first().boundingBox();
-  expect(icon.height).toBe(parseFloat(title));
+  // The folder glyph covers the folder name's capitals, top to baseline.
+  const fit = await page.evaluate(() => {
+    const name = [...document.querySelectorAll(".breadcrumb")].find((b) => !b.querySelector("svg"));
+    const range = document.createRange(); range.selectNodeContents(name); const box = range.getBoundingClientRect();
+    const ctx = document.createElement("canvas").getContext("2d"); ctx.font = getComputedStyle(name).font;
+    const m = ctx.measureText("L");
+    const baseline = box.y + (box.height - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+    const glyph = document.querySelector(".breadcrumb svg path").getBoundingClientRect();
+    return { top: glyph.y - (baseline - m.actualBoundingBoxAscent), bottom: glyph.y + glyph.height - baseline };
+  });
+  expect(Math.abs(fit.top)).toBeLessThan(1);
+  expect(Math.abs(fit.bottom)).toBeLessThan(1);
+  const colour = (selector) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+  expect(await colour(".breadcrumb-separator")).toBe(await colour(".breadcrumb"));
   const crumbs = await page.locator("#note-folder").boundingBox(), name = await page.locator("#document-title").boundingBox();
   expect(Math.abs(crumbs.y + crumbs.height / 2 - name.y - name.height / 2)).toBeLessThan(2);
 });
