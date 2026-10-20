@@ -75,6 +75,9 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   longer fall back to Markdown view.
 
 ### 1.5.0 — Smooth everything, then release
+- Theme picker: an All / Light / Dark switch above the list, and the list
+  grouped under Light and Dark headings; search and keyboard preview keep
+  working across groups.
 - User-led polish and fixes across all of the above, full regression runs,
   guide and release notes; release only on the user's word.
 
