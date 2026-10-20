@@ -1,6 +1,5 @@
 import { Node, InputRule } from "@tiptap/core";
 import type { Editor, JSONContent } from "@tiptap/core";
-import { MarkdownManager } from "@tiptap/markdown";
 import { Blockquote } from "@tiptap/extension-blockquote";
 import { ListItem } from "@tiptap/extension-list";
 
@@ -211,22 +210,6 @@ export const MathBlock = Node.create({
   },
 });
 
-// A backslash-escaped dollar shows as $ and saves with its backslash, so
-// prices such as \$5 never turn into formulas when the note is saved.
-export const EscapedDollar = Node.create({
-  name: "escapedDollar", group: "inline", inline: true, atom: true,
-  parseHTML() { return [{ tag: "span[data-escaped-dollar]" }]; },
-  renderHTML() { return ["span", { "data-escaped-dollar": "" }, "$"]; },
-  renderText() { return "$"; },
-  markdownTokenName: "escapedDollar",
-  markdownTokenizer: {
-    name: "escapedDollar", level: "inline", start: "\\$",
-    tokenize(source) { if (source.startsWith("\\$")) return { type: "escapedDollar", raw: "\\$" }; },
-  },
-  parseMarkdown() { return { type: "escapedDollar" }; },
-  renderMarkdown() { return "\\$"; },
-});
-
 // Emphasis and strikethrough look for their closing marks in a masked copy
 // of the text; masking formulas there keeps a * or _ in TeX from closing
 // emphasis outside it, as in the preview.
@@ -284,29 +267,3 @@ export const MathBlockquote = Blockquote.extend({
     }).join("");
   },
 });
-
-// The Markdown writer closes bold, italic, links and highlights around any
-// inline node and reopens them after it, which would rewrite **a $x$ b**.
-// Formulas and escaped dollars inside formatting go through the text path
-// as placeholders instead, and their own Markdown replaces them afterwards.
-const textLike = new Set(["inlineMath", "escapedDollar"]);
-type Renderer = (this: MarkdownManager, nodes: JSONContent[], parent?: JSONContent, separator?: string, level?: number) => string;
-const manager = MarkdownManager.prototype as unknown as { renderNodesWithMarkBoundaries: Renderer; renderNodeToMarkdown(node: JSONContent, parent?: JSONContent, index?: number, level?: number): string };
-const renderWithMarks = manager.renderNodesWithMarkBoundaries;
-// The reader likewise gives marks only to text, so **$x$** would lose its bold.
-const parser = MarkdownManager.prototype as unknown as { applyMarkToContent(type: string, content: JSONContent[], attrs?: Record<string, unknown>): JSONContent[] };
-const applyMark = parser.applyMarkToContent;
-parser.applyMarkToContent = function (type, content, attrs) {
-  return applyMark.call(this, type, content, attrs).map((node, i) => !textLike.has(node.type || "") ? node
-    : { ...node, content: undefined, marks: [...(content[i].marks || []), attrs ? { type, attrs } : { type }] });
-};
-manager.renderNodesWithMarkBoundaries = function (nodes, parent, separator, level) {
-  const kept: string[] = [];
-  const mapped = nodes.map(node => {
-    if (!textLike.has(node.type || "") || !node.marks?.length) return node;
-    kept.push(manager.renderNodeToMarkdown.call(this, node, parent, 0, level));
-    return { type: "text", text: `\ue000${kept.length - 1}\ue001`, marks: node.marks };
-  });
-  const result = renderWithMarks.call(this, mapped, parent, separator, level);
-  return kept.length ? result.replace(/\ue000(\d+)\ue001/g, (_, i: string) => kept[Number(i)]) : result;
-};

@@ -308,6 +308,14 @@ the block's delimiter and byte order mark. "Add properties" in Quick open starts
 front matter with a `tags` field. Preview shows front matter as a properties
 block above the text, and note excerpts and word counts leave it out.
 
+Editing in Write changes only what you edit. Paragraphs, lists, headings,
+tables and other blocks you leave alone are saved exactly as they were
+written, whatever style they use. Text you edit keeps its backslash escapes,
+character references such as `&amp;`, its emphasis delimiters (`_` or `*`,
+`~` or `~~`), code spans, autolinks and line breaks. Characters you type are
+escaped only where they would otherwise turn into formatting: `snake_case`
+stays as typed, while a typed `[a](b)` is saved as `\[a](b)` to stay text.
+
 Write deliberately falls back to Markdown for unclosed front matter,
 reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot

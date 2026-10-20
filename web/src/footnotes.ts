@@ -1,6 +1,7 @@
 import { Node, InputRule } from "@tiptap/core";
 import { Plugin } from "@tiptap/pm/state";
 import { attachedBelow } from "./write-math.js";
+import { pristine } from "./source-blocks.js";
 
 interface Definition {
   label: string;
@@ -291,7 +292,9 @@ export function footnoteExtensions(source: () => string) {
         if (all[next]?.type === "footnoteDefinition") return false;
         let previous = index - 1;
         while (all[previous]?.type === "paragraph" && !all[previous].content?.length) previous--;
-        return next < all.length || !["footnoteDefinition", "taskList", "mathBlock"].includes(all[previous]?.type || "");
+        // Write adds an empty paragraph after a final quote, list, table or
+        // other block so there is somewhere to type; it is not part of the note.
+        return next < all.length || (all[previous]?.type ?? "paragraph") === "paragraph";
       });
       let result = "";
       nodes.forEach((child, i) => {
@@ -302,7 +305,7 @@ export function footnoteExtensions(source: () => string) {
         // A display formula may sit directly below a line of text.
         else if (attachedBelow(previous, child)) result += "\n";
         else if (i) result += "\n\n";
-        result += helpers.renderChild!(child, i);
+        result += pristine(child) ?? helpers.renderChild!(child, i);
       });
       const last = nodes.at(-1);
       if (last?.type === "footnoteDefinition") result += last.attrs?.after || "";

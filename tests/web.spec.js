@@ -3387,6 +3387,60 @@ test("Mermaid code in Write keeps its exact fenced source on body edits", async 
   await expect.poll(() => diskBody(page, id)).toBe(diagram + "\n\nBody. More.");
 });
 
+test("Write saves blocks it did not change exactly as they were written", async ({ page }) => {
+  test.setTimeout(90_000);
+  const blocks = [
+    "Setext\n======", "Setext two\n---", "***", "___", "~~~js\ncode\n~~~", "    indented code",
+    "<https://example.com> and https://bare.example.com", "# Heading #", "- a\n\n- loose b",
+    "* star\n* bullets", "+ plus\n+ bullets", "1) paren\n2) numbers", "- a\n    - four-space nested",
+    "> quote\nlazy line", "| a | b |\n|:-|-:|\n| 1 | 2 |", "Use snake_case, [brackets], 2*3 and a ~ tilde.",
+    "Some _em_ and __strong__ and ~one~ and ` padded ` code.", "Escapes \\# \\> \\* kept.",
+  ];
+  const body = blocks.join("\n\n") + "\n\nBody.";
+  const id = await openSeed(page, body);
+  await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  const last = page.locator(".tiptap > p").filter({ hasText: "Body." });
+  await last.click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
+  await expect.poll(() => diskBody(page, id)).toBe(body + " More.");
+  // Undoing back to the original text restores each block's own Markdown.
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toBe(body);
+});
+
+test("editing a paragraph keeps its own escapes, delimiters, links and breaks", async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    "Body. Use snake_case, [brackets], 2*3, a ~ tilde, a < b and A & B.",
+    "Body. Some _em_ and __strong__ and *em* and **strong** and ~one~ and ~~two~~.",
+    "Body. Code ``a`b`` and ` padded ` and `x`.",
+    "Body. Escapes \\* \\_ \\[ \\] \\# \\> \\\\ \\` \\~ \\$5 kept.",
+    "Body. Entities &amp; &lt; &gt; &quot; &#169; &#x1F600; kept.",
+    "Body. A trailing backslash\\\nhard break and two spaces  \nbreak.",
+    "Body. <https://example.com> and https://bare.example.com/a_b and [t](https://e.com \"title\").",
+    "- Body. star *bullet* with snake_case",
+    "> Body. quoted _em_ and [brackets]",
+    "# Body. heading with snake_case",
+  ];
+  for (const body of cases) {
+    const id = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane"), body).toBeVisible();
+    const block = page.locator(".tiptap").getByText("Body.", { exact: false }).first();
+    await block.click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id), body).toBe(body.replace("Body.", "Edited Body."));
+  }
+});
+
+test("characters typed in Write are escaped only where they would become formatting", async ({ page }) => {
+  const id = await openSeed(page, "Start.");
+  await mode(page, "Write");
+  await page.locator(".tiptap p").click(); await page.keyboard.press("End");
+  await page.keyboard.type(" snake_case, 2*3 and [x] but a literal [a](b) here.");
+  await expect.poll(() => diskBody(page, id)).toBe("Start. snake_case, 2*3 and [x] but a literal \\[a](b) here.");
+});
+
 test("Write keeps inline and display formulas exact through body edits", async ({ page }) => {
   test.setTimeout(90_000);
   const cases = [

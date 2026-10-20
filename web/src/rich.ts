@@ -23,7 +23,9 @@ import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes } from "./footnotes.js";
 import { writingSettings } from "./preferences.js";
-import { InlineMath, MathBlock, EscapedDollar, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
+import { SourceBlocks, stampSources } from "./source-blocks.js";
+import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
+import { InlineMath, MathBlock, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -394,7 +396,10 @@ export function createRich(
         MathBlock,
         MathListItem,
         MathBlockquote,
-        EscapedDollar,
+        SourceBlocks,
+        EscapedChar,
+        CharacterReference,
+        WrittenStyle,
         imageNode(fileUrl),
       ],
       editorProps: {
@@ -460,6 +465,7 @@ export function createRich(
             contentType: "markdown",
             emitUpdate: false,
           });
+          stampSources(editor);
           loading = false;
           onWarning(
             "Edit rejected: notes support up to 10,000 lines and 4 MiB.",
@@ -476,6 +482,7 @@ export function createRich(
         onSelection?.();
       },
     });
+    stampSources(editor);
     loading = false;
   }
   function followFootnote(label: string) {
@@ -525,6 +532,7 @@ export function createRich(
           contentType: "markdown",
           emitUpdate: false,
         });
+        stampSources(editor);
         last = body;
         loading = false;
       }
