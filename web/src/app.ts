@@ -64,6 +64,7 @@ import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
 import { setupMenus } from "./menus.js";
+import { setupRailOrder } from "./rail.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
@@ -121,6 +122,7 @@ async function initialize() {
   setupOutline();
   setupDragging();
   setupMenus();
+  setupRailOrder();
   const data = await refresh();
   if (!data) return;
   adoptFormerVault(data.formerVaultIds);

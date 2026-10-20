@@ -2598,3 +2598,21 @@ test("note actions stay in the writing toolbar and every save state uses an edge
   }
 });
 
+test("rail icons can be dragged, reordered by keyboard and remembered after reload", async ({ page }) => {
+  await page.goto("/");
+  const commands = page.locator("#commands-button");
+  const notes = page.locator("#sidebar-toggle");
+  await expect(commands).toHaveAttribute("draggable", "true");
+  await commands.dragTo(notes, { targetPosition: { x: 20, y: 5 } });
+  await expect(page.locator(".activity-rail > button").first()).toHaveAttribute("id", "commands-button");
+  await page.reload();
+  await expect(page.locator(".activity-rail > button").first()).toHaveAttribute("id", "commands-button");
+  await commands.focus();
+  await page.keyboard.press("Alt+Shift+ArrowDown");
+  await expect(page.locator(".activity-rail > button").nth(1)).toHaveAttribute("id", "commands-button");
+  await expect(commands).toBeFocused();
+  await page.reload();
+  await expect(page.locator(".activity-rail > button").nth(1)).toHaveAttribute("id", "commands-button");
+  await commands.click();
+  await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toBeVisible();
+});

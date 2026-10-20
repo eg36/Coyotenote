@@ -2733,6 +2733,9 @@ dialog.danger #modal-submit {
 .activity-rail #sidebar-toggle { margin: 0; border: 0; background: transparent; color: var(--muted); }
 .app:not(.show-recents):not(.search-open) .activity-rail #sidebar-toggle[aria-expanded="true"] { background: var(--selected); color: var(--accent-text); }
 .rail-bottom { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 16px; }
+.activity-rail button[draggable] { position: relative; }
+.rail-drop-target::after { content: ""; position: absolute; left: 4px; right: 4px; top: -4px; height: 2px; background: var(--accent); }
+.rail-drop-target[data-drop-edge="after"]::after { top: auto; bottom: -4px; }
 .app.sidebar-hidden, .app.focus-mode { grid-template-columns: var(--rail-width) 0 minmax(0, 1fr); }
 .topbar .title-block { margin-left: 0; }
 .sidebar-actions { justify-content: flex-start; align-items: center; gap: 2px; }
