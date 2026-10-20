@@ -183,7 +183,6 @@
           <div class="panel-heading"><h2>Recently opened</h2><button class="text-button" id="show-all-notes">All notes</button></div>
           <div id="recent-list"></div>
         </section>
-        <section class="pinned-notes" id="pinned-notes" aria-label="Pinned notes" hidden><h2>Pinned</h2><div id="pinned-list"></div></section>
         <div class="sidebar-actions" role="toolbar" aria-label="Notes">
         <button id="today-note" class="icon-button" aria-label="Today's note" title="Today's note · Alt J" ><span data-icon="calendar"></span></button>
         <button id="tags-button" class="icon-button" aria-label="All tags" title="All tags" aria-expanded="false" aria-controls="tag-filter"><span data-icon="hash"></span></button>
@@ -219,6 +218,7 @@
           <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>
           <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>
         </details>
+        <details class="pinned-notes" id="pinned-notes" aria-label="Pinned notes" hidden><summary><span data-icon="chevronDown"></span>Pinned</summary><div id="pinned-list"></div></details>
         <div class="list-heading">
           <span class="list-title"><span id="list-label">Notes</span> <span id="note-count">0</span></span>
           <button id="clear-folder" class="text-button" hidden>All notes</button>

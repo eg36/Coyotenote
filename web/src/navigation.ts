@@ -2,7 +2,7 @@
 import { $, showError, showToast, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
 import { icon } from "./icons.js";
-import { browseFolder } from "./list.js";
+import { browseFolder, shortDate } from "./list.js";
 import { setSidebar } from "./sidebar.js";
 
 type Collection = "pins" | "recent";
@@ -45,7 +45,17 @@ function fillCollection(kind: Collection, element: HTMLElement) {
     title.textContent = note.title.split("/").pop() || note.title;
     const folder = document.createElement("small");
     folder.textContent = id.includes("/") ? id.slice(0, id.lastIndexOf("/")) : "Notebook";
-    button.append(title, folder);
+    if (kind === "pins") {
+      const head = document.createElement("span");
+      head.className = "note-row-head";
+      title.className = "note-title";
+      const date = document.createElement("time");
+      date.className = "note-date";
+      date.dateTime = note.modified;
+      date.textContent = shortDate(note.modified);
+      head.append(title, date);
+      button.append(head);
+    } else button.append(title, folder);
     button.onclick = () => openNote(id).catch(showError);
     element.append(button);
   }
@@ -76,7 +86,12 @@ function renderBreadcrumbs() {
     crumb(folders[i], folders.slice(0, i + 1).join("/"));
   }
 }
+let pinnedVault = "";
 function renderNavigation() {
+  if (state.vaultId && state.vaultId !== pinnedVault) {
+    pinnedVault = state.vaultId;
+    $("pinned-notes").open = storage.get(`labradorite-pins-open:${state.vaultId}`) !== "false";
+  }
   renderBreadcrumbs();
   $("find-replace").disabled = !state.current || Boolean(state.pendingDraft) || state.busy;
   fillCollection("pins", $("pinned-list"));

@@ -190,6 +190,11 @@ $("recent-notes").onclick = showRecent;
 $("show-all-notes").onclick = () => { showAllNotes(); browseFolder(null); };
 $("clear-folder").onclick = () => browseFolder(null);
 $("pin-note").onclick = togglePin;
+$("pinned-notes").querySelector("summary")?.addEventListener("click", (event) => {
+  event.preventDefault();
+  $("pinned-notes").open = !$("pinned-notes").open;
+  if (state.vaultId) storage.set(`labradorite-pins-open:${state.vaultId}`, String($("pinned-notes").open));
+});
 $("commands-button").onclick = () => paletteDialog(">");
 $("sidebar-scrim").onclick = () => {
   setSidebar(false);

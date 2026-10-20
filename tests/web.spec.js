@@ -2402,3 +2402,26 @@ test("this-note search follows navigation and leaves replacement mode when switc
   await expect(page.locator("#search-all")).toHaveAttribute("aria-pressed", "true");
   expect(await diskBody(page, first)).toBe("needle needle");
 });
+
+test("pinned notes sit below tags, match normal rows and remember their collapsed state", async ({ page }) => {
+  const id = await openSeed(page, "A small pinned row.", `Pinned layout ${Date.now()}`);
+  await page.getByRole("button", { name: "Pin note", exact: true }).click();
+  const pinned = page.locator("#pinned-notes");
+  const pinnedRow = page.locator("#pinned-list .navigation-note");
+  const normalRow = page.locator(`#note-list [data-note="${id}"]`);
+  await expect(pinnedRow.locator("time")).toHaveText(await normalRow.locator("time").innerText());
+  await expect(pinnedRow.locator("small")).toHaveCount(0);
+  await expect(pinnedRow.locator(".note-title")).toHaveCSS("font-size", "13px");
+  await expect(normalRow.locator(".note-title")).toHaveCSS("font-size", "13px");
+  expect(await page.locator("#tag-filter").evaluate((tags) => Boolean(tags.compareDocumentPosition(document.getElementById("pinned-notes")) & Node.DOCUMENT_POSITION_FOLLOWING))).toBeTruthy();
+  const pinBox = await pinned.boundingBox();
+  expect(pinBox.y + pinBox.height).toBeLessThanOrEqual((await page.locator(".list-heading").boundingBox()).y);
+  await pinned.locator("summary").click();
+  await expect(pinnedRow).toBeHidden();
+  await page.reload();
+  await expect(pinned).toBeVisible();
+  await expect(pinnedRow).toBeHidden();
+  await pinned.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(pinnedRow).toBeVisible();
+});
