@@ -3433,6 +3433,24 @@ test("editing a paragraph keeps its own escapes, delimiters, links and breaks", 
   }
 });
 
+test("edited lists, code blocks and headings keep their markers, fences and underlines", async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    "* Body. star\n* bullets", "+ Body. plus\n+ bullets", "1) Body. paren\n2) numbers",
+    "- outer\n  * Body. nested star", "Body. setext\n======", "Body. setext two\n---", "# Body. closed #",
+    "~~~js\nBody. tilde fence\n~~~", "````\nBody. long fence\n````", "    Body. indented code",
+  ];
+  for (const body of cases) {
+    const id = await openSeed(page, body + "\n\n***\n\nAfter.");
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane"), body).toBeVisible();
+    await page.locator(".tiptap").getByText("Body.", { exact: false }).first().click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    // The rule below and the paragraph after it stay as written too.
+    await expect.poll(() => diskBody(page, id), body).toBe(body.replace("Body.", "Edited Body.") + "\n\n***\n\nAfter.");
+  }
+});
+
 test("characters typed in Write are escaped only where they would become formatting", async ({ page }) => {
   const id = await openSeed(page, "Start.");
   await mode(page, "Write");

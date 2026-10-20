@@ -41,7 +41,7 @@ export const WrittenStyle = Extension.create({
     const kept = { default: null, rendered: false };
     return [
       { types: ["bold", "italic", "strike", "code", "link"], attributes: { written: kept } },
-      { types: ["hardBreak"], attributes: { written: kept } },
+      { types: ["hardBreak", "bulletList", "orderedList", "codeBlock", "heading", "horizontalRule"], attributes: { written: kept } },
     ];
   },
 });
@@ -94,6 +94,65 @@ type Manager = {
 };
 const proto = MarkdownManager.prototype as unknown as Manager;
 
+// How a list, code block, heading or rule was written: its bullet or number
+// delimiter, fence, underline or closing hashes, or the rule itself.
+type Block = Token & { ordered?: boolean; items?: Token[]; depth?: number; lang?: string };
+function blockWritten(token: Block) {
+  const raw = token.raw || "", first = raw.split("\n")[0];
+  switch (token.type) {
+    case "list": return /^ *(?:[-+*]|\d+([.)]))/.exec(first)?.[1] ?? /^ *([-+*])/.exec(first)?.[1] ?? null;
+    case "code": return /^ {0,3}(`{3,}|~{3,})/.exec(first)?.[1] ?? (/^(?: {4}|\t)/.test(first) ? "indented" : null);
+    case "heading": {
+      const underline = /\n *(=+|-+) *$/.exec(raw.trimEnd());
+      if (underline && !first.trimStart().startsWith("#")) return underline[0].slice(1);
+      return /[ \t]+#+[ \t]*$/.exec(first)?.[0] ?? null;
+    }
+    case "hr": return first.trim();
+  }
+  return null;
+}
+type BlockHandler = { parseMarkdown?: (token: Block, helpers: unknown) => unknown };
+const blockHandlersFor = (proto as unknown as { getHandlersForToken(type: string): BlockHandler[] }).getHandlersForToken;
+(proto as unknown as { getHandlersForToken(type: string): BlockHandler[] }).getHandlersForToken = function (type) {
+  const handlers = blockHandlersFor.call(this, type);
+  if (!["list", "code", "heading", "hr"].includes(type)) return handlers;
+  return handlers.map(handler => !handler.parseMarkdown ? handler : { ...handler, parseMarkdown(token: Block, helpers: unknown) {
+    const result = handler.parseMarkdown!.call(handler, token, helpers) as JSONContent | JSONContent[] | null;
+    const written = blockWritten(token);
+    const node = Array.isArray(result) ? result[0] : result;
+    if (node && written !== null) node.attrs = { ...node.attrs, written };
+    return result;
+  } });
+};
+
+// Writing a block as it was written, when its content still allows that.
+function writtenBlock(node: JSONContent, parent: JSONContent | undefined, markdown: string) {
+  const written = node.attrs?.written;
+  if (node.type === "listItem" && typeof parent?.attrs?.written === "string") {
+    const marker = parent.attrs.written;
+    if (parent.type === "bulletList" && /^[*+]$/.test(marker)) return markdown.replace(/^- /, marker + " ");
+    if (parent.type === "orderedList" && marker === ")") return markdown.replace(/^(\d+)\. /, "$1) ");
+    return markdown;
+  }
+  if (typeof written !== "string") return markdown;
+  const text = String(node.content?.map(child => child.text || "").join("") ?? "");
+  if (node.type === "horizontalRule") return written;
+  if (node.type === "codeBlock" && written === "indented" && !node.attrs?.language)
+    return text.split("\n").map(line => line ? "    " + line : line).join("\n");
+  if (node.type === "codeBlock" && /^(`{3,}|~{3,})$/.test(written)) {
+    // A longer or different fence inside the code would end it early.
+    if (text.split("\n").some(line => line.trim().startsWith(written[0].repeat(3)) && line.trim().length >= written.length)) return markdown;
+    return markdown.replace(/^`{3,}/, written).replace(/`{3,}$/, written);
+  }
+  if (node.type === "heading" && /^[=-]+$/.test(written.trim())) {
+    const level = written.trim()[0] === "=" ? 1 : 2;
+    const line = markdown.replace(/^#+ /, "");
+    return node.attrs?.level === level && !line.includes("\n") && line.trim() ? `${line}\n${written}` : markdown;
+  }
+  if (node.type === "heading") return markdown + written;
+  return markdown;
+}
+
 // Reading: remember how each mark and break was written.
 const handlerFor = proto.getHandlerForToken;
 proto.getHandlerForToken = function (type) {
@@ -125,7 +184,7 @@ const renderNode = proto.renderNodeToMarkdown;
 proto.renderNodeToMarkdown = function (node, parent, index, level, meta) {
   const written = node.attrs?.written;
   if (mode !== "plain" && node.type === "hardBreak" && typeof written === "string" && /^(?: {2,}|\\)\n$/.test(written)) return written;
-  return renderNode.call(this, node, parent, index, level, meta);
+  return writtenBlock(node, parent, renderNode.call(this, node, parent, index, level, meta));
 };
 const encode = proto.encodeTextForMarkdown;
 proto.encodeTextForMarkdown = function (text, node, parent) {
