@@ -478,7 +478,18 @@ only to the app's own pages (other sites cannot embed them), only from outside
 hidden folders and never through symlinks, with a sandboxing Content Security
 Policy so an SVG cannot run scripts. Loopback host checks, same-origin enforcement,
 a per-process mutation token and a Content Security Policy protect the local API
-from unrelated web pages. Note paths are validated by `internal/vault`, which
+from unrelated web pages.
+
+These protections are against web pages, not against other accounts on the
+same computer. Labradorite expects a computer used by one person: any program
+running on it, under any account, can connect to the loopback port, read the
+notes and fetch the token that allows changes. Do not run it on a computer
+shared with people who should not read your vault, whatever the permissions
+of the vault folder. Vault paths are checked before each file operation, but
+not as one step with it; a vault folder that another program changes at the
+same moment is protected on a best-effort basis.
+
+Note paths are validated by `internal/vault`, which
 reads the current disk content before checking a SHA-256 revision; an HTTP
 success follows the completed atomic save.
 

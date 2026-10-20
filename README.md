@@ -13,7 +13,9 @@ own computer only. No account, cloud service or network access.
 ## Features
 
 - Write visually or in Markdown, with preview and split view
-- `[[Wiki links]]`, tags, pins, and search and replace across notes
+- `[[Wiki links]]`, tags, pins, search across notes, and find and replace in a note
+- For a computer used by one person: the app is closed to web pages, not to
+  other accounts on the same machine
 - Autosave that never overwrites outside changes, with draft recovery
 - 14 themes, keyboard shortcuts and a phone-friendly layout
 
