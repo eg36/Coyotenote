@@ -401,6 +401,29 @@ function themeChooser() {
   empty.className = "theme-empty";
   empty.setAttribute("role", "status");
   empty.textContent = "No matching themes";
+  // All, Light or Dark themes; the choice is remembered in this browser.
+  const kinds = [["all", "All"], ["light", "Light"], ["dark", "Dark"]] as const;
+  let kind = storage.get("labradorite-theme-filter") || "all";
+  if (!kinds.some(([value]) => value === kind)) kind = "all";
+  const filter = document.createElement("div");
+  filter.className = "theme-filter";
+  filter.setAttribute("role", "group");
+  filter.setAttribute("aria-label", "Show themes");
+  const kindButtons = kinds.map(([value, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.dataset.kind = value;
+    button.onclick = () => {
+      kind = value;
+      storage.set("labradorite-theme-filter", value);
+      for (const other of kindButtons) other.setAttribute("aria-pressed", String(other === button));
+      render(true);
+    };
+    button.setAttribute("aria-pressed", String(value === kind));
+    return button;
+  });
+  filter.append(...kindButtons);
   let active = -1;
   let options: HTMLButtonElement[] = [];
   function activate(index: number, preview = true, scroll = true) {
@@ -421,9 +444,29 @@ function themeChooser() {
   function render(preview = false) {
     list.replaceChildren();
     options = [];
-    for (const theme of state.themes.filter((t) =>
-      t.name.toLowerCase().includes(search.value.trim().toLowerCase()),
-    )) {
+    const query = search.value.trim().toLowerCase();
+    const shown = state.themes.filter((t) => t.name.toLowerCase().includes(query) && (kind === "all" || t.light === (kind === "light")));
+    // With All, light themes come first, then dark, each under a heading.
+    const groups = kind === "all"
+      ? [["Light", shown.filter((t) => t.light)], ["Dark", shown.filter((t) => !t.light)]] as const
+      : [["", shown]] as const;
+    for (const [heading, themes] of groups) {
+      if (!themes.length) continue;
+      let target: HTMLElement = list;
+      if (heading) {
+        target = document.createElement("div");
+        target.className = "theme-group";
+        target.setAttribute("role", "group");
+        const title = document.createElement("div");
+        title.className = "theme-group-label";
+        title.id = "theme-group-" + heading.toLowerCase();
+        title.textContent = heading;
+        title.setAttribute("role", "presentation");
+        target.setAttribute("aria-labelledby", title.id);
+        target.append(title);
+        list.append(target);
+      }
+    for (const theme of themes) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "theme-option";
@@ -455,7 +498,8 @@ function themeChooser() {
         }
       };
       options.push(button);
-      list.append(button);
+      target.append(button);
+    }
     }
     empty.hidden = options.length > 0;
     const selected = options.findIndex((option) => option.dataset.themeId === state.theme);
@@ -464,6 +508,8 @@ function themeChooser() {
   search.oninput = () => render(true);
   panel.onkeydown = (event) => {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    // Enter and Space press a filter button rather than choose a theme.
+    if (filter.contains(event.target as Node) && (event.key === "Enter" || event.key === " ")) return;
     if (event.key === "Escape") {
       // Close the list, not the whole settings window.
       event.preventDefault();
@@ -487,7 +533,7 @@ function themeChooser() {
   const hints = document.createElement("p");
   hints.className = "theme-key-hints";
   hints.textContent = "↑↓ preview · Enter choose · Esc close";
-  panel.append(searchRow, list, empty, hints);
+  panel.append(filter, searchRow, list, empty, hints);
   const label = document.createElement("span");
   label.className = "field-label";
   label.setAttribute("aria-hidden", "true");

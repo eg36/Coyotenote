@@ -2206,6 +2206,13 @@ dialog.settings {
   font-size: var(--font-small);
   color: var(--muted);
 }
+/* All / Light / Dark switch above the theme search, and the list's groups. */
+.theme-filter { display: flex; gap: 2px; margin-bottom: 8px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--chrome); }
+.theme-filter button { flex: 1; min-height: 32px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: var(--font-small); cursor: pointer; }
+.theme-filter button:hover { background: var(--hover); color: var(--text); }
+.theme-filter button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); font-weight: 600; }
+.theme-filter button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.theme-group-label { padding: 8px 10px 4px; color: var(--muted); font-size: var(--font-small); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .theme-empty {
   margin: 18px 0;
   text-align: center;
