@@ -55,6 +55,16 @@ async function mode(page, name) {
   // The menu closes before the new view is loaded and focused.
   await expect(page.locator("#editor-area")).not.toHaveAttribute("aria-busy", "true");
 }
+// Native Home/End update the DOM selection before selectionchange reaches
+// ProseMirror. Observe both before typing or running an editor command.
+async function caretAt(page, text, offset) {
+  await expect.poll(() => page.locator(".tiptap").evaluate((dom, { text, offset }) => {
+    const native = window.getSelection();
+    const model = dom.editor.state.selection;
+    return native?.isCollapsed && native.anchorNode?.textContent === text && native.anchorOffset === offset &&
+      model.empty && model.$head.parent.textContent === text && model.$head.parentOffset === offset;
+  }, { text, offset })).toBe(true);
+}
 async function menu(page, section) {
   await page.locator(`[data-menu="${section}"]`).click();
 }
@@ -2237,13 +2247,7 @@ test("front matter shows as properties in Write and keeps its exact form", async
   const bodyParagraph = page.locator(".tiptap p");
   await bodyParagraph.click();
   await page.keyboard.press("Home");
-  // Home moves the browser caret; selectionchange then updates ProseMirror.
-  // Observe the caret before typing so this exactness test also verifies
-  // where the new text is inserted under a loaded runner.
-  await expect.poll(() => bodyParagraph.evaluate((paragraph) => {
-    const selection = window.getSelection();
-    return selection?.isCollapsed && paragraph.contains(selection.anchorNode) && selection.anchorOffset === 0;
-  })).toBe(true);
+  await caretAt(page, "Text.", 0);
   await page.keyboard.type("Typed ");
   await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nTyped Text.");
 
@@ -3355,6 +3359,7 @@ test("callout headers edit the type, title and folding, and typing makes a callo
   await page.locator(".tiptap p").click(); await expect(page.locator(".tiptap")).toBeFocused();
   await expect.poll(() => page.evaluate(() => getSelection()?.anchorOffset)).toBeGreaterThan(0);
   await page.keyboard.press("End");
+  await caretAt(page, "Start.", "Start.".length);
   await page.keyboard.press("Enter"); await page.keyboard.type("> [!todo] ");
   await expect(page.locator(".tiptap .write-callout.callout-todo")).toHaveCount(1);
   await expect(page.getByLabel("Callout title (Markdown)")).toBeFocused();
