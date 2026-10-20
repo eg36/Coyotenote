@@ -740,6 +740,32 @@ func TestRenameLeavesWikiSyntaxInCodeAlone(t *testing.T) {
 	}
 }
 
+func TestMovingANoteKeepsItsImagesPointingAtTheSameFiles(t *testing.T) {
+	a := testApp(t)
+	for _, file := range []string{"Work/diagram.png", "Other/diagram.png", "attachments/x.png"} {
+		path := filepath.Join(a.store.Dir, filepath.FromSlash(file))
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("png"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	body := "![d](diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<diagram.png> \"title\")"
+	n := request(t, a, "POST", "/api/note", mutation{ID: "Work/Note", Body: body}, 201)
+	moved := request(t, a, "POST", "/api/rename", mutation{ID: "Work/Note", Name: "Other/Note", Revision: n["revision"].(string)}, 200)
+	want := "![d](../Work/diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<../Work/diagram.png> \"title\")"
+	if got := request(t, a, "GET", "/api/note?id=Other/Note", nil, 200)["body"]; got != want {
+		t.Fatalf("after move: %q", got)
+	}
+	note := moved["note"].(map[string]any)
+	request(t, a, "POST", "/api/rename", mutation{ID: "Other/Note", Name: "Note", Revision: note["revision"].(string)}, 200)
+	want = "![d](Work/diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<Work/diagram.png> \"title\")"
+	if got := request(t, a, "GET", "/api/note?id=Note", nil, 200)["body"]; got != want {
+		t.Fatalf("after move to the top: %q", got)
+	}
+}
+
 func TestEmptyTrashDeletesForGood(t *testing.T) {
 	a := testApp(t)
 	for _, id := range []string{"One", "Two"} {

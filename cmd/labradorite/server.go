@@ -547,6 +547,21 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
+			// Its images are found from its folder, so a moved note keeps
+			// pointing at the same files.
+			for _, moved := range refreshed {
+				if moved.ID != in.Name {
+					continue
+				}
+				if body := a.store.MovedFileLinks(moved.Body, n.ID, in.Name); body != moved.Body {
+					if err := a.store.Save(moved, body); err != nil {
+						warnings = append(warnings, "Could not update image links in "+in.Name+": "+err.Error())
+					} else if refreshed, _, err = a.load(); err != nil {
+						return err
+					}
+				}
+				break
+			}
 			_, view, err := a.current(in.Name, refreshed, "")
 			if err != nil {
 				return err

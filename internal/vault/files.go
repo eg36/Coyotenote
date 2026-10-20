@@ -3,9 +3,11 @@ package vault
 import (
 	"errors"
 	"io/fs"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -60,6 +62,55 @@ func (s *Store) ResolveFile(src, from string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// imageLink matches the address of a Markdown image, ![alt](address …),
+// written plainly or in <angle brackets>.
+var imageLink = regexp.MustCompile(`!\[(?:[^\]\\\n]|\\.)*\]\([ \t]*(<[^<>\n]*>|[^\s()<>]+)`)
+
+// MovedFileLinks rewrites the image addresses in body, the text of a note
+// that moved from oldID to newID, so each still shows the file it showed
+// before: an address that from the new folder would find another file, or
+// none, becomes a path from the new folder to the original file. Images in
+// code, and addresses that find the same file either way, are left alone.
+func (s *Store) MovedFileLinks(body, oldID, newID string) string {
+	if FolderOf(oldID) == FolderOf(newID) || !strings.Contains(body, "![") {
+		return body
+	}
+	code := codeRanges(body)
+	matches := imageLink.FindAllStringSubmatchIndex(body, -1)
+	for i := len(matches) - 1; i >= 0; i-- {
+		m := matches[i]
+		if inCode(code, m[0]) || escaped(body, m[0]) {
+			continue
+		}
+		raw := body[m[2]:m[3]]
+		src := strings.TrimSuffix(strings.TrimPrefix(raw, "<"), ">")
+		target, ok := s.ResolveFile(src, oldID)
+		if decoded, err := url.PathUnescape(src); !ok && err == nil {
+			target, ok = s.ResolveFile(decoded, oldID)
+		}
+		if !ok {
+			continue
+		}
+		if now, found := s.ResolveFile(src, newID); found && now == target {
+			continue
+		}
+		from := filepath.FromSlash(FolderOf(newID))
+		if from == "" {
+			from = "."
+		}
+		rel, err := filepath.Rel(from, filepath.FromSlash(target))
+		if err != nil {
+			continue
+		}
+		address := filepath.ToSlash(rel)
+		if strings.HasPrefix(raw, "<") || strings.ContainsAny(address, " ()<>") {
+			address = "<" + address + ">"
+		}
+		body = body[:m[2]] + address + body[m[3]:]
+	}
+	return body
 }
 
 // FindFile finds a file by name anywhere in the vault outside hidden

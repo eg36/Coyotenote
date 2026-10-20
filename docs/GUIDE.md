@@ -146,7 +146,9 @@ not change the Markdown files or follow the vault to another browser.
   You can also **drag a note** onto a folder, or onto a note in it, to move it
   there; while dragging, a zone at the end of the list moves it out of folders.
   Resolved wiki links in other notes are rewritten to keep pointing at it;
-  externally changed files are left alone and reported.
+  externally changed files are left alone and reported. The moved note's own
+  image links, which are found from its folder, are rewritten too whenever
+  they would otherwise show a different image, or none, from the new folder.
 - **Tags** come from a `tags` (or `tag`) property in front matter, as a list or
   comma-separated, and from `#tags` in the text outside code; a
   tag needs a letter, so `#2026` is not one. When the vault has tags, click
