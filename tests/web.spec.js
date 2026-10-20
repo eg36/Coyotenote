@@ -569,6 +569,11 @@ test("create in folders, body search, rename, trash and undo", async ({
 test("trashing a repeated name keeps both copies and undo restores the original name", async ({
   page,
 }) => {
+  // Restore must really finish before stale title text can count as ready.
+  await page.route("**/api/restore", async route => {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await route.continue();
+  });
   const id = `Repeated ${Date.now()}`;
   for (const body of ["older copy", "newer copy"]) {
     await openSeed(page, body, id);
@@ -579,10 +584,17 @@ test("trashing a repeated name keeps both copies and undo restores the original 
       .getByRole("button", { name: "Move to trash", exact: true })
       .click();
     await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+    await expect(page.locator("#document-title")).toBeHidden();
   }
+  const copies = (await (await page.request.get("/api/trash")).json()).notes;
+  expect(copies.map(note => note.excerpt).sort()).toEqual(["newer copy", "older copy"]);
+  expect(new Set(copies.map(note => note.id)).size).toBe(2);
   await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.locator("#document-title")).toBeVisible();
   await expect(page.locator("#document-title")).toHaveText(id);
   expect(await diskBody(page, id)).toBe("newer copy");
+  const remaining = (await (await page.request.get("/api/trash")).json()).notes;
+  expect(remaining.map(note => note.excerpt)).toEqual(["older copy"]);
 });
 
 test("wiki links, backlinks, rename rewriting and rich serialization", async ({
