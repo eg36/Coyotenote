@@ -94,10 +94,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if same(vaultDir, config) {
-		// Browser drafts are filed under the vault's ID, which follows its path.
-		app.formerIDs = []string{vaultID(former)}
-	}
+	app.formerIDs = formerVaultIDs(*dir, vaultDir, config, former)
 	listener, err := net.Listen("tcp", *listen)
 	if err != nil {
 		return fmt.Errorf("%w; is Labradorite already running? Choose another address with -listen", err)
@@ -160,6 +157,18 @@ func moveFormerData(from, to string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// formerVaultIDs names the IDs whose browser drafts and settings belong to
+// this vault. Drafts are filed under a vault's ID, which follows its path, so
+// only the default notebook, whose folder moved from the former app's, has
+// one. A -data-dir folder, or any other folder, is its own vault and
+// inherits nothing.
+func formerVaultIDs(dataDir, vaultDir, config, former string) []string {
+	if dataDir != "" || !same(vaultDir, config) || same(config, former) {
+		return nil
+	}
+	return []string{vaultID(former)}
 }
 
 func same(a, b string) bool {

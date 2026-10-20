@@ -8,6 +8,25 @@ import (
 	"github.com/eg36/labradorite/internal/vault"
 )
 
+func TestOnlyTheDefaultVaultInheritsFormerDrafts(t *testing.T) {
+	base := t.TempDir()
+	config, former := filepath.Join(base, "labradorite"), filepath.Join(base, "coyotenote-web")
+	other := filepath.Join(base, "elsewhere")
+	if got := formerVaultIDs("", config, config, former); len(got) != 1 || got[0] != vaultID(former) {
+		t.Fatalf("default vault: %v", got)
+	}
+	for name, ids := range map[string][]string{
+		"-data-dir":          formerVaultIDs(other, other, other, former),
+		"-data-dir default":  formerVaultIDs(config, config, config, former),
+		"vault argument":     formerVaultIDs("", other, config, former),
+		"kept former folder": formerVaultIDs("", former, former, former),
+	} {
+		if len(ids) != 0 {
+			t.Errorf("%s inherited %v", name, ids)
+		}
+	}
+}
+
 func TestFormerDataMovesOnceAndNeverOverwrites(t *testing.T) {
 	base := t.TempDir()
 	from, to := filepath.Join(base, "coyotenote-web"), filepath.Join(base, "labradorite")
