@@ -827,3 +827,33 @@ func TestFootnotesRenderInPreview(t *testing.T) {
 		t.Errorf("footnote labels leaked into the preview: %s", html)
 	}
 }
+
+func TestCalloutsRenderInPreview(t *testing.T) {
+	a := testApp(t)
+	render := func(body string) string {
+		return request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Note"}, 200)["html"].(string)
+	}
+	for body, wants := range map[string][]string{
+		"> [!warning] Mind **the** gap\n> Body text.": {
+			`<div class="callout callout-warning" data-callout="warning">`, `data-icon="alert"`,
+			`<span class="callout-title-text">Mind <strong>the</strong> gap</span>`, `<div class="callout-content">`, "<p>Body text.</p>",
+		},
+		"> [!info]\n> Only a body.":                   {`<span class="callout-title-text">Info</span>`, "<p>Only a body.</p>"},
+		"> [!FAQ]- Folded\n> Hidden body":             {`<details class="callout callout-question" data-callout="faq">`, `<summary class="callout-title">`, "Folded"},
+		"> [!tip]+ Open\n> Shown":                     {`<details class="callout callout-tip" data-callout="tip" open>`},
+		"> [!tip] Title only":                         {`<span class="callout-title-text">Title only</span></div>`},
+		"> [!custom-thing] Mine\n> x":                 {`class="callout callout-note" data-callout="custom-thing"`, `data-icon="pen"`},
+		"> [!note] Outer\n> > [!bug] Inner\n> > Deep": {`callout-note`, `callout-bug`, "<p>Deep</p>"},
+		"> Plain quote\n> [!not] a callout":           {"<blockquote>", "[!not] a callout"},
+	} {
+		got := render(body)
+		for _, want := range wants {
+			if !strings.Contains(got, want) {
+				t.Errorf("render(%q) is missing %q:\n%s", body, want, got)
+			}
+		}
+	}
+	if got := render("> [!tip] Title only"); strings.Contains(got, "callout-content") {
+		t.Errorf("a title-only callout has a body: %s", got)
+	}
+}

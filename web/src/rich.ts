@@ -233,6 +233,8 @@ export function supportsRich(body: string) {
   });
   if (/^\s*\[\^[^\]]+\]:/m.test(body))
     reason = "Showing Markdown: Write would change this note's footnotes.";
+  if (/^ {0,3}>[ \t]*\[![^\]\s]+\]/m.test(body))
+    reason = "Showing Markdown: Write would change this note's callouts.";
   // Write closes bold, italic, strikethrough and highlights before a wiki
   // link or image and reopens them after it, which would rewrite the text.
   const split = "Showing Markdown: Write would split formatting around a link or image in this note.";

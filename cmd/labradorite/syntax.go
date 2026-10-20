@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"html"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -9,7 +11,7 @@ import (
 	gast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
-	"github.com/yuin/goldmark/renderer/html"
+	ghtml "github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -94,7 +96,7 @@ func (highlightRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) 
 	reg.Register(kindHighlight, func(w util.BufWriter, _ []byte, n gast.Node, entering bool) (gast.WalkStatus, error) {
 		if entering {
 			_, _ = w.WriteString("<mark")
-			html.RenderAttributes(w, n, html.GlobalAttributeFilter)
+			ghtml.RenderAttributes(w, n, ghtml.GlobalAttributeFilter)
 			_ = w.WriteByte('>')
 		} else {
 			_, _ = w.WriteString("</mark>")
@@ -304,4 +306,181 @@ func closingBracket(body string, open int) int {
 		}
 	}
 	return -1
+}
+
+// Callouts are blockquotes whose first line names a type, as in
+// "> [!warning] Mind the gap". A "+" or "-" after the type makes the callout
+// foldable, open or closed at first. The rest of the first line is the title,
+// and the quote's remaining content is the body.
+type callout struct {
+	gast.BaseBlock
+	kind, fold string
+}
+
+type calloutTitle struct{ gast.BaseBlock }
+
+type calloutContent struct{ gast.BaseBlock }
+
+var (
+	kindCallout        = gast.NewNodeKind("Callout")
+	kindCalloutTitle   = gast.NewNodeKind("CalloutTitle")
+	kindCalloutContent = gast.NewNodeKind("CalloutContent")
+)
+
+func (n *callout) Kind() gast.NodeKind        { return kindCallout }
+func (n *calloutTitle) Kind() gast.NodeKind   { return kindCalloutTitle }
+func (n *calloutContent) Kind() gast.NodeKind { return kindCalloutContent }
+
+func (n *callout) Dump(source []byte, level int) { gast.DumpHelper(n, source, level, nil, nil) }
+func (n *calloutTitle) Dump(source []byte, level int) {
+	gast.DumpHelper(n, source, level, nil, nil)
+}
+func (n *calloutContent) Dump(source []byte, level int) {
+	gast.DumpHelper(n, source, level, nil, nil)
+}
+
+// calloutTypes maps every callout type and alias to the type it looks like
+// and the icon it shows. Unknown types look like a note.
+var calloutTypes = func() map[string][2]string {
+	types := map[string][2]string{}
+	for _, t := range []struct{ name, icon, aliases string }{
+		{"note", "pen", ""}, {"abstract", "list", "summary tldr"}, {"info", "info", ""},
+		{"todo", "checkSquare", ""}, {"tip", "flame", "hint important"},
+		{"success", "check", "check done"}, {"question", "help", "help faq"},
+		{"warning", "alert", "caution attention"}, {"failure", "close", "fail missing"},
+		{"danger", "zap", "error"}, {"bug", "bug", ""}, {"example", "ordered", ""},
+		{"quote", "quote", "cite"},
+	} {
+		for _, name := range append([]string{t.name}, strings.Fields(t.aliases)...) {
+			types[name] = [2]string{t.name, t.icon}
+		}
+	}
+	return types
+}()
+
+var calloutHead = regexp.MustCompile(`^\[!([^\]\s]+)\]([+-]?)[ \t]*`)
+
+type calloutTransformer struct{}
+
+func (calloutTransformer) Transform(doc *gast.Document, reader text.Reader, _ parser.Context) {
+	source := reader.Source()
+	var quotes []*gast.Blockquote
+	_ = gast.Walk(doc, func(n gast.Node, entering bool) (gast.WalkStatus, error) {
+		if q, ok := n.(*gast.Blockquote); ok && entering {
+			quotes = append(quotes, q)
+		}
+		return gast.WalkContinue, nil
+	})
+	for _, q := range quotes {
+		first, ok := q.FirstChild().(*gast.Paragraph)
+		if !ok || first.Lines().Len() == 0 {
+			continue
+		}
+		line := first.Lines().At(0)
+		head := calloutHead.FindSubmatchIndex(line.Value(source))
+		if head == nil {
+			continue
+		}
+		c := &callout{kind: strings.ToLower(string(line.Value(source)[head[2]:head[3]])), fold: string(line.Value(source)[head[4]:head[5]])}
+		// The title is the first line after the type, as parsed inline.
+		title := &calloutTitle{}
+		prefixEnd := line.Start + head[1]
+		for n := first.FirstChild(); n != nil; {
+			next := n.NextSibling()
+			t, isText := n.(*gast.Text)
+			lineEnds := isText && (t.SoftLineBreak() || t.HardLineBreak())
+			first.RemoveChild(first, n)
+			if !isText || t.Segment.Stop > prefixEnd {
+				if isText {
+					t.Segment = t.Segment.WithStart(max(t.Segment.Start, prefixEnd))
+					t.SetSoftLineBreak(false)
+					t.SetHardLineBreak(false)
+				}
+				title.AppendChild(title, n)
+			}
+			if lineEnds {
+				break
+			}
+			n = next
+		}
+		content := &calloutContent{}
+		if first.HasChildren() {
+			content.AppendChild(content, first)
+		} else {
+			q.RemoveChild(q, first)
+		}
+		for n := q.FirstChild(); n != nil; {
+			next := n.NextSibling()
+			if n != first {
+				content.AppendChild(content, n)
+			}
+			n = next
+		}
+		c.AppendChild(c, title)
+		if content.HasChildren() {
+			c.AppendChild(c, content)
+		}
+		q.Parent().ReplaceChild(q.Parent(), q, c)
+	}
+}
+
+type calloutRenderer struct{}
+
+func (calloutRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(kindCallout, func(w util.BufWriter, _ []byte, n gast.Node, entering bool) (gast.WalkStatus, error) {
+		c := n.(*callout)
+		tag := "div"
+		if c.fold != "" {
+			tag = "details"
+		}
+		if !entering {
+			_, _ = w.WriteString("</" + tag + ">\n")
+			return gast.WalkContinue, nil
+		}
+		look, ok := calloutTypes[c.kind]
+		if !ok {
+			look = calloutTypes["note"]
+		}
+		_, _ = w.WriteString("<" + tag + ` class="callout callout-` + look[0] + `" data-callout="` + html.EscapeString(c.kind) + `"`)
+		if c.fold == "+" {
+			_, _ = w.WriteString(" open")
+		}
+		_, _ = w.WriteString(">\n")
+		return gast.WalkContinue, nil
+	})
+	reg.Register(kindCalloutTitle, func(w util.BufWriter, _ []byte, n gast.Node, entering bool) (gast.WalkStatus, error) {
+		c := n.Parent().(*callout)
+		tag := "div"
+		if c.fold != "" {
+			tag = "summary"
+		}
+		if !entering {
+			_, _ = w.WriteString("</span></" + tag + ">\n")
+			return gast.WalkContinue, nil
+		}
+		look, ok := calloutTypes[c.kind]
+		if !ok {
+			look = calloutTypes["note"]
+		}
+		_, _ = w.WriteString("<" + tag + ` class="callout-title"><span class="callout-icon" data-icon="` + look[1] + `"></span><span class="callout-title-text">`)
+		if !n.HasChildren() {
+			_, _ = w.WriteString(html.EscapeString(strings.ToUpper(c.kind[:1]) + c.kind[1:]))
+		}
+		return gast.WalkContinue, nil
+	})
+	reg.Register(kindCalloutContent, func(w util.BufWriter, _ []byte, _ gast.Node, entering bool) (gast.WalkStatus, error) {
+		if entering {
+			_, _ = w.WriteString("<div class=\"callout-content\">\n")
+		} else {
+			_, _ = w.WriteString("</div>\n")
+		}
+		return gast.WalkContinue, nil
+	})
+}
+
+type callouts struct{}
+
+func (callouts) Extend(m goldmark.Markdown) {
+	m.Parser().AddOptions(parser.WithASTTransformers(util.Prioritized(calloutTransformer{}, 600)))
+	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(calloutRenderer{}, 500)))
 }

@@ -213,6 +213,13 @@ Beyond GitHub Flavored Markdown, Preview understands:
   `[^1]: text` defines it anywhere in the note (indent further lines by two
   spaces); `^[text]` writes one inline. Preview numbers them and lists them at
   the end; click a number or ↩ to jump between them.
+- **Callouts:** a quote starting `> [!type] Title` becomes a coloured box with
+  an icon. Types: note, abstract (summary, tldr), info, todo, tip (hint,
+  important), success (check, done), question (help, faq), warning (caution,
+  attention), failure (fail, missing), danger (error), bug, example and quote
+  (cite); others look like a note. `[!type]-` starts folded and `[!type]+`
+  open; nest callouts with `> >`. Leave out the body for a title-only callout.
+  Write shows notes with callouts in Markdown, so their syntax stays exact.
 
 ### WYSIWYG round trips
 

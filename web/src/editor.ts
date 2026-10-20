@@ -2,7 +2,7 @@ import type { AppState, Note, StateResponse } from "./types.js";
 // The open note: editing, saving, loading, views and the formatting toolbar.
 import { openSearch } from "./search.js";
 import { rememberNote, renderNavigation } from "./navigation.js";
-import { icon } from "./icons.js";
+import { hydrateIcons, icon } from "./icons.js";
 import { setSidebar } from "./sidebar.js";
 import {
   $,
@@ -363,6 +363,7 @@ function schedulePreview(immediate = false) {
         const data = await api<{ html: string }>("/api/render", "POST", { id, body });
         if (generation === state.previewGeneration) {
           $("preview").innerHTML = data.html;
+          hydrateIcons($("preview"));
           decorateLinks();
           decorateTags($("preview"));
         }

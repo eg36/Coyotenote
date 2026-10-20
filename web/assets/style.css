@@ -2935,3 +2935,21 @@ dialog.danger #modal-submit {
 #preview .footnotes li { margin-bottom: 0.4em; }
 #preview .footnotes li p { margin: 0; }
 #preview .footnote-backref { text-decoration: none; margin-left: 4px; }
+/* Callouts in the preview: a tinted box with an icon and title, coloured by
+   type from the theme. Foldable ones are <details>. */
+#preview .callout { --callout: var(--blue); margin: 1em 0; padding: 10px 14px; border-radius: 8px; border-left: 3px solid var(--callout); background: color-mix(in srgb, var(--callout) 10%, transparent); }
+#preview .callout-abstract, #preview .callout-tip { --callout: var(--cyan); }
+#preview .callout-success { --callout: var(--good); }
+#preview .callout-question, #preview .callout-warning { --callout: var(--warn); }
+#preview .callout-failure, #preview .callout-danger, #preview .callout-bug { --callout: var(--danger); }
+#preview .callout-example { --callout: var(--pink); }
+#preview .callout-quote { --callout: var(--muted); }
+#preview .callout-title { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text); }
+#preview .callout-icon { display: inline-flex; flex: none; color: var(--callout); }
+#preview .callout-icon svg { width: 18px; height: 18px; }
+#preview summary.callout-title { cursor: pointer; list-style: none; }
+#preview summary.callout-title::-webkit-details-marker { display: none; }
+#preview summary.callout-title::after { content: "›"; margin-left: auto; color: var(--muted); transition: transform 0.15s ease; }
+#preview details.callout[open] > summary.callout-title::after { transform: rotate(90deg); }
+#preview .callout-content { margin-top: 6px; }
+#preview .callout-content > :last-child { margin-bottom: 0; }

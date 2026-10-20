@@ -2936,3 +2936,21 @@ test("inline footnotes keep the note in Markdown until Write edits footnotes", a
   await expect(page.locator("#toast-text")).toContainText("footnotes");
   expect(await diskBody(page, id)).toBe(text);
 });
+
+test("callouts render in Preview with icons and folding, and keep the note in Markdown for Write", async ({ page }) => {
+  const text = "> [!warning] Mind the gap\n> Stand behind the line.\n\n> [!faq]- Why fold?\n> Hidden until opened.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await expect(page.locator("#toast-text")).toContainText("callouts");
+  await mode(page, "Preview");
+  const warning = page.locator("#preview .callout-warning");
+  await expect(warning.locator(".callout-title-text")).toHaveText("Mind the gap");
+  await expect(warning.locator(".callout-icon svg")).toHaveCount(1);
+  await expect(warning).toContainText("Stand behind the line.");
+  const folded = page.locator("#preview details.callout-question");
+  await expect(folded.getByText("Hidden until opened.")).toBeHidden();
+  await folded.locator("summary").click();
+  await expect(folded.getByText("Hidden until opened.")).toBeVisible();
+  expect(await diskBody(page, id)).toBe(text);
+});
