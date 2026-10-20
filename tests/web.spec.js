@@ -856,7 +856,7 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
 test("start-page navigation stays together and status sits at the right edge", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#app")).toHaveClass(/at-home/);
-  await expect(page.getByRole("group", { name: "Workspace navigation" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
   for (const width of [1999, 1840, 1839, 1500, 1440, 1280, 900, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (let toggle = 0; toggle < 2; toggle++) {
@@ -864,15 +864,13 @@ test("start-page navigation stays together and status sits at the right edge", a
       expect(width - status.x - status.width).toBeLessThanOrEqual(14);
       const title = await page.locator("#app-title").boundingBox();
       expect(title.x + title.width).toBeLessThanOrEqual(status.x);
-      const buttons = await page.locator(".nav-buttons").boundingBox();
+      const back = await page.locator("#history-back").boundingBox();
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
       const logo = await page.locator("#brand").boundingBox();
       expect(sidebarToggle.y).toBeGreaterThanOrEqual(logo.y + logo.height);
       expect(sidebarToggle.x).toBeLessThan(60);
-      const menus = await page.locator("#menu-bar").boundingBox();
-      expect(buttons.x).toBeGreaterThanOrEqual(menus.x + menus.width);
-      if (width > 530) expect(buttons.x - menus.x - menus.width).toBeLessThanOrEqual(24);
-      else expect(Math.abs(buttons.y + buttons.height / 2 - menus.y - menus.height / 2)).toBeLessThanOrEqual(5);
+      expect(back.x).toBeLessThan(60);
+      expect(back.y).toBeGreaterThan(sidebarToggle.y);
       await expect(page.locator("#sidebar-toggle")).toBeInViewport();
       await expect(page.locator("#history-back")).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
@@ -1118,7 +1116,7 @@ test("linked-note navigation has a back button and source history stays per note
   await page.locator(".cm-content").fill("Edit in origin.");
   await page.keyboard.press("Control+s");
   await expect.poll(() => diskBody(page, origin)).toBe("Edit in origin.");
-  await page.locator(`[data-note="${target}"]`).click();
+  await page.locator(`#note-list [data-note="${target}"]`).click();
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+z");
   await expect(page.locator(".cm-content")).toHaveText("A destination.");
@@ -2324,7 +2322,7 @@ test("the persistent rail keeps navigation reachable and full titles have themed
   for (const name of ["Labradorite home", "Toggle notes", "Search all notes", "Recently opened notes", "New note", "Commands", "Settings"])
     await expect(rail.getByRole(name === "Labradorite home" ? "link" : "button", { name, exact: true })).toBeVisible();
   await page.locator("#document-title").hover();
-  await expect(page.getByRole("tooltip")).toContainText(id);
+  await expect(page.getByRole("tooltip")).toHaveText(id);
   await page.mouse.move(1000, 500);
   await page.locator("#commands-button").click();
   await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toHaveValue(">");

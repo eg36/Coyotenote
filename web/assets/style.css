@@ -2788,3 +2788,6 @@ dialog.danger #modal-submit {
 .search-step button { flex: 1; min-height: 32px; border-radius: 6px; padding: 6px; background: var(--hover); font-size: 12px; }
 .search-open.search-in-note .sidebar > :is(.note-list, .list-heading, .tag-filter, .pinned-notes, .sidebar-actions) { display: none !important; }
 .app:not(.search-open) .note-search-options { display: none !important; }
+@media (max-width: 530px) {
+  .topbar .editor-bar { padding-left: 6px; }
+}

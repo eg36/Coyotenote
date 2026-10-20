@@ -172,7 +172,7 @@ async function openNote(
   state.source?.replace(state.body, { reset: true });
   state.restoring = false;
   $("document-title").textContent = note.title.split("/").pop() || note.title;
-  $("document-title").title = note.id + " · Rename or move note";
+  $("document-title").title = note.id;
   $("document-head").hidden = false;
   $("document-actions").hidden = false;
   $("find-replace").disabled = false;

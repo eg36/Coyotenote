@@ -16,7 +16,7 @@ let warmUntil = 0;
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
 
 function fill(text: string) {
-  const [label, ...rest] = text.split(" · ");
+  const [label, ...rest] = target?.id === "document-title" ? [text] : text.split(" · ");
   tip.replaceChildren(label || "");
   if (rest.length) {
     const keys = document.createElement("kbd");
