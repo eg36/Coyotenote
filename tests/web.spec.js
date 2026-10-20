@@ -4229,6 +4229,25 @@ test("Write edits multiline footnotes, follows references and undoes definition 
   await expect(page.locator("#preview .footnotes")).toContainText("Untouched.");
 });
 
+for (const key of ["Enter", "Space"]) {
+  for (const resolved of [false, true]) {
+    test(`${key} activates a ${resolved ? "resolved" : "missing"} footnote without editing the note`, async ({ page }) => {
+      const label = resolved ? "source" : "missing";
+      const text = resolved ? "A claim[^source].\n\n[^source]: Keep this.\n" : "A claim[^missing].\n\nBody.";
+      const id = await openSeed(page, text);
+      await mode(page, "Write");
+      await page.locator(".tiptap").evaluate(dom => dom.editor.commands.setTextSelection(1));
+      const reference = page.getByRole("button", { name: `Edit footnote ${label}`, exact: true });
+      await reference.focus();
+      await page.keyboard.press(key);
+      if (resolved) await expect(page.getByRole("textbox", { name: "Footnote source", exact: true })).toBeFocused();
+      else await expect(page.locator("#toast-text")).toContainText("has no definition yet");
+      expect(await page.locator(".tiptap").evaluate(dom => dom.editor.getMarkdown())).toBe(text);
+      expect(await diskBody(page, id)).toBe(text);
+    });
+  }
+}
+
 test("unsupported footnote layouts fall back and unresolved references stay exact", async ({ page }) => {
   for (const text of [
     "Text[^a].\n\n[^a]: One.\n\n[^a]: Duplicate.",

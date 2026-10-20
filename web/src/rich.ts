@@ -513,9 +513,10 @@ export function createRich(
   element.addEventListener("keydown", event => {
     const target = event.target;
     if (target instanceof HTMLElement && target.dataset.footnoteReference && ["Enter", " "].includes(event.key)) {
-      event.preventDefault(); followFootnote(target.dataset.footnoteReference);
+      // Capture before ProseMirror's Enter keymap can split a paragraph.
+      event.preventDefault(); event.stopPropagation(); followFootnote(target.dataset.footnoteReference);
     }
-  });
+  }, true);
   // Tiptap's task checkbox builds its transaction and then focuses the
   // editor, which in WebKit moves the selection first and leaves that
   // transaction stale. Toggling here, before its listener, avoids that.
