@@ -240,6 +240,8 @@ export function supportsRich(body: string) {
   const split = "Showing Markdown: Write would split formatting around a link or image in this note.";
   marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
     if (["strong", "em", "del"].includes(token.type) && /\[\[|!\[/.test(token.raw)) reason = split;
+    if (token.type === "list_item" && /^\s*(?:[-*+]|\d+[.)])[ \t]+\[[^\sxX[\]\\]\][ \t]/.test(token.raw))
+      reason = "Showing Markdown: Write would change this note's custom task marks, such as [?].";
     if (token.type === "text" || token.type === "paragraph")
       for (const match of token.raw.matchAll(highlightPattern))
         if (/\[\[|!\[/.test(match[2])) reason = split;

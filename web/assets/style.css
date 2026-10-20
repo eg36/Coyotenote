@@ -2956,3 +2956,12 @@ dialog.danger #modal-submit {
 #preview details.callout[open] > summary.callout-title::after { transform: rotate(90deg); }
 #preview .callout-content { margin-top: 6px; }
 #preview .callout-content > :last-child { margin-bottom: 0; }
+/* Custom task marks in the preview, such as [?] or [-]: a small box the
+   size of a checkbox showing the mark, tinted by what it usually means. */
+#preview .task-mark { --task: var(--accent); display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin: 0 8px 0 0; vertical-align: middle; border: 1.5px solid var(--task); border-radius: 3px; color: var(--task); font: 700 10px/1 var(--font-ui); }
+#preview li[data-task="?"] > .task-mark { --task: var(--warn); }
+#preview li[data-task="!"] > .task-mark { --task: var(--danger); }
+#preview li[data-task=">"] > .task-mark { --task: var(--blue); }
+#preview li[data-task="/"] > .task-mark { --task: var(--good); }
+#preview li[data-task="-"] > .task-mark { --task: var(--muted); }
+#preview li[data-task="-"] { color: var(--muted); text-decoration: line-through; }

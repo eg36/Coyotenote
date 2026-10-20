@@ -879,3 +879,18 @@ func TestSameNoteLinksAndBlockIDs(t *testing.T) {
 		t.Errorf("same-note links leaked into note links: %+v", links)
 	}
 }
+
+func TestCustomTaskMarksRender(t *testing.T) {
+	a := testApp(t)
+	html := request(t, a, "POST", "/api/render", mutation{Body: "- [ ] Open\n- [x] Done\n- [?] Ask\n- [-] Dropped\n- [>] Later\n- [!] Urgent\n- [/] Halfway\n- [*] Starred\n- not [?] a task\n\nText [?] stays.", ID: "Note"}, 200)["html"].(string)
+	for _, want := range []string{
+		`<input disabled="" type="checkbox"> Open`, `<input checked="" disabled="" type="checkbox"> Done`,
+		`<li data-task="?"><span class="task-mark" role="img" aria-label="Task question">?</span> Ask</li>`,
+		`<li data-task="-">`, `aria-label="Task cancelled"`, `<li data-task="&gt;">`, `<li data-task="!">`,
+		`<li data-task="/">`, `aria-label="Task marked *"`, "<li>not [?] a task</li>", "<p>Text [?] stays.</p>",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q in %s", want, html)
+		}
+	}
+}

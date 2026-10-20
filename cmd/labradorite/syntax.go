@@ -532,3 +532,66 @@ type blocks struct{}
 func (blocks) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(parser.WithASTTransformers(util.Prioritized(blockIDs{}, 700)))
 }
+
+// taskMark is a task list item with a mark other than a space or x, such as
+// "- [?] Ask" or "- [-] Dropped". Its list item carries the mark in
+// data-task, so each kind can be styled.
+type taskMark struct {
+	gast.BaseInline
+	mark string
+}
+
+var kindTaskMark = gast.NewNodeKind("TaskMark")
+
+func (n *taskMark) Kind() gast.NodeKind { return kindTaskMark }
+
+func (n *taskMark) Dump(source []byte, level int) { gast.DumpHelper(n, source, level, nil, nil) }
+
+var taskMarkPattern = regexp.MustCompile(`^\[([^\sxX\[\]\\])\][ \t]+`)
+
+type taskMarkParser struct{}
+
+func (taskMarkParser) Trigger() []byte { return []byte{'['} }
+
+// Parse follows the GFM task list rules: only at the start of a list item's
+// first line.
+func (taskMarkParser) Parse(parent gast.Node, block text.Reader, _ parser.Context) gast.Node {
+	item, ok := parent.Parent().(*gast.ListItem)
+	if !ok || item.FirstChild() != parent || parent.HasChildren() {
+		return nil
+	}
+	line, _ := block.PeekLine()
+	m := taskMarkPattern.FindSubmatchIndex(line)
+	if m == nil {
+		return nil
+	}
+	mark := string(line[m[2]:m[3]])
+	block.Advance(m[1])
+	item.SetAttributeString("data-task", []byte(mark))
+	return &taskMark{mark: mark}
+}
+
+var taskMarkNames = map[string]string{"?": "question", "-": "cancelled", ">": "deferred", "!": "important", "/": "in progress"}
+
+type taskMarkRenderer struct{}
+
+func (taskMarkRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(kindTaskMark, func(w util.BufWriter, _ []byte, n gast.Node, entering bool) (gast.WalkStatus, error) {
+		if entering {
+			mark := n.(*taskMark).mark
+			label := taskMarkNames[mark]
+			if label == "" {
+				label = "marked " + mark
+			}
+			_, _ = w.WriteString(`<span class="task-mark" role="img" aria-label="Task ` + html.EscapeString(label) + `">` + html.EscapeString(mark) + "</span> ")
+		}
+		return gast.WalkContinue, nil
+	})
+}
+
+type taskMarks struct{}
+
+func (taskMarks) Extend(m goldmark.Markdown) {
+	m.Parser().AddOptions(parser.WithInlineParsers(util.Prioritized(taskMarkParser{}, 1)))
+	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(taskMarkRenderer{}, 500)))
+}

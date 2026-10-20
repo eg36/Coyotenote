@@ -3007,3 +3007,21 @@ test("same-note links, block ids and table aliases work in Preview and Write", a
   await expect(page.locator("#document-title")).toHaveText(target);
   await expect(page.locator('#preview [id="b-key"]')).toBeInViewport();
 });
+
+test("custom task marks render in Preview and keep the note in Markdown for Write", async ({ page }) => {
+  const text = "- [ ] Open\n- [?] Ask Priya\n- [-] Dropped idea\n- [!] Urgent";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await expect(page.locator("#toast-text")).toContainText("custom task marks");
+  expect(await diskBody(page, id)).toBe(text);
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .task-mark")).toHaveCount(3);
+  await expect(page.locator('#preview li[data-task="?"] .task-mark')).toHaveText("?");
+  await expect(page.locator('#preview li[data-task="-"]')).toHaveCSS("text-decoration-line", "line-through");
+  await expect(page.locator("#preview")).not.toContainText("[?]");
+  // Ordinary tasks still open in Write.
+  await openSeed(page, "- [ ] Plain\n- [x] Done");
+  await mode(page, "Write");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+});

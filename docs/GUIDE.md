@@ -225,6 +225,10 @@ Beyond GitHub Flavored Markdown, Preview understands:
   ` ^an-id` to name that block, then link to it with `[[Note#^an-id]]` or
   `[[#^an-id]]`; Preview hides the marker. Inside a table cell, write an alias
   with an escaped pipe: `[[Note\|label]]`.
+- **Task marks:** besides `- [ ]` and `- [x]`, any single character marks a task:
+  `[?]` question, `[!]` important, `[>]` deferred, `[/]` in progress and `[-]`
+  cancelled (struck through) get their own colour in Preview. Write shows such
+  notes in Markdown, so the marks stay exact.
 
 ### WYSIWYG round trips
 
