@@ -3000,3 +3000,12 @@ dialog.danger #modal-submit {
 #preview .embed-link, #preview .embed-missing { padding: 6px 12px; }
 #preview .embed-link .embed-title { margin: 0; }
 #preview .embed-missing { color: var(--muted); font-style: italic; border-left-color: var(--line); }
+/* The rail's logo area is exactly as tall as the header, which grows when a
+   note is open, so the first rail icon and the notes panel's toolbar share a
+   line 28px below the header either way. All their icons are 19px. */
+@media (min-width: 800px) {
+  .activity-rail { padding-top: 0; }
+  .activity-rail .brand { flex: none; height: var(--topbar-height, 58px); margin: 0; padding: 0 2px; box-sizing: border-box; }
+  .sidebar { padding-top: 10px; }
+}
+.sidebar-actions .icon-button svg, .sidebar-actions :is(#history-back, #history-forward, #collapse-sidebar) svg { width: 19px; height: 19px; }

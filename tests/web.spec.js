@@ -3142,3 +3142,16 @@ test("tooltips sit 7px below the control they describe", async ({ page }) => {
   const [box, tipBox] = [await control.boundingBox(), await tip.boundingBox()];
   expect(Math.abs(tipBox.y - box.y - box.height - 7)).toBeLessThan(0.6);
 });
+
+test("the rail's first icon lines up with the notes toolbar at home and in a note", async ({ page }) => {
+  const middle = async (selector) => { const box = await page.locator(selector).boundingBox(); return box.y + box.height / 2; };
+  const id = await openSeed(page, "Aligned.");
+  for (const url of ["/", "/?note=" + encodeURIComponent(id)]) {
+    await page.goto(url);
+    await expect(page.locator("#today-note")).toBeVisible();
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    expect(Math.abs((await middle("#sidebar-toggle")) - (await middle("#today-note"))), url).toBeLessThan(1);
+    const sizes = await page.locator(".sidebar-actions svg, .activity-rail > button svg").evaluateAll((icons) => icons.map((i) => Math.round(i.getBoundingClientRect().width)).filter((w) => w > 0));
+    expect(new Set(sizes)).toEqual(new Set([19]));
+  }
+});
