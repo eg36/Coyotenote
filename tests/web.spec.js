@@ -40,6 +40,9 @@ async function openThemes(page) {
 // mode picks a view from the header's selector, or from the View menu when
 // the header is hidden.
 async function mode(page, name) {
+  // A reload resolves before startup has opened the note and restored the
+  // sidebar. Do not mistake its temporarily hidden selector for phone UI.
+  await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", /true|false/);
   if (await page.locator("#view-type").isVisible()) {
     await page.locator("#view-type").click();
     await page.getByRole("option", { name, exact: true }).click();
@@ -3204,12 +3207,12 @@ test("footnotes render in Preview and jump between reference and note", async ({
   expect(page.url()).toBe(before);
 });
 
-test("Write keeps inline footnotes exact through body edits and view changes", async ({ page }) => {
-  for (const aside of [
-    "with a side note", "  **bold** and [a link](https://example.com)  ",
-    "nested [square [brackets]] and \\[escaped\\]", "first line\nsecond line",
-    "<u>raw</u> &copy; $\\alpha$ ![[literal]]",
-  ]) {
+for (const [index, aside] of [
+  "with a side note", "  **bold** and [a link](https://example.com)  ",
+  "nested [square [brackets]] and \\[escaped\\]", "first line\nsecond line",
+  "<u>raw</u> &copy; $\\alpha$ ![[literal]]",
+].entries()) {
+  test(`Write keeps inline footnote case ${index + 1} exact through body edits and view changes`, async ({ page }) => {
     const text = `A thought^[${aside}] here. Another^[second].\n\nNext line.`;
     const id = await openSeed(page, text); await mode(page, "Write");
     await expect(page.locator("#rich-pane")).toBeVisible();
@@ -3222,8 +3225,8 @@ test("Write keeps inline footnotes exact through body edits and view changes", a
     await page.reload(); await mode(page, "Write");
     await expect(page.locator("#rich-pane")).toBeVisible();
     expect(await diskBody(page, id)).toBe(text + " More.");
-  }
-});
+  });
+}
 
 test("inline footnotes retain final newlines on body edits", async ({ page }) => {
   for (const ending of ["\n", "\n\n"]) {
@@ -4007,16 +4010,15 @@ test("display formulas in numbered lists and directly below lists or quotes stay
   expect(await diskBody(page, id)).toBe("- item\n$$\nx\n$$");
 });
 
-test("Write keeps numbered and named footnote definitions exact through body edits", async ({ page }) => {
-  const cases = [
-    "Text[^1] and again[^1].\n\n[^1]: Keep this definition.\n",
-    "Text[^source].\n\n[^source]:  First **bold** line.  \n    Continued with [a link](https://example.com).\n\n    A second paragraph.\n\nAfter.",
-    "Text[^a] and text[^b].\n\n\n[^a]: One.\n[^b]: Two.\n\n\n",
-    "[^named]: Before the text.\n\nText[^named].",
-    "Text[^tab].\n\n[^tab]: First.\n\tTabbed continuation.\n",
-    '```text\n[^code]: literal\n```\n\nText[^real].\n\n[^real]: Actual note.',
-  ];
-  for (const text of cases) {
+for (const [index, text] of [
+  "Text[^1] and again[^1].\n\n[^1]: Keep this definition.\n",
+  "Text[^source].\n\n[^source]:  First **bold** line.  \n    Continued with [a link](https://example.com).\n\n    A second paragraph.\n\nAfter.",
+  "Text[^a] and text[^b].\n\n\n[^a]: One.\n[^b]: Two.\n\n\n",
+  "[^named]: Before the text.\n\nText[^named].",
+  "Text[^tab].\n\n[^tab]: First.\n\tTabbed continuation.\n",
+  '```text\n[^code]: literal\n```\n\nText[^real].\n\n[^real]: Actual note.',
+].entries()) {
+  test(`Write keeps footnote definition case ${index + 1} exact through body edits`, async ({ page }) => {
     const id = await openSeed(page, text);
     await mode(page, "Write");
     await expect(page.locator("#rich-pane")).toBeVisible();
@@ -4028,8 +4030,8 @@ test("Write keeps numbered and named footnote definitions exact through body edi
     await mode(page, "Markdown"); await mode(page, "Write");
     await expect(page.locator("#rich-pane")).toBeVisible();
     expect(await diskBody(page, id)).toBe(text.replace("Text", "Edited Text"));
-  }
-});
+  });
+}
 
 test("Write edits multiline footnotes, follows references and undoes definition edits", async ({ page }) => {
   const text = '---\ntags: [research]\n---\n\nA claim[^source] and another[^2].\n\n[^source]:  First line.  \n\tNext line.\n\n[^2]: Untouched.\n';
