@@ -2849,7 +2849,10 @@ dialog.danger #modal-submit {
 .topbar { display: grid; grid-template-columns: minmax(0, 1fr) 27px; grid-template-rows: minmax(28px, auto) auto; padding: 6px 12px; row-gap: 2px; }
 .topbar .title-block { display: flex; grid-column: 1 / -1; grid-row: 1; justify-self: center; width: fit-content; max-width: min(680px, calc(100vw - var(--rail-width) - 76px)); min-width: 0; margin: 0; }
 .topbar .title-row { justify-content: center; padding: 0; }
-.topbar .note-heading { flex: 0 1 auto; }
+.topbar .note-heading { flex: 0 1 auto; gap: 2px; }
+.note-heading #pin-note { width: 26px; height: 26px; }
+.note-heading #pin-note svg { width: 15px; height: 15px; }
+.note-heading #pin-note[aria-pressed="true"] { color: var(--accent-text); }
 .topbar .header-tools { display: flex; justify-content: center; grid-column: 1 / -1; grid-row: 2; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; width: 100%; max-width: none; min-width: 0; margin: 0; padding: 0; gap: 8px; background: transparent; position: static; transform: none; }
 .header-tools .menu-bar { display: flex; align-items: center; flex-shrink: 0; gap: 2px; margin: 0; padding: 0; }
 .header-tools .menu-bar button { width: auto; height: 28px; padding: 0 6px; font-size: 13px; }

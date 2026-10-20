@@ -2738,3 +2738,25 @@ test("the editor view selector sits in the notes toolbar and views stay reachabl
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
+
+test("pin sits right after the note title and pins the open note", async ({ page }) => {
+  const id = await openSeed(page, "Pin me from the title.", `Title pin ${Date.now()}`);
+  const pin = page.locator("#pin-note");
+  expect(await page.locator("#document-actions #pin-note").count()).toBe(0);
+  expect(await page.locator(".note-heading #pin-note").count()).toBe(1);
+  for (const width of [1440, 900, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(pin).toBeInViewport();
+    const title = await page.locator("#document-title").boundingBox(), box = await pin.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(title.x + title.width - 1);
+    expect(box.x - title.x - title.width).toBeLessThan(8);
+    expect(Math.abs(box.y + box.height / 2 - title.y - title.height / 2)).toBeLessThan(2);
+  }
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await expect(pin).toHaveAttribute("aria-label", "Unpin note");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("#pinned-list .navigation-note")).toHaveAttribute("data-note", id);
+  await page.goto("/");
+  await expect(pin).toBeHidden();
+});

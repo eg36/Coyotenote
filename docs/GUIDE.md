@@ -82,7 +82,8 @@ area blank. **File / Edit / View / Insert** stay centered below the title. The
 menus remain available on the start page; note-only commands need an open note.
 Use ↑/↓ within a menu, ←/→ to switch menus, and Escape to close.
 
-Pin, outline, history, download and trash are grouped with the centered menu.
+Outline, history, download and trash are grouped with the centered menu. The
+pin button sits right after the note title.
 A status dot before the note title shows save state; hover for details. It is
 hidden on the start page. On phones,
 note actions wrap onto their own row within the menu. At home the menu is
@@ -154,8 +155,8 @@ not change the Markdown files or follow the vault to another browser.
 - The icons above the notes list open **today's note**, toggle **tags**, and
   **collapse or expand all folders and pins**. **Previous / Next note** follow
   visited-note history. The small button at the far right closes the panel.
-- **Pinned notes** sit below tags and above Notes. Use the pin button in the
-  header or the Pin/Unpin command; this section has compact title/date rows and
+- **Pinned notes** sit below tags and above Notes. Use the pin button after the
+  note title or the Pin/Unpin command; this section has compact title/date rows and
   remembers whether it is collapsed. **Recently opened** in the rail shows your
   last 30 opened notes. Pins and recents stay in this browser for this vault;
   renaming or moving through the app follows the note's new path.
