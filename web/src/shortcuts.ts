@@ -1,3 +1,4 @@
+import { openSearch } from "./search.js";
 import { showAllNotes } from "./navigation.js";
 import type { AppState } from "./types.js";
 // Keyboard shortcuts and the note navigation they trigger.
@@ -30,11 +31,7 @@ function showNotes() {
   setSidebar(true);
 }
 function findNotes() {
-  state.folder = null;
-  showNotes();
-  $("app").classList.add("search-open");
-  $("sidebar-search").setAttribute("aria-expanded", "true");
-  $("search").focus();
+  openSearch("all").catch(showError);
 }
 function cycleMode() {
   const modes: AppState["mode"][] = ["write", "source", "preview", "split"];

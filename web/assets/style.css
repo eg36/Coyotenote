@@ -2777,3 +2777,14 @@ dialog.danger #modal-submit {
 .breadcrumb-separator { font-size: 11px; color: var(--muted); }
 .tooltip { max-width: min(360px, calc(100vw - 16px)); overflow-wrap: anywhere; }
 @media (max-width: 530px) { .note-folder { display: none; } }
+.search-scopes { display: flex; gap: 4px; padding: 4px; margin-bottom: 8px; background: var(--hover); border-radius: 8px; }
+.search-scopes button { flex: 1; padding: 7px 4px; border-radius: 5px; background: transparent; color: var(--muted); font-size: 12px; }
+.search-scopes button[aria-pressed="true"] { background: var(--surface); color: var(--text); }
+.app:not(.search-open) .search-scopes { display: none; }
+.note-search-options { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 16px; }
+.note-search-options label, .note-search-options p { margin: 0; font-size: 12px; color: var(--muted); }
+.note-search-options input { width: 100%; min-height: 36px; padding: 6px 8px; }
+.search-step { display: flex; gap: 6px; }
+.search-step button { flex: 1; min-height: 32px; border-radius: 6px; padding: 6px; background: var(--hover); font-size: 12px; }
+.search-open.search-in-note .sidebar > :is(.note-list, .list-heading, .tag-filter, .pinned-notes, .sidebar-actions) { display: none !important; }
+.app:not(.search-open) .note-search-options { display: none !important; }

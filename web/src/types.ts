@@ -60,6 +60,10 @@ export interface SourceEditor {
   replace(body: string, options?: { reset?: boolean }): void;
   focus(): void;
   find(query?: string): void;
+  search(query: string, replacement: string): void;
+  matchCount(): number;
+  nextMatch(previous?: boolean): void;
+  replaceMatch(all?: boolean): void;
   readOnly(value: boolean): void;
   insert(text: string): void;
   wrap(before: string, after?: string): void;

@@ -22,6 +22,10 @@ function toggleSidebar() {
     : !$("app").classList.contains("sidebar-hidden");
   setSidebar(!open);
 }
-mobile.addEventListener("change", restoreSidebar);
+mobile.addEventListener("change", () => {
+  const focusedInPanel = $("sidebar").contains(document.activeElement);
+  restoreSidebar();
+  if (focusedInPanel) setSidebar(true, false);
+});
 
 export { restoreSidebar, setSidebar, toggleSidebar };

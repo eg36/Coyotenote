@@ -3,6 +3,7 @@ import type { Note, SourceEditor } from "./types.js";
 
 interface SourceOptions {
   onChange(body: string): void;
+  onFind(): void;
   getNotes(): Note[];
   onWarning(message: string): void;
   onFiles(files: File[]): void;
@@ -33,12 +34,12 @@ import {
   bracketMatching,
 } from "@codemirror/language";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
-import { searchKeymap, highlightSelectionMatches, openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
+import { search, findNext, findPrevious, replaceNext, replaceAll, getSearchQuery, closeSearchPanel, searchKeymap, highlightSelectionMatches, openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
 import { tags } from "@lezer/highlight";
 
 export function createSource(
   element: HTMLElement,
-  { onChange, getNotes, onWarning, onFiles, imageFiles }: SourceOptions,
+  { onChange, onFind, getNotes, onWarning, onFiles, imageFiles }: SourceOptions,
 ): SourceEditor {
   let updating = false;
   const readOnly = new Compartment();
@@ -76,6 +77,7 @@ export function createSource(
     indentOnInput(),
     bracketMatching(),
     highlightSelectionMatches(),
+    search(),
     markdown(),
     syntaxHighlighting(colors),
     placeholder("A thought, a list, the beginning of something…"),
@@ -104,6 +106,7 @@ export function createSource(
       ...completionKeymap,
       ...defaultKeymap,
       ...historyKeymap,
+      { key: "Mod-f", run: () => { onFind(); return true; } },
       ...searchKeymap,
       indentWithTab,
     ]),
@@ -205,6 +208,20 @@ export function createSource(
       // The panel exists only once opened, so the query follows it.
       if (query) view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: query })) });
     },
+    search(query, replacement) {
+      closeSearchPanel(view);
+      view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: query, replace: replacement, literal: true })) });
+    },
+    matchCount() {
+      const query = getSearchQuery(view.state);
+      if (!query.search || !query.valid) return 0;
+      const cursor = query.getCursor(view.state);
+      let count = 0;
+      while (!cursor.next().done) count++;
+      return count;
+    },
+    nextMatch(previous = false) { (previous ? findPrevious : findNext)(view); },
+    replaceMatch(all = false) { (all ? replaceAll : replaceNext)(view); },
     readOnly(value) {
       view.dispatch({
         effects: readOnly.reconfigure(EditorState.readOnly.of(value)),

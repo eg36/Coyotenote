@@ -20,7 +20,7 @@ async function openSeed(page, body, name) {
 // searchBox opens the header search, which is a button until used.
 async function searchBox(page) {
   const box = page.locator("#search");
-  if (await box.isHidden()) {
+  if (await box.isHidden() || await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") {
     const icon = page.locator("#sidebar-search");
     if (await icon.isVisible()) await icon.click();
     else await page.keyboard.press("Control+Shift+e");
@@ -948,7 +948,7 @@ test("search opens at the top of the notes list, in the drawer on small screens"
   const search = page.locator("#search");
   // The header holds find and replace for the note, not a notes search.
   await expect(page.locator(".topbar #search")).toHaveCount(0);
-  await expect(page.locator(".topbar").getByRole("button", { name: "Find and replace in this note" })).toBeVisible();
+  await expect(page.locator(".topbar #find-replace")).toHaveCount(0);
   await expect(search).toBeHidden();
   await page.locator("#sidebar-toggle").click();
   await expect(page.locator("#sidebar")).toBeHidden();
@@ -1398,7 +1398,7 @@ test("sidebar icons start notes, open today's note, search and fold every folder
   await expect(page.getByRole("dialog", { name: "New note" })).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Today's note" }).click();
-  await expect(page.locator("#note-folder")).toHaveText("Journal");
+  await expect(page.getByRole("button", { name: "Browse Journal", exact: true })).toBeVisible();
 });
 
 test("the logo goes to the start page and back returns to the note that was open", async ({ page }) => {
@@ -1414,14 +1414,14 @@ test("the logo goes to the start page and back returns to the note that was open
   await expect(page.locator("#history-back")).toBeDisabled();
 });
 
-test("find and replace in the header opens for the note, starting from the notes search words", async ({ page }) => {
+test("search scope switches to this note while keeping the same query", async ({ page }) => {
   await openSeed(page, "Replace the old word, then the old word again.");
   const box = await searchBox(page);
   await box.fill("old word");
   await page.getByRole("button", { name: "Find and replace in this note" }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
-  await expect(page.locator(".cm-search input[name=search]")).toHaveValue("old word");
-  await expect(page.locator(".cm-search input[name=replace]")).toBeVisible();
+  await expect(page.locator("#search")).toHaveValue("old word");
+  await expect(page.locator("#search-replacement")).toBeVisible();
   // Without an open note there is nothing to search in.
   await page.goto("/");
   await (await searchBox(page)).click();
@@ -2194,17 +2194,18 @@ test("find and replace opens from Write, autosaves replacements and supports und
   await page.locator('[data-menu="edit"]').click();
   await page.getByRole("menuitem", { name: "Find and replace…" }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
-  const find = page.locator('.cm-search input[name="search"]');
-  const replace = page.locator('.cm-search input[name="replace"]');
+  const find = page.locator("#search");
+  const replace = page.locator("#search-replacement");
   await expect(find).toBeFocused();
   await find.fill("alpha");
   await replace.fill("omega");
   await replace.press("Tab");
-  await page.locator('.cm-search button[name="replaceAll"]').click();
+  await page.locator("#search-replace-all").click();
   await expect.poll(() => diskBody(page, id)).toContain("omega omega beta with edits");
   await find.focus();
   await page.keyboard.press("Escape");
-  await expect(page.locator(".cm-search")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#note-search-options")).toBeHidden();
   await page.locator(".cm-content").focus();
   await page.keyboard.press("Control+z");
   await expect.poll(() => diskBody(page, id)).toContain("alpha alpha beta with edits");
@@ -2216,16 +2217,22 @@ test("find and replace keeps Split open and fits a narrow screen", async ({ page
   await page.keyboard.press("Control+k");
   await page.getByLabel("Search notes, headings and commands").fill(">find and replace");
   await page.keyboard.press("Enter");
-  await expect(page.locator(".cm-search")).toBeVisible();
+  await expect(page.locator("#note-search-options")).toBeVisible();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({width,height:844});
-    await expect(page.locator('.cm-search button[name="replaceAll"]')).toBeInViewport();
-    expect(await page.locator(".cm-search").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
-    const findBox = await page.locator('.cm-search input[name="search"]').boundingBox();
-    const replaceBox = await page.locator('.cm-search input[name="replace"]').boundingBox();
+    if (width < 800) {
+      if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
+      await expect(page.locator("#sidebar")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    }
+    await expect(page.locator("#search-replace-all")).toBeInViewport();
+    expect(await page.locator("#note-search-options").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+    const findBox = await page.locator("#search").boundingBox();
+    const replaceBox = await page.locator("#search-replacement").boundingBox();
     expect(replaceBox.y).toBeGreaterThan(findBox.y);
-    expect(replaceBox.x).toBeCloseTo(findBox.x, 0);
+    const panel = await page.locator("#sidebar").boundingBox();
+    expect(replaceBox.x).toBeGreaterThanOrEqual(panel.x);
+    expect(replaceBox.x + replaceBox.width).toBeLessThanOrEqual(panel.x + panel.width);
   }
 });
 
@@ -2368,4 +2375,22 @@ test("folder breadcrumbs browse descendants without moving notes or changing the
   await expect(page.locator("#clear-folder")).toBeHidden();
   await expect(page.locator("#list-label")).toHaveText("Notes");
   expect(await diskBody(page, id)).toBe("A document in a nested folder.");
+});
+
+test("this-note search follows navigation and leaves replacement mode when switching back to Write", async ({ page }) => {
+  const first = await openSeed(page, "needle needle", `Search scope ${Date.now()}`);
+  await page.keyboard.press("Control+Shift+e");
+  await page.locator("#search").fill("needle");
+  await page.locator("#find-replace").click();
+  await expect(page.locator("#search-matches")).toHaveText("2 matches");
+  await page.locator("#search-replacement").fill("replacement");
+  await mode(page, "Write");
+  await expect(page.locator("#note-search-options")).toBeHidden();
+  await expect(page.locator("#search-all")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#rich-editor")).toContainText("needle needle");
+  await page.locator("#find-replace").click();
+  await page.locator("#brand").click();
+  await expect(page.locator("#note-search-options")).toBeHidden();
+  await expect(page.locator("#search-all")).toHaveAttribute("aria-pressed", "true");
+  expect(await diskBody(page, first)).toBe("needle needle");
 });

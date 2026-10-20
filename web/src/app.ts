@@ -59,7 +59,7 @@ import {
   undoTrash,
 } from "./dialogs.js";
 import { compareDialog } from "./compare.js";
-import { findNotes, shortcutChords, showNotes } from "./shortcuts.js";
+import { findNotes, shortcutChords } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { setupOutline, toggleOutline } from "./outline.js";
 import { historyDialog } from "./history.js";
@@ -69,6 +69,7 @@ import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
 import { dailyNote } from "./daily.js";
 import { setupTooltips } from "./tooltip.js";
+import { setupSearch } from "./search.js";
 import { showAllNotes, showRecent, togglePin } from "./navigation.js";
 import { restoreSidebar, setSidebar, toggleSidebar } from "./sidebar.js";
 
@@ -110,11 +111,13 @@ async function initialize() {
     state.mode = "write";
   state.source = createSource($("source-editor"), {
     onChange: (body) => changed(body, "source"),
+    onFind: () => findInNote().catch(showError),
     getNotes: () => state.notes,
     onWarning: (message) => showToast(message, { persistent: true }),
     onFiles: addImages,
     imageFiles,
   });
+  setupSearch();
   setupOutline();
   setupDragging();
   setupMenus();
@@ -136,7 +139,7 @@ $("today-note").onclick = () => dailyNote().catch(showError);
 // The search icon opens the field, and closes it again (clearing it). The
 // field stays open until then, so the list never jumps under the pointer.
 $("sidebar-search").onclick = () => {
-  if (!$("app").classList.contains("search-open")) return findNotes();
+  if (!$("app").classList.contains("search-open") || $("sidebar-toggle").getAttribute("aria-expanded") !== "true") return findNotes();
   if ($("search").value) {
     $("search").value = "";
     $("search").dispatchEvent(new Event("input"));
@@ -178,32 +181,6 @@ $("note-sort").onchange = () => {
   state.sort = sort;
   storage.set("coyote-sort", state.sort);
   renderList();
-};
-let searchTimer: ReturnType<typeof setTimeout> | undefined;
-$("search").onfocus = showNotes;
-// Keep the search open while its own button takes the click.
-$("find-replace").onmousedown = (e) => e.preventDefault();
-$("find-replace").onclick = () => {
-  const query = $("search").value.trim();
-  findInNote(query).catch(showError);
-};
-$("search").onkeydown = (event) => {
-  if (event.key !== "Escape") return;
-  event.preventDefault();
-  // Escape clears a search first, then closes the empty field.
-  if ($("search").value) {
-    $("search").value = "";
-    $("search").dispatchEvent(new Event("input"));
-  } else {
-    $("sidebar-search").focus();
-    closeSearch();
-  }
-};
-$("search").oninput = () => {
-  showNotes();
-  state.search = $("search").value;
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => refresh().catch(showError), 120);
 };
 $("sidebar-toggle").onclick = () => {
   if ($("app").classList.contains("show-recents")) { showAllNotes(); setSidebar(true); }

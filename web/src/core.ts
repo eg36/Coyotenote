@@ -10,6 +10,12 @@ interface AppElements {
   "show-all-notes": HTMLButtonElement;
   "document-title": HTMLButtonElement;
   "search": HTMLInputElement;
+  "search-all": HTMLButtonElement;
+  "search-replacement": HTMLInputElement;
+  "search-previous": HTMLButtonElement;
+  "search-next": HTMLButtonElement;
+  "search-replace": HTMLButtonElement;
+  "search-replace-all": HTMLButtonElement;
   "find-replace": HTMLButtonElement;
   "outline-button": HTMLButtonElement;
   "history-button": HTMLButtonElement;

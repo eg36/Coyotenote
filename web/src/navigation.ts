@@ -77,6 +77,7 @@ function renderBreadcrumbs() {
 }
 function renderNavigation() {
   renderBreadcrumbs();
+  $("find-replace").disabled = !state.current || Boolean(state.pendingDraft) || state.busy;
   fillCollection("pins", $("pinned-list"));
   $("pinned-notes").hidden = !$("pinned-list").childElementCount;
   fillCollection("recent", $("recent-list"));

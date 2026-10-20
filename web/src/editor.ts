@@ -1,5 +1,6 @@
 import type { AppState, Note, StateResponse } from "./types.js";
 // The open note: editing, saving, loading, views and the formatting toolbar.
+import { openSearch } from "./search.js";
 import { rememberNote, renderNavigation } from "./navigation.js";
 import { icon } from "./icons.js";
 import { setSidebar } from "./sidebar.js";
@@ -33,6 +34,7 @@ function changed(body: string, from: "source" | "rich" | "properties") {
     (state.savingBody !== null && body !== state.savingBody);
   storeDraft();
   updateCounts();
+  document.dispatchEvent(new Event("note-content-change"));
   setSaveState(
     state.dirty ? "dirty" : "saved",
     state.dirty ? "Unsaved changes" : "All changes saved",
@@ -195,6 +197,7 @@ async function openNote(
   await setMode(state.mode, { focus: false });
   schedulePreview(true);
   renderOutline(true);
+  document.dispatchEvent(new Event("note-selection-change"));
   // Choosing a note dismisses the phone drawer without changing its preference.
   if (window.innerWidth < 800) setSidebar(false, false);
   if (heading) setTimeout(() => scrollToHeading(heading), 300);
@@ -231,6 +234,7 @@ function emptyNotebook() {
   updateBacklinks();
   renderList();
   updateOrphans();
+  document.dispatchEvent(new Event("note-selection-change"));
 }
 async function createNote(name: string, body = "") {
   await save();
@@ -245,8 +249,7 @@ async function createNote(name: string, body = "") {
 }
 async function findInNote(query = "") {
   if (!state.current || state.pendingDraft || state.busy) return;
-  if (!["source", "split"].includes(state.mode)) await setMode("source");
-  state.source?.find(query);
+  await openSearch("note", query || undefined);
 }
 async function ensureRich() {
   if (!state.rich) {
@@ -306,6 +309,7 @@ async function setMode(mode: AppState["mode"], { focus = true } = {}) {
   applyEditability();
   state.source?.refresh();
   if (mode === "preview" || mode === "split") schedulePreview(true);
+  document.dispatchEvent(new Event("editor-mode-change"));
   if (focus) focusEditor();
   updateToolbar();
   renderOutline(true);

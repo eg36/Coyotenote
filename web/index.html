@@ -152,16 +152,6 @@
           </button>
         </section>
         </div>
-        <button
-          id="find-replace"
-          class="icon-button"
-          type="button"
-          title="Find and replace in this note"
-          aria-label="Find and replace in this note"
-          disabled
-        >
-          <span data-icon="replace"></span>
-        </button>
         </div>
           <span class="save-state" id="save-state" role="status"
             ><span class="save-dot"></span
@@ -212,6 +202,10 @@
         <button id="today-note" class="icon-button" aria-label="Today's note" title="Today's note · Alt J" ><span data-icon="calendar"></span></button>
         <button id="fold-folders" class="icon-button" aria-label="Collapse all folders" title="Collapse all folders" ><span data-icon="collapse"></span></button>
         </div>
+        <div class="search-scopes" role="group" aria-label="Search scope">
+          <button id="search-all" aria-pressed="true">All notes</button>
+          <button id="find-replace" aria-label="Find and replace in this note" aria-pressed="false" disabled>This note</button>
+        </div>
         <div class="search">
           <label class="search-field"
             ><span data-icon="search"></span
@@ -226,6 +220,14 @@
             </kbd></label
           >
         </div>
+        <section id="note-search-options" class="note-search-options" aria-label="Find and replace" hidden>
+          <p id="search-matches" role="status">Type something to find in this note.</p>
+          <div class="search-step"><button id="search-previous">Previous</button><button id="search-next">Next</button></div>
+          <label for="search-replacement">Replace with</label>
+          <input id="search-replacement" aria-label="Replace with" autocomplete="off" />
+          <div class="search-step"><button id="search-replace">Replace</button><button id="search-replace-all">Replace all</button></div>
+          <p class="search-hint">Find and replace uses the Markdown view.</p>
+        </section>
         <details id="tag-filter" class="tag-filter" hidden>
           <summary><span data-icon="chevronDown"></span><span id="tag-filter-label">All tags</span></summary>
           <div id="tag-options" role="group" aria-label="Show notes with a tag"></div>
