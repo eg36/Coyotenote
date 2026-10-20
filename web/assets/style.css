@@ -2728,10 +2728,10 @@ dialog.danger #modal-submit {
 }
 .activity-rail .brand { margin-bottom: 12px; }
 .activity-rail .icon-button { width: 40px; height: 40px; border-radius: 8px; }
-.activity-rail .icon-button[aria-expanded="true"],
+.activity-rail #sidebar-search[aria-expanded="true"],
 .activity-rail .icon-button[aria-pressed="true"] { background: var(--selected); color: var(--accent-text); }
-.activity-rail #sidebar-toggle { margin: 0; border: 0; background: transparent; }
-.activity-rail #sidebar-toggle[aria-expanded="true"] { background: var(--selected); }
+.activity-rail #sidebar-toggle { margin: 0; border: 0; background: transparent; color: var(--muted); }
+.app:not(.show-recents):not(.search-open) .activity-rail #sidebar-toggle[aria-expanded="true"] { background: var(--selected); color: var(--accent-text); }
 .rail-bottom { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 16px; }
 .app.sidebar-hidden, .app.focus-mode { grid-template-columns: var(--rail-width) 0 minmax(0, 1fr); }
 .topbar .title-block { margin-left: 0; }

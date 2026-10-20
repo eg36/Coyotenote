@@ -2477,3 +2477,18 @@ test("closing this-note search restores the prior writing mode unless the user s
   await page.reload();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
 });
+
+test("the rail highlights only the active notes, recent or search view", async ({ page }) => {
+  await openSeed(page, "One active navigation view.");
+  const notes = page.locator("#sidebar-toggle");
+  const recent = page.locator("#recent-notes");
+  const search = page.locator("#sidebar-search");
+  await recent.click();
+  await expect(recent).toHaveAttribute("aria-pressed", "true");
+  await expect(notes).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await notes.click();
+  await expect(recent).toHaveAttribute("aria-pressed", "false");
+  await search.click();
+  await expect(search).toHaveAttribute("aria-expanded", "true");
+  await expect(notes).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});
