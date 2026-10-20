@@ -1984,7 +1984,9 @@ test("front matter shows as properties in Write and keeps its exact form", async
     const id = await openSeed(page, front + "# Heading\n\nBody text.");
     await mode(page, "Write");
     await expect(page.locator("#rich-pane")).toBeVisible();
-    const box = page.getByLabel("Properties");
+    if (await page.getByRole("button", { name: "Edit YAML", exact: true }).isVisible())
+      await page.getByRole("button", { name: "Edit YAML", exact: true }).click();
+    const box = page.getByLabel("Properties", { exact: true });
     await expect(box).toHaveValue(front.replace(/^\uFEFF/, "").split("\n").slice(1, -3).join("\n"));
     await page.locator(".tiptap p").click();
     await page.keyboard.press("End");
@@ -1996,6 +1998,7 @@ test("front matter shows as properties in Write and keeps its exact form", async
   await page.keyboard.press("Alt+o");
   await expect(page.locator("#outline-list button")).toHaveText(["Real heading"]);
   await page.keyboard.press("Alt+o");
+  await page.getByRole("button", { name: "Edit YAML", exact: true }).click();
   await page.getByLabel("Properties").fill("title: New\ntags: [travel, plans]");
   await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nText.");
   await page.locator(".tiptap p").click();
@@ -2009,9 +2012,10 @@ test("front matter shows as properties in Write and keeps its exact form", async
   await page.keyboard.press("Control+k");
   await page.keyboard.type(">add properties");
   await page.keyboard.press("Enter");
-  await expect(page.getByLabel("Properties")).toBeFocused();
+  await expect(page.getByLabel("tags", { exact: true })).toBeFocused();
   await page.keyboard.type("journal");
-  await expect.poll(() => diskBody(page, plain)).toBe("---\ntags: journal\n---\n\nPlain text.");
+  await page.keyboard.press("Tab");
+  await expect.poll(() => diskBody(page, plain)).toBe('---\ntags: ["journal"]\n---\n\nPlain text.');
 });
 
 test("tags from properties and text filter the note list", async ({ page }) => {
@@ -3170,4 +3174,43 @@ test("safe HTML formatting shows in Preview while scripts and handlers never run
   await expect(page.locator("#preview script, #preview [onerror]")).toHaveCount(0);
   await page.waitForTimeout(300);
   expect(dialogs).toBe(0);
+});
+
+test("typed properties edit one YAML value while preserving every untouched byte", async ({ page }) => {
+  const front = '\uFEFF---\n# Keep this comment\ntitle: \'Original\'  # title comment\ncount: 12\nready: TRUE\nday: 2026-10-20\nitems: [one, \'two\']\ntags: [field, notes]\n\n---  \n\n\n';
+  const id = await openSeed(page, front + "Body.");
+  await mode(page, "Write");
+  await expect(page.getByLabel("title", { exact: true })).toHaveValue("Original");
+  await expect(page.getByLabel("count", { exact: true })).toHaveAttribute("type", "number");
+  await expect(page.getByLabel("ready", { exact: true })).toBeChecked();
+  await expect(page.getByLabel("day", { exact: true })).toHaveAttribute("type", "date");
+  let expected = front + "Body.";
+  for (const [key, value, before, after] of [
+    ["title", 'New: # "quoted"', "'Original'", '"New: # \\"quoted\\""'],
+    ["count", "3.5", "count: 12", "count: 3.5"],
+    ["day", "2026-11-01", "day: 2026-10-20", "day: 2026-11-01"],
+    ["items", "one, three", "items: [one, 'two']", 'items: ["one", "three"]'],
+    ["tags", "new, tag", "tags: [field, notes]", 'tags: ["new", "tag"]'],
+  ]) {
+    await page.getByLabel(key, { exact: true }).fill(value);
+    await page.getByLabel(key, { exact: true }).press("Tab");
+    expected = expected.replace(before, after);
+    await expect.poll(() => diskBody(page, id)).toBe(expected);
+  }
+  await page.getByLabel("ready", { exact: true }).uncheck();
+  expected = expected.replace("ready: TRUE", "ready: false");
+  await expect.poll(() => diskBody(page, id)).toBe(expected);
+  await page.locator(".tiptap p").click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" More.");
+  await expect.poll(() => diskBody(page, id)).toBe(expected + " More.");
+  await mode(page, "Markdown"); await mode(page, "Write");
+  await expect(page.getByLabel("title", { exact: true })).toHaveValue('New: # "quoted"');
+  for (const yaml of ["nested:\n  key: value", "items:\n  - one\n  - two", "key: &anchor value", "key: yes", "key: value\nkey: another", "text: |\n  words"]) {
+    const rawId = await openSeed(page, "---\n" + yaml + "\n---\n\nBody.");
+    await mode(page, "Write");
+    await expect(page.getByLabel("Properties", { exact: true })).toHaveValue(yaml);
+    await page.locator(".tiptap p").click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
+    await expect.poll(() => diskBody(page, rawId)).toBe("---\n" + yaml + "\n---\n\nBody. More.");
+  }
 });

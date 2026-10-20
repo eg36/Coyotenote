@@ -3009,3 +3009,14 @@ dialog.danger #modal-submit {
   .sidebar { padding-top: 10px; }
 }
 .sidebar-actions .icon-button svg, .sidebar-actions :is(#history-back, #history-forward, #collapse-sidebar) svg { width: 19px; height: 19px; }
+
+/* Properties share the writing column and theme colours. */
+.properties [hidden] { display: none; }
+.properties-toggle { font-size: var(--font-small); color: var(--muted); margin-bottom: 8px; }
+.properties-rows { border-top: 1px solid var(--line); }
+.properties .property-row { display: grid; grid-template-columns: minmax(80px, 1fr) 70px minmax(100px, 2fr); gap: 10px; align-items: center; margin: 0; padding: 7px 0; border-bottom: 1px solid var(--line); color: var(--text); }
+.property-type { color: var(--muted); font-size: 12px; font-weight: normal; }
+.property-row input { min-width: 0; width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--chrome); color: var(--text); font: inherit; font-weight: normal; }
+.property-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.property-row input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 600px) { .properties .property-row { grid-template-columns: minmax(60px, 1fr) minmax(90px, 2fr); } .property-type { display: none; } }

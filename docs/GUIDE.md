@@ -478,3 +478,13 @@ deployment.
 
 [MIT](../LICENSE). See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and the
 generated browser dependency license bundle for upstream attributions.
+
+### Typed properties in Write
+
+Simple YAML front matter appears as named fields: text, numbers, checkboxes,
+dates (`YYYY-MM-DD`), flow lists (`[one, two]`) and tags. Separate list or tag
+values with commas. Changes save when you leave a field; only that value is
+rewritten. Untouched keys, comments, spacing and delimiters keep their exact
+text. Use **Edit YAML** to add or rename keys, or to enter richer YAML.
+Nested mappings, block lists, multiline values, aliases and other complex YAML,
+and all TOML front matter, keep the raw Properties editor.

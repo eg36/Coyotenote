@@ -20,6 +20,7 @@ import { findDraft, storeDraft, updateOrphans } from "./drafts.js";
 import { renderList, revealNote, updateBacklinks } from "./list.js";
 import { applyTheme, followWiki } from "./dialogs.js";
 import { renderOutline } from "./outline.js";
+import { renderProperties } from "./properties.js";
 import { splitFrontMatter, withProperties } from "./frontmatter.js";
 import { addImages, fileUrl, imageFiles } from "./attachments.js";
 
@@ -326,6 +327,8 @@ function showProperties() {
   const box = $("properties-text");
   $("properties").hidden = !state.front;
   if (state.front && box.value !== state.front.inner) box.value = state.front.inner;
+  if (state.front) renderProperties($("properties"), state.front.inner, state.front.fence,
+    state.current?.id || "", !state.pendingDraft && !state.busy, editProperties);
   box.style.height = "auto";
   box.style.height = box.scrollHeight + 2 + "px";
 }
@@ -340,6 +343,7 @@ function editProperties(inner: string) {
 function applyEditability() {
   const editable = !state.pendingDraft && !state.busy;
   $("properties-text").readOnly = !editable;
+  for (const input of $("properties").querySelectorAll("input")) input.disabled = !editable;
   state.source?.readOnly(!editable);
   state.rich?.editor?.setEditable(editable, false);
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format], #block-type"))

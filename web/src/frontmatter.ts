@@ -24,9 +24,14 @@ function splitFrontMatter(body: string): FrontMatter | null {
 // withProperties rebuilds a note from edited properties and its text, in
 // the form its front matter already had.
 function withProperties(front: FrontMatter | null | undefined, inner: string, rest: string) {
-  const fence = front?.fence || "---";
+  if (front) {
+    const start = front.bom.length + front.fence.length + 1;
+    const tail = front.prefix.slice(start + front.inner.length);
+    return front.prefix.slice(0, start) + inner + (inner && !tail.startsWith("\n") ? "\n" : "") + tail + rest;
+  }
+  const fence = "---";
   const block = inner === "" ? `${fence}\n${fence}\n` : `${fence}\n${inner.replace(/\n+$/, "")}\n${fence}\n`;
-  return (front?.bom || "") + block + (front ? front.gap : "\n") + rest;
+  return block + "\n" + rest;
 }
 
 export { splitFrontMatter, withProperties };

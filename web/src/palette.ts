@@ -91,7 +91,7 @@ function marked(element: HTMLElement, text: string, at: number[]) {
 function addProperties() {
   editProperties("tags: ");
   if (state.mode === "write") {
-    const box = $("properties-text");
+    const box = document.querySelector<HTMLInputElement>(".properties-rows input") || $("properties-text");
     box.focus();
     box.setSelectionRange(box.value.length, box.value.length);
   }
