@@ -35,9 +35,10 @@ async function openThemes(page) {
   await expect(page.getByRole("combobox", { name: "Find a theme" })).toBeFocused();
 }
 // mode picks a view from the notes panel's selector, or from the View menu
-// when the notes panel is closed.
+// when the notes panel is closed (a closed phone drawer only slides away).
 async function mode(page, name) {
-  if (await page.locator("#view-type").isVisible()) {
+  const notesOpen = (await page.locator("#sidebar-toggle").getAttribute("aria-expanded")) === "true";
+  if (notesOpen && await page.locator("#view-type").isVisible()) {
     await page.locator("#view-type").click();
     await page.getByRole("option", { name, exact: true }).click();
     await expect(page.locator("#view-menu")).toBeHidden();
