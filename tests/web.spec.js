@@ -1000,6 +1000,8 @@ test("sidebar remembers open and closed choices across reloads at home and in a 
     for (const url of ["/", "/?note=" + encodeURIComponent(id)]) {
       await page.goto(url);
       await expect(page.locator("#app")).toHaveClass(url === "/" ? /at-home/ : /^(?!.*at-home)/);
+      // Read the choice only after initialization has restored it.
+      await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", /true|false/);
       for (const open of [true, false]) {
         if ((await page.locator("#sidebar-toggle").getAttribute("aria-expanded")) !== String(open))
           await page.locator("#sidebar-toggle").click();
