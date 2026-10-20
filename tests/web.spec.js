@@ -1629,9 +1629,26 @@ test("a conflict compares both versions and keeps whichever is chosen", async ({
   const second = await context.newPage();
   await second.goto("/?note=" + encodeURIComponent(id));
   await mode(second, "Markdown");
+  // Hold a dirty tab's save while its peer writes. A clean tab may correctly
+  // reload external changes on focus or on the three-second vault check.
+  async function holdSave(tab) {
+    let arrive, release;
+    const pending = new Promise((resolve) => { arrive = resolve; });
+    const gate = new Promise((resolve) => { release = resolve; });
+    await tab.route("**/api/note", async (route) => {
+      if (route.request().method() !== "PUT") return route.continue();
+      arrive();
+      await gate;
+      await route.continue();
+    }, { times: 1 });
+    return { pending, release };
+  }
+  const secondSave = await holdSave(second);
+  await second.locator(".cm-content").fill("Shared line.\nSecond tab ending.");
+  await secondSave.pending;
   await page.locator(".cm-content").fill("Shared line.\nFirst tab ending.");
   await expect.poll(() => diskBody(page, id)).toContain("First tab ending.");
-  await second.locator(".cm-content").fill("Shared line.\nSecond tab ending.");
+  secondSave.release();
   await expect(second.locator("#compare-versions")).toBeVisible();
   await expect(second.locator("#compare-versions")).toHaveClass(/primary/);
   await expect(second.locator("#retry-save")).not.toHaveClass(/primary/);
@@ -1643,11 +1660,14 @@ test("a conflict compares both versions and keeps whichever is chosen", async ({
   await expect(mine).toContainText("Second tab ending.");
   await expect(disk.locator(".changed")).toHaveText(["First tab ending."]);
   await expect(mine.locator(".changed")).toHaveText(["Second tab ending."]);
+  const firstSave = await holdSave(page);
+  await page.locator(".cm-content").fill("Shared line.\nFirst tab again.");
+  await firstSave.pending;
   await second.getByRole("button", { name: "Keep my edits" }).click();
   await expect(second.locator("#error-banner")).toBeHidden();
   await expect.poll(() => diskBody(page, id)).toContain("Second tab ending.");
 
-  await page.locator(".cm-content").fill("Shared line.\nFirst tab again.");
+  firstSave.release();
   await expect(page.locator("#compare-versions")).toBeVisible();
   await page.locator("#compare-versions").click();
   await page.getByRole("button", { name: "Use disk version" }).click();
