@@ -2865,5 +2865,12 @@ dialog.danger #modal-submit {
 @media (min-width: 1280px) {
   .header-divider { display: block; position: absolute; top: 0; bottom: 0; left: calc(var(--notes-width) - 1px); width: 1px; background: color-mix(in srgb, var(--line) 60%, transparent); pointer-events: none; }
   .topbar #save-state { margin-left: 0; }
-  .app.at-home .header-tools { margin: 0 auto; }
+  .app.at-home .title-block { flex: 0 0 auto; min-width: 0; max-width: calc(var(--notes-width) - 72px); }
+  .app.at-home .header-tools { margin: 0 auto 0 12px; }
+}
+
+@media (max-width: 530px) {
+  .app.at-home .topbar { grid-template-columns: max-content 44px minmax(0, 1fr) auto; }
+  .app.at-home .header-tools { grid-column: 2; grid-row: 1; margin: 0; }
+  .app.at-home .topbar #save-state { grid-column: 4; grid-row: 1; }
 }

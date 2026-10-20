@@ -872,6 +872,10 @@ test("start-page navigation stays together and status sits at the right edge", a
       expect(width - status.x - status.width).toBeLessThanOrEqual(14);
       const title = await page.locator("#app-title").boundingBox();
       expect(title.x + title.width).toBeLessThanOrEqual(status.x);
+      const menuButton = await page.locator('[data-menu="workspace"]').boundingBox();
+      expect(menuButton.x).toBeGreaterThanOrEqual(title.x + title.width);
+      expect(menuButton.x - title.x - title.width).toBeLessThan(140);
+      expect(Math.abs(menuButton.y + menuButton.height / 2 - title.y - title.height / 2)).toBeLessThan(8);
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
       const logo = await page.locator("#brand").boundingBox();
       expect(sidebarToggle.y).toBeGreaterThanOrEqual(logo.y + logo.height);
