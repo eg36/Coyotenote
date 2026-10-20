@@ -307,6 +307,7 @@ async function setMode(mode: AppState["mode"], { focus = true, persist = true } 
   closeBlockMenu();
   const view = views.find(([value]) => value === mode);
   $("view-type-icon").innerHTML = icon(view?.[2] || "pen");
+  $("view-type-label").textContent = view?.[1] || "Write";
   $("view-type").setAttribute("aria-label", `Editor view: ${view?.[1] || "Write"}`);
   $("view-type").title = `Editor view: ${view?.[1] || "Write"} · Alt M`;
   for (const option of $("view-menu").querySelectorAll<HTMLElement>("[data-view]"))

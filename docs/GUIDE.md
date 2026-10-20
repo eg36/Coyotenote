@@ -89,9 +89,9 @@ hidden on the start page. On phones,
 note actions wrap onto their own row within the menu. At home the menu is
 centered vertically and horizontally in the header.
 
-The **Write / Markdown / Preview / Split** selector sits in the Notes panel's
-toolbar, after Previous/Next note, and shows the current view's icon. With the
-Notes panel closed, switch views from the **View** menu or with Alt+M.
+The **Write / Markdown / Preview / Split** selector sits at the left end of the
+header, beside the logo, and shows the current view (icon only on phones). The
+**View** menu and Alt+M switch views too.
 
 **Text formatting** in the left rail opens a panel between Notes and the document.
 It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,

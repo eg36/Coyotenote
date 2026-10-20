@@ -34,11 +34,10 @@ async function openThemes(page) {
   if (await page.locator("#theme-panel").isHidden()) await page.getByRole("button", { name: /^Theme:/ }).click();
   await expect(page.getByRole("combobox", { name: "Find a theme" })).toBeFocused();
 }
-// mode picks a view from the notes panel's selector, or from the View menu
-// when the notes panel is closed (a closed phone drawer only slides away).
+// mode picks a view from the header's selector, or from the View menu when
+// the header is hidden.
 async function mode(page, name) {
-  const notesOpen = (await page.locator("#sidebar-toggle").getAttribute("aria-expanded")) === "true";
-  if (notesOpen && await page.locator("#view-type").isVisible()) {
+  if (await page.locator("#view-type").isVisible()) {
     await page.locator("#view-type").click();
     await page.getByRole("option", { name, exact: true }).click();
     await expect(page.locator("#view-menu")).toBeHidden();
@@ -2697,47 +2696,52 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
-test("the editor view selector sits in the notes toolbar and views stay reachable when it is closed", async ({ page }) => {
+test("the editor view selector sits at the header's left end and views stay reachable", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#view-type")).toBeHidden();
   await openSeed(page, "Switch views freely.");
   const view = page.locator("#view-type"), area = page.locator("#editor-area");
-  expect(await page.locator(".sidebar-actions #view-type").count()).toBe(1);
+  expect(await page.locator(".topbar > #view-type").count()).toBe(1);
+  expect(await page.locator(".sidebar-actions #view-type").count()).toBe(0);
   await expect(view).toHaveAttribute("aria-label", "Editor view: Write");
-  // It follows Previous/Next and stays on the toolbar's single row.
-  const forward = await page.locator("#history-forward").boundingBox(), box = await view.boundingBox();
-  const collapse = await page.locator("#collapse-sidebar").boundingBox();
-  expect(box.x).toBeGreaterThanOrEqual(forward.x + forward.width);
-  expect(box.x + box.width).toBeLessThanOrEqual(collapse.x);
-  expect(Math.abs(box.y + box.height / 2 - forward.y - forward.height / 2)).toBeLessThan(2);
+  await expect(view).toContainText("Write");
+  for (const width of [1999, 1440, 900, 700, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    const box = await view.boundingBox(), header = await page.locator(".topbar").boundingBox();
+    const rail = await page.locator(".activity-rail").boundingBox();
+    // Left end of the header, just right of the logo, and inside the bar.
+    expect(box.x - rail.x - rail.width).toBeLessThan(16);
+    expect(box.y).toBeGreaterThanOrEqual(header.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(header.y + header.height);
+    // The centered title, menus and note actions never overlap it.
+    for (const selector of ["#document-head", "#menu-bar [data-menu=file]", "#document-actions"]) {
+      const other = await page.locator(selector).boundingBox();
+      const apart = other.x >= box.x + box.width || other.y >= box.y + box.height || other.y + other.height <= box.y;
+      expect(apart, `${selector} at ${width}px`).toBeTruthy();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
   await view.click();
   await page.getByRole("option", { name: "Split", exact: true }).click();
   await expect(area).toHaveAttribute("data-mode", "split");
   await expect(view).toHaveAttribute("aria-label", "Editor view: Split");
-  await expect(view.locator("svg").first()).toBeVisible();
-  // With the notes panel closed, the View menu and Alt+M still switch views.
+  await expect(view).toContainText("Split");
+  // It stays in the header with the notes panel collapsed; Alt+M and the View menu work too.
   await page.locator("#collapse-sidebar").click();
-  await expect(view).toBeHidden();
+  await expect(view).toBeVisible();
   await menu(page, "view");
   await page.getByRole("menuitem", { name: "Preview", exact: true }).click();
   await expect(area).toHaveAttribute("data-mode", "preview");
   await page.locator("#preview").click();
   await page.keyboard.press("Alt+m");
   await expect(area).toHaveAttribute("data-mode", "split");
-  await page.locator("#sidebar-toggle").click();
-  await expect(view).toHaveAttribute("aria-label", "Editor view: Split");
   await view.press("ArrowDown");
   await expect(page.locator("#view-menu")).toBeFocused();
   await page.keyboard.press("Home");
   await page.keyboard.press("Enter");
   await expect(area).toHaveAttribute("data-mode", "write");
   await expect(page.locator("#format-panel")).toBeVisible();
-  for (const width of [900, 390]) {
-    await page.setViewportSize({ width, height: 844 });
-    if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
-    await expect(view).toBeInViewport();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-  }
 });
 
 test("pin sits right after the note title and pins the open note", async ({ page }) => {

@@ -2751,21 +2751,9 @@ dialog.danger #modal-submit {
 .sidebar-actions :is(#history-back, #history-forward) { width: 26px; height: 28px; }
 .sidebar-actions :is(#history-back, #history-forward) svg { width: 16px; height: 16px; }
 .sidebar-actions #collapse-sidebar { width: 26px; height: 28px; margin-left: auto; }
-.sidebar-actions .view-type { width: auto; height: 28px; padding: 0 2px 0 5px; gap: 0; color: var(--muted); }
-.sidebar-actions .view-type:hover, .sidebar-actions .view-type[aria-expanded="true"] { color: var(--text); }
-.sidebar-actions .view-type svg { width: 16px; height: 16px; }
-.sidebar-actions .view-type svg:last-child { width: 12px; height: 12px; }
 .sidebar-actions #collapse-sidebar svg { width: 16px; height: 16px; }
 @media (min-width: 1550px) { .app { --notes-width: 280px; } }
-@media (max-width: 980px) {
-  .app { --notes-width: 225px; }
-  /* The narrower notes panel keeps its whole toolbar on one row. */
-  @media (min-width: 800px) {
-    .sidebar-actions { gap: 1px; }
-    .sidebar-actions :is(#today-note, #tags-button, #fold-folders) { width: 28px; }
-    .sidebar-actions .view-type { padding: 0 1px 0 3px; }
-  }
-}
+@media (max-width: 980px) { .app { --notes-width: 225px; } }
 @media (max-width: 799px) {
   .app, .app.sidebar-hidden, .app.focus-mode {
     --rail-width: 48px;
@@ -2849,6 +2837,20 @@ dialog.danger #modal-submit {
 .topbar { display: grid; grid-template-columns: minmax(0, 1fr) 27px; grid-template-rows: minmax(28px, auto) auto; padding: 6px 12px; row-gap: 2px; }
 .topbar .title-block { display: flex; grid-column: 1 / -1; grid-row: 1; justify-self: center; width: fit-content; max-width: min(680px, calc(100vw - var(--rail-width) - 76px)); min-width: 0; margin: 0; }
 .topbar .title-row { justify-content: center; padding: 0; }
+/* The editor view selector holds the header's left end, beside the logo; the
+   centered title and menus keep an equal gutter on both sides to clear it. */
+.topbar { --view-gutter: 132px; }
+.topbar > .view-type { grid-column: 1; grid-row: 1 / -1; justify-self: start; align-self: center; width: auto; height: 32px; gap: 6px; padding: 0 6px 0 8px; border: 1px solid var(--line); color: var(--text); z-index: 1; }
+.topbar > .view-type svg { color: var(--muted); }
+.topbar > .view-type svg:first-child { width: 16px; height: 16px; }
+.app:not(.at-home) .topbar .title-block { max-width: min(680px, calc(100% - 2 * var(--view-gutter))); }
+.app:not(.at-home) .topbar .header-tools { padding: 0 var(--view-gutter); }
+@media (max-width: 680px) {
+  .topbar { --view-gutter: 44px; }
+  .topbar > .view-type { grid-row: 1; gap: 0; padding: 0 2px 0 6px; }
+  .topbar > .view-type #view-type-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .app:not(.at-home) .topbar .header-tools { padding: 0; }
+}
 .topbar .note-heading { flex: 0 1 auto; gap: 2px; }
 .note-heading #pin-note { width: 26px; height: 26px; }
 .note-heading #pin-note svg { width: 15px; height: 15px; }
