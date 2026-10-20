@@ -1,6 +1,6 @@
 // Package vault reads and writes a folder of Markdown notes: atomic saves that
 // refuse to overwrite outside edits, a trash that keeps every deletion, a lock
-// against a second process, and Obsidian-style [[wiki link]] resolution.
+// against a second process, and [[wiki link]] resolution.
 package vault
 
 import (
@@ -169,7 +169,7 @@ func Open(dir string) (*Store, error) {
 func (s *Store) Close() { _ = unlockFile(s.lock); _ = s.lock.Close() }
 
 // Load reads every note below the vault root, skipping hidden directories
-// such as .trash, .git and .obsidian. Files that are unsafe to edit (symlinks,
+// such as .trash, .git and other apps' settings. Files that are unsafe to edit (symlinks,
 // invalid UTF-8, too many lines, unreadable) are skipped and reported, never changed.
 func (s *Store) Load() ([]Note, LoadReport, error) {
 	var r LoadReport

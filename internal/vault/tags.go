@@ -8,7 +8,7 @@ import (
 
 var (
 	frontMatter = regexp.MustCompile(`^\x{FEFF}?(---|\+\+\+)\r?\n((?s:.*?))\r?\n?(?:---|\+\+\+)[ \t]*(?:\r?\n|$)`)
-	// An inline tag follows a space or the start of a line, as in Obsidian,
+	// An inline tag follows a space or the start of a line
 	// and needs one character that is not a digit.
 	inlineTag = regexp.MustCompile(`(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)`)
 	tagKey    = regexp.MustCompile(`(?i)^(tags?)\s*[:=]\s*(.*)$`)

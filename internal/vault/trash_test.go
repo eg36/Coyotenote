@@ -154,7 +154,7 @@ func TestEmptyTrashDeletesTrashedNotesAndTheirHistory(t *testing.T) {
 	trashNote("Gone", "second") // trashed as "Gone 2"
 	trashNote("Kept", "trashed copy")
 	writeNote(t, s, "Kept", "a new note with the same name")
-	other := filepath.Join(s.Dir, ".trash", "obsidian-file.txt")
+	other := filepath.Join(s.Dir, ".trash", "other-app-file.txt")
 	os.WriteFile(other, []byte("not ours"), 0600)
 
 	live, _, _ := s.Load()

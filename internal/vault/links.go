@@ -102,7 +102,7 @@ func escaped(body string, at int) bool {
 	return run%2 == 1
 }
 
-// Resolver maps link targets to note IDs the way Obsidian does: an exact path
+// Resolver maps link targets to note IDs: an exact path
 // first, then a unique file name, preferring the linking note's own folder.
 type Resolver struct {
 	byPath map[string]string

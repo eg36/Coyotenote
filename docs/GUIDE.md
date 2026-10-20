@@ -132,8 +132,8 @@ not change the Markdown files or follow the vault to another browser.
   with ordinary Markdown, such as `![photo](attachments/photo.png)`. PNG, JPEG,
   GIF, WebP, AVIF and SVG images up to 20 MiB are accepted; a pasted screenshot is
   named after the moment it was pasted. Image paths are read relative to the note
-  first, then to the vault root, as Obsidian does, and Obsidian embeds such as
-  `![[photo.png]]` show in Preview.
+  first, then to the vault root, and embeds such as `![[photo.png]]` show in
+  Preview.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
 - **Find and replace** (Edit or Quick open command) searches the open
@@ -148,7 +148,7 @@ not change the Markdown files or follow the vault to another browser.
   Resolved wiki links in other notes are rewritten to keep pointing at it;
   externally changed files are left alone and reported.
 - **Tags** come from a `tags` (or `tag`) property in front matter, as a list or
-  comma-separated, and from `#tags` in the text outside code, as in Obsidian; a
+  comma-separated, and from `#tags` in the text outside code; a
   tag needs a letter, so `#2026` is not one. When the vault has tags, click
   **All tags** (#) in the sidebar to see each tag and its note count. Choose a tag
   to filter the note list, or choose All tags inside the list to reset it.
@@ -330,8 +330,8 @@ What Labradorite stores in a vault:
 - **`theme`**: the chosen theme ID, in the default data folder (or the
   `-data-dir` folder). Theme IDs never change.
 
-Hidden folders are never read as notes, so `.git` or `.obsidian` can share the
-folder. In the browser, drafts, view, sort order and collapsed folders keep their
+Hidden folders are never read as notes, so `.git` or another app's settings
+folder can share the vault. In the browser, drafts, view, sort order and collapsed folders keep their
 storage keys across versions; drafts belong to the vault's folder path, so move
 a vault only after its drafts are saved.
 

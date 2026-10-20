@@ -47,8 +47,8 @@ func (s *Store) regularFile(rel string) bool {
 }
 
 // ResolveFile finds the vault file that src, as written in note from, points
-// to: relative to the note's folder first, then to the vault root, the way
-// Obsidian reads both. It returns the file's vault-relative path.
+// to: relative to the note's folder first, then to the vault root. It
+// returns the file's vault-relative path.
 func (s *Store) ResolveFile(src, from string) (string, bool) {
 	src = strings.TrimPrefix(strings.ReplaceAll(src, `\`, "/"), "/")
 	if src == "" || strings.Contains(src, ":") {

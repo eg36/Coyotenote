@@ -759,7 +759,7 @@ func (a *webApp) attach(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// embedImage is the Markdown image for an Obsidian embed such as
+// embedImage is the Markdown image for a wiki-link embed such as
 // ![[photo.png|caption]], or "" when l does not embed an image.
 func embedImage(body string, l vault.Link) string {
 	if l.Start == 0 || body[l.Start-1] != '!' || vault.ImageType(l.Target) == "" {

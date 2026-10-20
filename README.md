@@ -48,9 +48,9 @@ moves the old default folder, `~/.local/share/coyotenote-web`, to
 ## Notes and links
 
 - A vault is a folder of `.md` files; the file name is the note's title.
-  Subfolders group notes, and hidden folders (`.git`, `.obsidian`, `.trash`) are
-  ignored, so the same folder opens in Obsidian.
-- Links use Obsidian syntax: `[[Note]]`, `[[Folder/Note]]`, `[[Note#Heading]]`,
+  Subfolders group notes, and hidden folders (such as `.git` and `.trash`) are
+  ignored, so other Markdown tools can share the same folder.
+- Links use wiki-link syntax: `[[Note]]`, `[[Folder/Note]]`, `[[Note#Heading]]`,
   `[[Note|text]]`. Typing `[[` suggests notes.
 - Deleted notes go to `.trash/` in the vault and are never emptied automatically;
   the Trash dialog can delete them for good.

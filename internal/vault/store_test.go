@@ -53,7 +53,7 @@ func TestLoadWalksFoldersAndSkipsHidden(t *testing.T) {
 	writeNote(t, s, "workshop/deep/Inner", "inner")
 	writeNote(t, s, "Zebra", "z")
 	writeNote(t, s, "apple", "a")
-	for _, hidden := range []string{".obsidian/config.md", ".trash/old.md", ".git/x.md"} {
+	for _, hidden := range []string{".app-settings/config.md", ".trash/old.md", ".git/x.md"} {
 		p := filepath.Join(s.Dir, filepath.FromSlash(hidden))
 		os.MkdirAll(filepath.Dir(p), 0700)
 		os.WriteFile(p, []byte("hidden"), 0600)
