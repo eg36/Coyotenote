@@ -2507,19 +2507,35 @@ test("closing this-note search restores the prior writing mode unless the user s
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
 });
 
-test("the rail highlights only the active notes, recent or search view", async ({ page }) => {
+test("the rail marks open panels with a bar: one of notes, recent or search, plus formatting", async ({ page }) => {
   await openSeed(page, "One active navigation view.");
   const notes = page.locator("#sidebar-toggle");
   const recent = page.locator("#recent-notes");
   const search = page.locator("#sidebar-search");
+  const format = page.locator("#format-toggle");
+  const marked = async () => page.evaluate(() =>
+    [...document.querySelectorAll(".activity-rail button")]
+      .filter((button) => getComputedStyle(button, "::before").content !== "none")
+      .map((button) => button.id));
+  await page.mouse.move(800, 500);
+  await expect.poll(marked).toEqual(["sidebar-toggle", "format-toggle"]);
   await recent.click();
   await expect(recent).toHaveAttribute("aria-pressed", "true");
-  await expect(notes).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect.poll(marked).toEqual(["format-toggle", "recent-notes"]);
   await notes.click();
   await expect(recent).toHaveAttribute("aria-pressed", "false");
   await search.click();
   await expect(search).toHaveAttribute("aria-expanded", "true");
-  await expect(notes).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect.poll(marked).toEqual(["format-toggle", "sidebar-search"]);
+  // An open panel never fills its icon, and hovering looks the same on every icon.
+  await page.addStyleTag({ content: "* { transition: none !important; }" });
+  await page.mouse.move(800, 500);
+  for (const button of [notes, search, format]) await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await notes.hover();
+  const hovered = await notes.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await recent.hover();
+  await expect(recent).toHaveCSS("background-color", hovered);
+  expect(hovered).not.toBe("rgba(0, 0, 0, 0)");
 });
 
 
