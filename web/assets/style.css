@@ -2915,6 +2915,7 @@ dialog.danger #modal-submit {
 :is(#preview, #rich-editor) mark.hl-blue, .hl-swatch.hl-blue { --hl: var(--blue); }
 :is(#preview, #rich-editor) mark.hl-purple, .hl-swatch.hl-purple { --hl: var(--pink); }
 /* Highlight swatches in the formatting panel: each button is its colour's tint. */
-#format-panel .hl-swatch { --hl: var(--warn); width: 28px; font-size: 12px; font-weight: 500; background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); }
+.hl-swatch { --hl: var(--warn); }
+#format-panel .hl-swatch { width: 28px; font-size: 12px; font-weight: 500; background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); }
 #format-panel .hl-swatch:hover { background: color-mix(in srgb, var(--hl) 45%, transparent); }
-#format-panel .hl-swatch[aria-pressed="true"] { background: color-mix(in srgb, var(--hl) 30%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
+#format-panel .hl-swatch[aria-pressed="true"] { background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); box-shadow: inset 0 0 0 2px var(--accent); }

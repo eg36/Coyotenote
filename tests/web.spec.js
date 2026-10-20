@@ -2812,6 +2812,9 @@ test("the formatting panel applies, recolours and removes highlights, and typing
   const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
   const panel = page.locator("#format-panel");
   await expect(panel.locator(".hl-swatch")).toHaveCount(6);
+  // Each swatch is filled with its own colour.
+  const fills = await panel.locator(".hl-swatch").evaluateAll((buttons) => buttons.map((b) => getComputedStyle(b).backgroundColor));
+  expect(new Set(fills).size).toBe(6);
   // Select "this" and highlight it in the default colour.
   await editor.locator("p").first().click();
   await page.keyboard.press("Home");
