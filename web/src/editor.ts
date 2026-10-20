@@ -141,7 +141,7 @@ async function refresh({ query = state.search } = {}) {
 }
 async function openNote(
   id: string,
-  { skipSave = false, pushBack = true, heading = "" } = {},
+  { skipSave = false, pushBack = true, heading = "", reveal = true } = {},
 ) {
   const generation = ++state.openGeneration;
   if (!skipSave) await save();
@@ -157,7 +157,7 @@ async function openNote(
   }
   if (pushBack && state.current?.id && state.current.id !== id)
     state.back.push(state.current.id);
-  revealNote(note.id);
+  if (reveal) revealNote(note.id);
   $("history-back").disabled = state.back.length === 0;
   clearTimeout(state.saveTimer);
   state.current = note;

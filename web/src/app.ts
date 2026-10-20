@@ -128,8 +128,12 @@ async function initialize() {
   // The app opens on its start page; a reload keeps the open note, which
   // the address names.
   const requested = new URL(location.href).searchParams.get("note");
-  if (requested && state.notes.some((n) => n.id === requested))
-    await openNote(requested, { skipSave: true });
+  if (requested && state.notes.some((n) => n.id === requested)) {
+    const reloading = performance.getEntriesByType("navigation").some(
+      (entry) => entry instanceof PerformanceNavigationTiming && entry.type === "reload",
+    );
+    await openNote(requested, { skipSave: true, reveal: !reloading });
+  }
   else emptyNotebook();
   restoreSidebar();
   if (new URL(location.href).searchParams.has("new")) newNoteDialog();

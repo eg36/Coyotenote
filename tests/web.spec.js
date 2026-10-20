@@ -2438,10 +2438,9 @@ test("collapse and expand all includes pinned notes and restores both after relo
   await expect(fold).toHaveAttribute("aria-label", "Expand all folders");
   await page.reload();
   await expect(pinned).toBeHidden();
-  // Opening the current note reveals its folder; the combined action must
-  // collapse the open folder before it offers to expand everything.
-  await expect(fold).toHaveAttribute("aria-label", "Collapse all folders");
-  await fold.click();
+  // Reloading the current note must not override the saved folder choice.
+  await expect(row).toHaveCount(0);
+  await expect(fold).toHaveAttribute("aria-label", "Expand all folders");
   await fold.click();
   await expect(pinned).toBeVisible();
   await expect(row).toBeVisible();
