@@ -84,7 +84,8 @@ available on the start page; note-only commands and the view selector need an
 open note. Use ↑/↓ within a menu, ←/→ to switch menus, and Escape to close.
 
 Pin, outline, history, download and trash are grouped with the centered menu.
-A status dot at the far right shows save state; hover for details. On phones,
+A status dot before the note title shows save state; hover for details. It is
+hidden on the start page. On phones,
 note actions wrap onto their own row within the menu. At home the menu is
 centered vertically and horizontally in the header.
 

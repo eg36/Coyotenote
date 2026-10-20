@@ -862,15 +862,14 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   ).toBeTruthy();
 });
 
-test("start-page navigation stays together and status sits at the right edge", async ({ page }) => {
+test("start-page navigation stays centered and its save indicator is hidden", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#app")).toHaveClass(/at-home/);
   await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
   for (const width of [1999, 1840, 1839, 1500, 1440, 1280, 900, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (let toggle = 0; toggle < 2; toggle++) {
-      const status = await page.locator("#save-state").boundingBox();
-      expect(width - status.x - status.width).toBeLessThanOrEqual(14);
+      await expect(page.locator("#save-state")).toBeHidden();
       await expect(page.locator("#app-title")).toBeEmpty();
       const headerBox = await page.locator(".topbar").boundingBox();
       const menuBox = await page.locator("#menu-bar").boundingBox();
@@ -884,7 +883,8 @@ test("start-page navigation stays together and status sits at the right edge", a
       expect(sidebarToggle.x).toBeLessThan(60);
       await expect(page.locator("#sidebar-toggle")).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-      if (width < 800 && toggle === 1) await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
+      if (width < 800 && await page.locator("#sidebar-toggle").getAttribute("aria-expanded") === "true")
+        await page.locator("#collapse-sidebar").click();
       else await page.locator("#sidebar-toggle").click();
     }
   }
@@ -2593,7 +2593,7 @@ test("this-note search supports case, whole words, regex captures and invalid pa
 });
 
 
-test("note actions stay in the writing toolbar and every save state uses an edge dot", async ({ page }) => {
+test("note actions stay in the writing toolbar and the save dot precedes the note title", async ({ page }) => {
   await openSeed(page, "Stable status.");
   for (const width of [1999, 1440, 1280, 900, 390, 320]) {
     await page.setViewportSize({width, height: 900});
@@ -2604,7 +2604,9 @@ test("note actions stay in the writing toolbar and every save state uses an edge
       expect(menus.y + menus.height).toBeLessThanOrEqual(actions.y);
     }
     const status = await page.locator("#save-state").boundingBox();
-    expect(width - status.x - status.width).toBeLessThanOrEqual(14);
+    const title = await page.locator("#document-title").boundingBox();
+    expect(status.x + status.width).toBeLessThanOrEqual(title.x);
+    expect(Math.abs(status.y + status.height / 2 - title.y - title.height / 2)).toBeLessThan(2);
     await expect(page.locator(".header-divider")).toHaveCount(0);
     expect(await page.locator("#menu-bar #document-actions").count()).toBe(1);
     const label = await page.locator("#save-label").boundingBox();
