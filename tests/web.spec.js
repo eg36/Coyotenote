@@ -83,7 +83,7 @@ test("empty notebook, create a note, WYSIWYG writing and autosave", async ({
 test("document menus and note actions stay above the left formatting panel", async ({ page }) => {
   await page.goto("/");
   const popup = page.locator("#menu-popup");
-  await expect(page.locator("#menu-bar button")).toHaveCount(4);
+  await expect(page.locator("#menu-bar [data-menu]")).toHaveCount(4);
   await menu(page, "file");
   await expect(page.getByRole("menuitem", { name: "Rename or move…" })).toBeDisabled();
   await page.keyboard.press("ArrowRight");
@@ -95,7 +95,7 @@ test("document menus and note actions stay above the left formatting panel", asy
   const homeMenus = await page.locator("#menu-bar").boundingBox();
   await openSeed(page, "A document with menus.");
   const menus = await page.locator("#menu-bar").boundingBox();
-  expect(Math.abs(menus.x - homeMenus.x)).toBeLessThan(1);
+  expect(Math.abs(menus.x + menus.width / 2 - homeMenus.x - homeMenus.width / 2)).toBeLessThan(1);
   const writing = await page.locator(".editor-bar").boundingBox();
   await expect(page.locator("#format-panel")).toBeVisible();
   const panel = await page.locator("#format-panel").boundingBox();
@@ -871,8 +871,11 @@ test("start-page navigation stays together and status sits at the right edge", a
     for (let toggle = 0; toggle < 2; toggle++) {
       const status = await page.locator("#save-state").boundingBox();
       expect(width - status.x - status.width).toBeLessThanOrEqual(14);
-      const title = await page.locator("#app-title").boundingBox();
-      expect(title.x + title.width).toBeLessThanOrEqual(status.x);
+      await expect(page.locator("#app-title")).toBeEmpty();
+      const headerBox = await page.locator(".topbar").boundingBox();
+      const menuBox = await page.locator("#menu-bar").boundingBox();
+      expect(Math.abs(menuBox.x + menuBox.width / 2 - headerBox.x - headerBox.width / 2)).toBeLessThan(2);
+      expect(Math.abs(menuBox.y + menuBox.height / 2 - headerBox.y - headerBox.height / 2)).toBeLessThan(2);
       for (const name of ["file", "edit", "view", "insert"])
         await expect(page.locator(`[data-menu="${name}"]`)).toBeInViewport();
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
@@ -2553,12 +2556,10 @@ test("editor toolbar stays anchored when note titles change", async ({ page }) =
     const changed = await page.locator(".header-tools").boundingBox();
     expect(Math.abs(changed.x - initial.x)).toBeLessThan(1);
     const title = await page.locator("#document-title").boundingBox();
-    expect(title.x + title.width).toBeLessThanOrEqual(changed.x);
+    const menuRow = await page.locator("#menu-bar").boundingBox();
+    expect(title.y + title.height).toBeLessThanOrEqual(menuRow.y);
     const titleBlock = await page.locator(".title-block").boundingBox();
-    const status = await page.locator("#save-state").boundingBox();
-    const leftGap = changed.x - titleBlock.x - titleBlock.width;
-    const rightGap = status.x - changed.x - changed.width;
-    expect(Math.abs(leftGap - rightGap)).toBeLessThan(2);
+    expect(Math.abs(titleBlock.x + titleBlock.width / 2 - menuRow.x - menuRow.width / 2)).toBeLessThan(2);
     await page.locator("#collapse-sidebar").click();
     const collapsed = await page.locator(".header-tools").boundingBox();
     expect(Math.abs(collapsed.x - initial.x)).toBeLessThan(1);
@@ -2597,15 +2598,15 @@ test("note actions stay in the writing toolbar and every save state uses an edge
   for (const width of [1999, 1440, 1280, 900, 390, 320]) {
     await page.setViewportSize({width, height: 900});
     expect(await page.locator(".editor-bar #document-actions").count()).toBe(1);
+    if (width <= 680) {
+      const menus = await page.locator("#view-type").boundingBox();
+      const actions = await page.locator("#document-actions").boundingBox();
+      expect(menus.y + menus.height).toBeLessThanOrEqual(actions.y);
+    }
     const status = await page.locator("#save-state").boundingBox();
     expect(width - status.x - status.width).toBeLessThanOrEqual(14);
-    if (width >= 1280) {
-      const divider = await page.locator(".header-divider").boundingBox();
-      const sidebar = await page.locator("#sidebar").boundingBox();
-      expect(Math.abs(divider.x - sidebar.x - sidebar.width + 1)).toBeLessThan(1);
-      const colors = await page.evaluate(() => [getComputedStyle(document.querySelector(".header-divider")).backgroundColor, getComputedStyle(document.querySelector("#sidebar")).borderRightColor]);
-      expect(colors[0]).toBe(colors[1]);
-    }
+    await expect(page.locator(".header-divider")).toHaveCount(0);
+    expect(await page.locator("#menu-bar #document-actions").count()).toBe(1);
     const label = await page.locator("#save-label").boundingBox();
     expect(label.width).toBeLessThanOrEqual(1);
     expect(await page.locator(".topbar").evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe("1px");
@@ -2637,6 +2638,13 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   const id = await openSeed(page, "A paragraph to style.");
   const pane = page.locator("#format-panel"), toggle = page.locator("#format-toggle");
   await expect(pane).toBeVisible();
+  expect(await page.locator(".activity-rail #format-toggle").count()).toBe(1);
+  const toggleBox = await toggle.boundingBox();
+  expect(toggleBox.width).toBeGreaterThanOrEqual(40);
+  const insert = await page.locator('[data-menu="insert"]').boundingBox();
+  const view = await page.locator("#view-type").boundingBox();
+  expect(view.x).toBeGreaterThanOrEqual(insert.x + insert.width);
+  expect(Math.abs(view.y - insert.y)).toBeLessThan(2);
   const sidebar = await page.locator("#sidebar").boundingBox(), panel = await pane.boundingBox();
   expect(panel.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width);
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).click();

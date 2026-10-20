@@ -28,11 +28,15 @@ this document does not authorize a release tag.
   tags and above Notes. Folder and pin collapse choices survive reloads.
 - Rail shortcuts can be dragged or reordered with Alt+Shift+↑/↓ and remember
   their order in the browser. Keep the logo and bottom utility group anchored.
-- Reserve room for the larger title and full-title tooltip; keep the editor
-  toolbar centered without shifting when note names change.
+- Put the larger note title above the centered menu row; leave the title area
+  blank at home. Keep the full-title tooltip for truncated paths.
 - The rail provides Commands (the existing searchable command palette).
-  File / Edit / View / Insert form a row above the writing toolbar. The menu
-  row remains at home; note editing controls appear only with an open note.
+  File / Edit / View / Insert and the writing-mode selector stay centered at
+  the top, with note actions part of the same centered menu group. Formatting controls live in a
+  collapsible panel LEFT of the document, after Notes, opened from the rail.
+  Keep the mode selector directly after Insert; do not recreate a toolbar row.
+  Center the home menu both ways, leave its title blank, and remove the old
+  vertical divider from the header.
 - Search scope switching should preserve the query; existing full-text result
   previews remain available. This note retains case, whole-word, regex and
   replacement controls, and restores the prior writing mode when closed.

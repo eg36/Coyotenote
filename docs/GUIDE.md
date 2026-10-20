@@ -76,16 +76,24 @@ panel is closed. Desktop and phone remember their own open/closed preference.
 Drag rail icons to reorder them within the main shortcuts or bottom utility group;
 Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order.
 
-The top bar holds the clickable note title and folder breadcrumbs. Hover or focus
-a truncated title to read its full path. **File / Edit / View / Insert** sit
-in a row above the writing toolbar. The menus remain available on the start page;
-writing controls appear when a note is open. Use ↑/↓ within a menu, ←/→ to switch
-menus, and Escape to close. Note-only commands are disabled at home.
-The toolbar stays centered as titles change, with note actions inside it and a
-status dot at the far right of the header. Hover the dot for save details.
-The vertical header divider aligns with the notes panel below. On smaller
-screens the menus and writing controls wrap below the title, and phones give
-formatting its own scrollable row.
+The note title and folder breadcrumbs sit above the centered menu row. Hover or
+focus a truncated title to read its full path. The start page leaves the title
+area blank. **File / Edit / View / Insert**, followed by the **Write / Markdown /
+Preview / Split** selector, stay centered below the title. The menus remain
+available on the start page; note-only commands and the view selector need an
+open note. Use ↑/↓ within a menu, ←/→ to switch menus, and Escape to close.
+
+Pin, outline, history, download and trash are grouped with the centered menu.
+A status dot at the far right shows save state; hover for details. On phones,
+note actions wrap onto their own row within the menu. At home the menu is
+centered vertically and horizontally in the header.
+
+**Text formatting** in the left rail opens a panel between Notes and the document.
+It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,
+and undo/redo. It is available in Write, and closes in source or preview modes.
+The close button or Escape hides it; this browser remembers the choice separately
+for desktop and smaller screens. On smaller screens it opens over the content;
+click outside to close. Focus mode temporarily hides it too.
 
 The rail's **Search** button (or Ctrl/⌘ Shift E) opens one query field with
 **All notes / This note** scopes. Switching scope keeps the query. Escape clears
@@ -104,7 +112,7 @@ applies at once and is kept; Done closes the window.
 Spelling uses the browser's own language and dictionary. These preferences do
 not change the Markdown files or follow the vault to another browser.
 
-- **Write** is a Tiptap WYSIWYG editor. Use the toolbar or Markdown input rules for
+- **Write** is a Tiptap WYSIWYG editor. Use the formatting panel or Markdown input rules for
   headings, bold, italic, strike, lists, tasks, quotes, inline/fenced code, links
   and tables. Undo/redo operates on edits, independently of trash restore.
 - **Markdown** is CodeMirror with selection, undo, line numbers, syntax colors,
@@ -113,7 +121,7 @@ not change the Markdown files or follow the vault to another browser.
 - **Preview** is read-only Markdown rendered by Go/Goldmark. External links open
   separately with no referrer. Images from the vault are shown; remote images are
   replaced by their description and never fetched. Raw HTML is not executed.
-- **Images:** paste or drop an image into Write or Markdown, or use the toolbar's
+- **Images:** paste or drop an image into Write or Markdown, or use the formatting panel's
   image button, and it is saved in the vault's `attachments/` folder and linked
   with ordinary Markdown, such as `![photo](attachments/photo.png)`. PNG, JPEG,
   GIF, WebP, AVIF and SVG images up to 20 MiB are accepted; a pasted screenshot is
@@ -192,7 +200,7 @@ After an actual WYSIWYG edit, Markdown is serialized by Tiptap. List marker styl
 blank lines, emphasis markers and table spacing can be normalized; this is expected.
 
 Wiki links such as `[[Note]]`, `[[Folder/Note#Heading|label]]` are preserved by a
-custom Markdown node. Click a rendered wiki link to follow it; use the toolbar to
+custom Markdown node. Click a rendered wiki link to follow it; use the formatting panel to
 insert one, or finish typing `[[a note]]`. The source editor suggests existing notes
 while typing `[[`. Missing notes can be created from a link.
 

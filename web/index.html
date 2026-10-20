@@ -19,6 +19,7 @@
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
 
         <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
+            <button id="format-toggle" class="icon-button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
         <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
         <button id="recent-notes" class="icon-button" aria-label="Recently opened notes" title="Recently opened notes" aria-pressed="false"><span data-icon="history"></span></button>
         <button id="new-note" class="icon-button" aria-label="New note" title="New note · Ctrl/⌘ N" ><span data-icon="newNote"></span></button>
@@ -31,7 +32,7 @@
       <header class="topbar">
         <div class="title-block">
           <div class="title-row">
-            <span class="app-title" id="app-title">Labradorite</span>
+            <span class="app-title" id="app-title"></span>
             <div class="note-heading" id="document-head" hidden>
               <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
               ><button id="document-title" class="document-title" title="Rename note" aria-description="Rename or move this note">
@@ -41,12 +42,8 @@
           </div>
 
         </div>
-        <span class="header-divider" aria-hidden="true"></span>
         <div class="header-tools">
-        <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button></nav>
-        <div class="editor-bar">
-
-        <div class="view-switch" id="view-switch">
+        <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>        <div class="view-switch" id="view-switch">
           <button
             id="view-type"
             class="view-type"
@@ -60,9 +57,10 @@
             ><span data-icon="chevronDown"></span>
           </button>
         </div>
+        <div class="editor-bar">
 
           <div class="document-actions" id="document-actions" hidden>
-            <button id="format-toggle" class="icon-button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
+
             <button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
             <button
               id="outline-button"
@@ -96,7 +94,7 @@
               <span data-icon="trash"></span>
             </button>
           </div>
-        </div>
+        </div></nav>
         </div>
           <span class="save-state" id="save-state" role="status"
             ><span class="save-dot"></span
