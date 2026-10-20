@@ -55,6 +55,7 @@ function renderBreadcrumbs() {
   container.replaceChildren();
   if (!state.current) return;
   const folders = state.current.id.split("/").slice(0, -1);
+  if (!folders.length) return;
   function crumb(label: string, folder: string | null) {
     const button = document.createElement("button");
     button.className = "breadcrumb";

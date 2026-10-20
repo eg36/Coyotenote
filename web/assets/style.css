@@ -2791,3 +2791,5 @@ dialog.danger #modal-submit {
 @media (max-width: 530px) {
   .topbar .editor-bar { padding-left: 6px; }
 }
+.title-row > #history-back { width: 26px; height: 26px; margin-right: 6px; flex-shrink: 0; }
+.title-row > #history-back svg { width: 16px; height: 16px; }

@@ -869,8 +869,8 @@ test("start-page navigation stays together and status sits at the right edge", a
       const logo = await page.locator("#brand").boundingBox();
       expect(sidebarToggle.y).toBeGreaterThanOrEqual(logo.y + logo.height);
       expect(sidebarToggle.x).toBeLessThan(60);
-      expect(back.x).toBeLessThan(60);
-      expect(back.y).toBeGreaterThan(sidebarToggle.y);
+      expect(back.x).toBeGreaterThanOrEqual(logo.x + logo.width);
+      expect(back.y).toBeLessThan(sidebarToggle.y);
       await expect(page.locator("#sidebar-toggle")).toBeInViewport();
       await expect(page.locator("#history-back")).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
