@@ -2289,6 +2289,65 @@ test("note history shows earlier versions with changes marked and restores one",
   await expect(page.getByRole("dialog", { name: "Note history" })).toContainText("No earlier versions yet");
 });
 
+for (const key of ["Home", "End", "Shift+Home", "Wrapped Home"]) {
+  test(`native ${key} survives delayed selectionchange after Write gains focus`, async ({ page }) => {
+    await page.addInitScript(() => {
+      const add = document.addEventListener.bind(document);
+      const remove = document.removeEventListener.bind(document);
+      const wrappers = new WeakMap();
+      document.addEventListener = (type, listener, options) => {
+        if (type !== "selectionchange" || !listener) return add(type, listener, options);
+        if (!wrappers.has(listener)) wrappers.set(listener, event => setTimeout(() => {
+          if (typeof listener === "function") listener.call(document, event);
+          else listener.handleEvent(event);
+        }, 100));
+        return add(type, wrappers.get(listener), options);
+      };
+      document.removeEventListener = (type, listener, options) => remove(type, type === "selectionchange" ? wrappers.get(listener) || listener : listener, options);
+    });
+    if (key === "Wrapped Home") await page.setViewportSize({ width: 390, height: 844 });
+    const text = key === "Wrapped Home" ? "A wrapped paragraph with enough words to occupy several visual lines while remaining a single Markdown paragraph. ".repeat(3).trim() : "A paragraph for caret movement.";
+    const id = await openSeed(page, text);
+    await mode(page, "Write");
+    await page.locator("#view-type").focus();
+    await page.locator(".tiptap").evaluate((dom, { key, text }) => {
+      const editor = dom.editor;
+      editor.commands.setTextSelection(key === "End" ? 1 : text.length + 1);
+      dom.addEventListener("keyup", event => {
+        if (!["Home", "End"].includes(event.key)) return;
+        const selection = getSelection();
+        window.__nativeCaret = {
+          anchor: editor.view.posAtDOM(selection.anchorNode, selection.anchorOffset),
+          head: editor.view.posAtDOM(selection.focusNode, selection.focusOffset),
+        };
+      }, true);
+      editor.view.focus();
+    }, { key, text });
+    await page.keyboard.press(key === "Wrapped Home" ? "Home" : key);
+    // ProseMirror's focus restoration runs after 20ms. Keep selectionchange
+    // delayed for 100ms so this checks the race rather than eventual recovery.
+    await page.waitForTimeout(50);
+    const state = await page.locator(".tiptap").evaluate(dom => {
+      const editor = dom.editor, selection = getSelection();
+      return {
+        native: window.__nativeCaret,
+        model: { anchor: editor.state.selection.anchor, head: editor.state.selection.head },
+        dom: { anchor: editor.view.posAtDOM(selection.anchorNode, selection.anchorOffset), head: editor.view.posAtDOM(selection.focusNode, selection.focusOffset) },
+      };
+    });
+    expect(state.model).toEqual(state.native);
+    expect(state.dom).toEqual(state.native);
+    if (key === "Home") expect(state.native).toEqual({ anchor: 1, head: 1 });
+    if (key === "End") expect(state.native).toEqual({ anchor: text.length + 1, head: text.length + 1 });
+    if (key === "Shift+Home") expect(state.native).toEqual({ anchor: text.length + 1, head: 1 });
+    if (key === "Wrapped Home") {
+      expect(state.native.head).toBeGreaterThan(1);
+      expect(state.native.head).toBeLessThan(text.length + 1);
+    }
+    expect(await diskBody(page, id)).toBe(text);
+  });
+}
+
 test("front matter shows as properties in Write and keeps its exact form", async ({
   page,
 }) => {

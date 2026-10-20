@@ -15,6 +15,7 @@ interface RichOptions {
 import { marked, Marked, Hooks } from "marked";
 import type { Token, Tokens } from "marked";
 import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
+import { TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
@@ -405,6 +406,23 @@ export function createRich(
         imageNode(fileUrl),
       ],
       editorProps: {
+        handleDOMEvents: {
+          keyup(view, event) {
+            if (event.isComposing || !["Home", "End"].includes(event.key) || document.activeElement !== view.dom) return false;
+            const selection = window.getSelection();
+            if (!selection?.anchorNode || !selection.focusNode ||
+                !view.dom.contains(selection.anchorNode) || !view.dom.contains(selection.focusNode)) return false;
+            // Home/End use the browser's visual line boundaries. Commit its
+            // result on keyup: a delayed focus callback can otherwise restore
+            // the old model selection before selectionchange has reached it.
+            const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
+            const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
+            if (!view.state.doc.resolve(anchor).parent.inlineContent || !view.state.doc.resolve(head).parent.inlineContent) return false;
+            const next = TextSelection.create(view.state.doc, anchor, head);
+            if (!next.eq(view.state.selection)) view.dispatch(view.state.tr.setSelection(next));
+            return false;
+          },
+        },
         attributes: { "aria-label": "WYSIWYG editor", spellcheck: String(writingSettings.spellcheck) },
         handlePaste(view, event) {
           const files = imageFiles(event.clipboardData);
