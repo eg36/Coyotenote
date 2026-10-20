@@ -2975,6 +2975,13 @@ test("folder breadcrumbs match the note title's size", async ({ page }) => {
   expect(Math.abs(fit.bottom)).toBeLessThan(1);
   const colour = (selector) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
   expect(await colour(".breadcrumb-separator")).toBe(await colour(".breadcrumb"));
+  // A short folder name shows whole beside a short title, with a gap before it.
+  await openSeed(page, "Short.", `Projects/Trail ${Date.now() % 1000}`);
+  const folder = page.locator(".breadcrumb:not(:has(svg))").first();
+  await expect(folder).toHaveText("Projects");
+  expect(await folder.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+  const folders = await page.locator("#note-folder").boundingBox(), heading = await page.locator("#document-title").boundingBox();
+  expect(heading.x - folders.x - folders.width).toBeGreaterThanOrEqual(0);
   const crumbs = await page.locator("#note-folder").boundingBox(), name = await page.locator("#document-title").boundingBox();
   expect(Math.abs(crumbs.y + crumbs.height / 2 - name.y - name.height / 2)).toBeLessThan(2);
 });
