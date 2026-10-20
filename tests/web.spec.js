@@ -3608,7 +3608,13 @@ test("task marks match between views, keep plain bullets and work by keyboard", 
   const appearance = await page.locator(".tiptap .task-mark:visible").evaluateAll(marks => marks.map(mark => {
     const css = getComputedStyle(mark); return [mark.textContent, css.color, css.width, css.height, css.borderRadius];
   }));
+  // Rendering is asynchronous even after the mode switch completes.
+  await page.route("**/api/render", async route => {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await route.continue();
+  });
   await mode(page, "Preview");
+  await expect(page.locator("#preview .task-mark")).toHaveCount(appearance.length);
   expect(await page.locator("#preview .task-mark").evaluateAll(marks => marks.map(mark => {
     const css = getComputedStyle(mark); return [mark.textContent, css.color, css.width, css.height, css.borderRadius];
   }))).toEqual(appearance);
