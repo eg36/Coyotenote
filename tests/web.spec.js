@@ -2806,3 +2806,13 @@ test("highlights render in Preview and Write, and Write saves their == markers e
   const tint = await page.locator("#preview mark").first().evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(tint).not.toBe("rgba(0, 0, 0, 0)");
 });
+
+test("spaces typed after bold or highlighted words save as ordinary spaces", async ({ page }) => {
+  const id = await openSeed(page, "Start.");
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  await editor.locator("p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Then **bold** and ==marked== end");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("Start. Then **bold** and ==marked== end");
+});
