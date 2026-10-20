@@ -117,7 +117,7 @@ func newWebApp(s *vault.Store) (*webApp, error) {
 	if _, err := rand.Read(token[:]); err != nil {
 		return nil, err
 	}
-	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}, callouts{}, blocks{}, taskMarks{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()), goldmark.WithRendererOptions(gmhtml.WithUnsafe()))}, nil
+	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}, callouts{}, blocks{}, taskMarks{}, maths{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()), goldmark.WithRendererOptions(gmhtml.WithUnsafe()))}, nil
 }
 
 func revision(body string) string {

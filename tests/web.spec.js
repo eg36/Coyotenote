@@ -3214,3 +3214,76 @@ test("typed properties edit one YAML value while preserving every untouched byte
     await expect.poll(() => diskBody(page, rawId)).toBe("---\n" + yaml + "\n---\n\nBody. More.");
   }
 });
+
+test("math and Mermaid load locally only when needed and preserve source", async ({ page }) => {
+  const remote = [], assets = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.origin !== "http://127.0.0.1:4289") remote.push(request.url());
+    if (url.pathname.startsWith("/assets/")) assets.push(url.pathname);
+  });
+  await openSeed(page, "A plain note.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview")).toContainText("A plain note.");
+  const plainAssets = new Set(assets);
+  expect(assets.some(path => /katex/.test(path))).toBe(false);
+  const body = 'Inline $x^2 + y^2 = z^2$. Money $5 and $6.\n\n$$\n\\frac{1}{2} + \\sqrt{4}\n$$\n\n```mermaid\nflowchart LR\n  Draft --> Review --> Done\n```';
+  const id = await openSeed(page, body);
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .katex")).toHaveCount(2);
+  await expect(page.locator("#preview .mermaid-diagram svg")).toHaveCount(1);
+  await expect(page.locator("#preview")).toContainText("Money $5 and $6.");
+  expect(assets.some(path => path === "/assets/katex.css")).toBe(true);
+  expect(assets.some(path => /\.woff2$/.test(path))).toBe(true);
+  expect(assets.filter(path => !plainAssets.has(path)).length).toBeGreaterThan(2);
+  expect(remote).toEqual([]);
+  expect(await diskBody(page, id)).toBe(body);
+  await mode(page, "Write");
+  await expect(page.locator("#source-pane")).toBeVisible();
+  await expect(page.locator("#toast-text")).toContainText("math");
+  expect(await diskBody(page, id)).toBe(body);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .mermaid-diagram svg")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const diagramWidth = await page.locator("#preview .mermaid-diagram svg").evaluate(svg => svg.getBoundingClientRect().width);
+  expect(diagramWidth).toBeGreaterThan(300);
+});
+
+test("invalid math and diagrams remain readable and cannot load images or configuration", async ({ page }) => {
+  const remote = [], files = [];
+  page.on("request", request => {
+    if (!request.url().startsWith("http://127.0.0.1:4289/")) remote.push(request.url());
+    if (request.url().includes("must-not-load")) files.push(request.url());
+  });
+  const body = '$\\notACommand{x}$\n\n$\\includegraphics{https://example.com/must-not-load.png}$\n\n```mermaid\nnot a diagram\n```\n\n```mermaid\nflowchart LR\n A@{ img: "./must-not-load.png" }\n```\n\n```mermaid\n%%{init: {"securityLevel": "loose"}}%%\nflowchart LR\n A --> B\n```\n\n```mermaid\nsequenceDiagram\n Alice->>Bob: Hello\n```';
+  await openSeed(page, body);
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .math.render-error")).toHaveCount(1);
+  await expect(page.locator("#preview p.render-error")).toHaveCount(3);
+  await expect(page.locator("#preview .mermaid-diagram svg")).toHaveCount(1);
+  await expect(page.locator("#preview .math").first()).toHaveText('\\notACommand{x}');
+  expect(remote).toEqual([]); expect(files).toEqual([]);
+  await openSeed(page, "A newer note.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview")).toHaveText("A newer note.");
+  await expect(page.locator("#preview svg")).toHaveCount(0);
+});
+
+test("Mermaid code in Write keeps its exact fenced source on body edits", async ({ page }) => {
+  const diagram = '```mermaid\nflowchart LR\n  A --> B\n```';
+  const id = await openSeed(page, diagram + "\n\nBody.");
+  await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await page.locator(".tiptap p").last().click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
+  await expect.poll(() => diskBody(page, id)).toBe(diagram + "\n\nBody. More.");
+});
+
+test("plain inline equations stay exact as text in Write", async ({ page }) => {
+  const body = 'Distance $d=vt$. A square $a^2 + b^2 = c^2$.\n\nBody.';
+  const id = await openSeed(page, body);
+  await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await page.locator(".tiptap p").last().click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
+  await expect.poll(() => diskBody(page, id)).toBe(body + " More.");
+});

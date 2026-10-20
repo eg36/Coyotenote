@@ -22,6 +22,7 @@ import {
   refresh,
   save,
   scrollToHeading,
+  schedulePreview,
 } from "./editor.js";
 import { shortcuts } from "./shortcuts.js";
 
@@ -39,6 +40,7 @@ function applyTheme(id: string) {
     root.style.setProperty("--" + role, color);
   for (const [role, value] of Object.entries(readableRoles(theme.colors)))
     root.style.setProperty("--" + role, value);
+  if ($("preview").querySelector(".mermaid-diagram, code.language-mermaid")) schedulePreview(true);
 }
 async function chooseTheme(id: string) {
   await api("/api/settings", "POST", { theme: id });

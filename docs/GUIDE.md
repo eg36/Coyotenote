@@ -243,6 +243,30 @@ Beyond GitHub Flavored Markdown, Preview understands:
   and pictures from other computers are removed. As elsewhere, Markdown inside
   an HTML block is shown as written, and Write shows such notes in Markdown.
 
+#### Math and Mermaid in Preview
+Write inline formulas as `$x^2 + y^2 = z^2$`; the dollar signs must touch the
+formula. Money such as `$5 and $6` stays text. Put `$$` on its own lines around
+a display formula (or write `$$x^2$$` on one line). Code and escaped dollar
+signs stay literal. KaTeX renders the TeX locally; invalid formulas remain
+readable with a short explanation on hover. Simple inline equations remain
+literal text in Write. TeX commands, display math and formulas with Markdown
+punctuation open in Markdown with a message, to preserve their source exactly.
+
+Use a fenced code block with the language `mermaid` for a diagram:
+
+````markdown
+```mermaid
+flowchart LR
+  Draft --> Review --> Done
+```
+````
+
+Diagrams use strict rendering and theme colours. Their fenced source remains
+editable in Write. Invalid diagrams keep their source with an error message.
+Images, URLs, custom configuration and CSS styling directives are disabled so
+rendering stays offline. Both renderers and the math fonts are bundled; their
+code loads only when Preview needs it, with no CDN or other network service.
+
 ### Markdown editor
 
 - **Folding:** point at the line numbers to see a ⌄ beside each heading and
@@ -275,8 +299,16 @@ footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and nam
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
 round-trip intact, including when a browser draft is restored; a short message says
 which syntax kept the note in Markdown. Use source mode for
-exact whitespace or Markdown dialects beyond GFM. Math rendering and collaborative
-editing are not supported.
+exact whitespace or Markdown dialects beyond GFM. Collaborative editing is not supported.
+
+### Typed properties in Write
+Simple YAML front matter appears as named fields: text, numbers, checkboxes,
+dates (`YYYY-MM-DD`), flow lists (`[one, two]`) and tags. Separate list or tag
+values with commas. Changes save when you leave a field; only that value is
+rewritten. Untouched keys, comments, spacing and delimiters keep their exact
+text. Use **Edit YAML** to add or rename keys, or to enter richer YAML.
+Nested mappings, block lists, multiline values, aliases and other complex YAML,
+and all TOML front matter, keep the raw Properties editor.
 
 ### Keyboard shortcuts
 
@@ -478,13 +510,3 @@ deployment.
 
 [MIT](../LICENSE). See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and the
 generated browser dependency license bundle for upstream attributions.
-
-### Typed properties in Write
-
-Simple YAML front matter appears as named fields: text, numbers, checkboxes,
-dates (`YYYY-MM-DD`), flow lists (`[one, two]`) and tags. Separate list or tag
-values with commas. Changes save when you leave a field; only that value is
-rewritten. Untouched keys, comments, spacing and delimiters keep their exact
-text. Use **Edit YAML** to add or rename keys, or to enter richer YAML.
-Nested mappings, block lists, multiline values, aliases and other complex YAML,
-and all TOML front matter, keep the raw Properties editor.

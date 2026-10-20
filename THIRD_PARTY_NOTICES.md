@@ -35,3 +35,13 @@ The app keeps the 12 named palettes' values; its Labradorite Light/Dark use
 neutral surfaces with blue accents. These themes are community adaptations; they
 do not imply endorsement by their original authors. The existing Go module
 dependencies retain their own licenses.
+
+## Math and diagrams
+
+KaTeX and Mermaid are bundled under their MIT licenses, together with the
+licenses for their bundled dependencies in `web/assets/THIRD_PARTY_LICENSES.txt`.
+Mermaid's prebundled FastDom license is also in `docs/licenses/fastdom.txt`.
+Its prebundled YAML parser is replaced at build time by the patched js-yaml
+package. KaTeX fonts are bundled locally under the MIT license from
+[KaTeX/katex-fonts](https://github.com/KaTeX/katex-fonts); the full text is in
+`docs/licenses/KaTeX-fonts.txt` and `/assets/KaTeX-fonts-LICENSE.txt`.

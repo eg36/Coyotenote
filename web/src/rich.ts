@@ -216,6 +216,15 @@ export function supportsRich(body: string) {
     return "Showing Markdown: Write would change this note's front matter.";
   let reason = "";
   marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
+    if (token.type === "paragraph" || token.type === "text") {
+      const text = token.raw.replace(/(`+)[\s\S]*?\1/g, "");
+      for (const math of text.matchAll(/(?<!\\)\$(?:\$|(?=\S)(?:\\.|[^$\n])*?\S?\$(?!\d))/g)) {
+        // Plain equations are literal text in Write. TeX commands, display
+        // blocks and Markdown punctuation need source editing to stay exact.
+        if (!/^\$[A-Za-z0-9 +\-=^(),.\/]+\$$/.test(math[0]))
+          reason = "Showing Markdown: Write would change this note's math. Edit its TeX in Markdown.";
+      }
+    }
     if (token.type === "html")
       reason = "Showing Markdown: Write would change the HTML in this note.";
     if (token.type === "def")

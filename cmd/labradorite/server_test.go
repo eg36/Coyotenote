@@ -988,3 +988,25 @@ func TestPreviewHTMLIsSanitised(t *testing.T) {
 		}
 	}
 }
+
+func TestMathMarkersInPreview(t *testing.T) {
+	a := testApp(t)
+	for body, want := range map[string]string{
+		`$x^2 + y^2$`:                    `<span class="math">x^2 + y^2</span>`,
+		"$5 and $6":                      `<p>$5 and $6</p>`,
+		"$ spaced$ and $space $":         `<p>$ spaced$ and $space $</p>`,
+		`\$literal$`:                     `<p>$literal$</p>`,
+		"`$code$`":                       `<code>$code$</code>`,
+		"```text\n$x$\n```":              `<code class="language-text">$x$`,
+		"$a < b & c$":                    `<span class="math">a &lt; b &amp; c</span>`,
+		"$$\nx^2\n\n+ y^2\n$$\n\nAfter.": "<div class=\"math\">x^2\n\n+ y^2</div>\n<p>After.</p>",
+		"$$x^2$$\n\nAfter.":              "<div class=\"math\">x^2</div>\n<p>After.</p>",
+		"$$\nunclosed":                   "<p>$$\nunclosed</p>",
+		"```mermaid\nflowchart LR\n A --> B\n```": `<code class="language-mermaid">flowchart LR`,
+	} {
+		got := request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Math"}, 200)["html"].(string)
+		if !strings.Contains(got, want) {
+			t.Errorf("render(%q)=%q, want %q", body, got, want)
+		}
+	}
+}

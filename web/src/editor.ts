@@ -367,6 +367,15 @@ function schedulePreview(immediate = false) {
         const data = await api<{ html: string }>("/api/render", "POST", { id, body });
         if (generation === state.previewGeneration) {
           $("preview").innerHTML = data.html;
+          const preview = $("preview");
+          if (preview.querySelector(".math"))
+            import("./preview-math.js").then(({ renderMath }) => {
+              if (generation === state.previewGeneration) return renderMath(preview);
+            }).catch(() => { if (generation === state.previewGeneration) showToast("Math renderer unavailable. Reload to try again."); });
+          if (preview.querySelector("code.language-mermaid"))
+            import("./preview-diagrams.js").then(({ renderDiagrams }) => {
+              if (generation === state.previewGeneration) return renderDiagrams(preview);
+            }).catch(() => { if (generation === state.previewGeneration) showToast("Diagram renderer unavailable. Reload to try again."); });
           hydrateIcons($("preview"));
           decorateLinks();
           decorateTags($("preview"));

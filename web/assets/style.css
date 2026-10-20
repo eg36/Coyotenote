@@ -3020,3 +3020,8 @@ dialog.danger #modal-submit {
 .property-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
 .property-row input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 @media (max-width: 600px) { .properties .property-row { grid-template-columns: minmax(60px, 1fr) minmax(90px, 2fr); } .property-type { display: none; } }
+
+.prose div.math, .mermaid-diagram { overflow-x: auto; margin: 1.25em 0; padding: 4px 0; }
+.prose .math { white-space: normal; }
+.mermaid-diagram svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.prose .render-error { color: var(--muted); text-decoration: underline dotted; text-underline-offset: 4px; }
