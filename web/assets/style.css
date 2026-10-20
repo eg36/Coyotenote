@@ -504,9 +504,10 @@ input[type="search"]::-webkit-search-cancel-button {
   font-weight: 400;
   line-height: 1.4;
   color: var(--text);
+  /* One line; the tooltip shows the whole title. */
   overflow-wrap: anywhere;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2711,7 +2712,7 @@ dialog.danger #modal-submit {
 /* The activity rail stays available when the notes panel is folded away. */
 .app {
   --rail-width: 56px;
-  --notes-width: 256px;
+  --notes-width: 240px;
   grid-template-columns: var(--rail-width) var(--notes-width) minmax(0, 1fr);
   grid-template-areas: "rail top top" "rail side main";
 }
@@ -2754,8 +2755,12 @@ dialog.danger #modal-submit {
 .sidebar-actions :is(#history-back, #history-forward) svg { width: 16px; height: 16px; }
 .sidebar-actions #collapse-sidebar { width: 26px; height: 28px; margin-left: auto; }
 .sidebar-actions #collapse-sidebar svg { width: 16px; height: 16px; }
-@media (min-width: 1550px) { .app { --notes-width: 280px; } }
-@media (max-width: 980px) { .app { --notes-width: 225px; } }
+@media (min-width: 1550px) { .app { --notes-width: 260px; } }
+@media (max-width: 980px) {
+  .app { --notes-width: 210px; }
+  /* The narrower notes panel keeps its toolbar on one row. */
+  @media (min-width: 800px) { .sidebar-actions :is(#today-note, #tags-button, #fold-folders) { width: 30px; } }
+}
 @media (max-width: 799px) {
   .app, .app.sidebar-hidden, .app.focus-mode {
     --rail-width: 48px;

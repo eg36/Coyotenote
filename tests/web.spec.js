@@ -3122,3 +3122,13 @@ test("note embeds show the other note's text in Preview and link to it", async (
   await expect(page.locator("#document-title")).toHaveText(source);
   expect(await diskBody(page, id)).toBe(text);
 });
+
+test("long note titles take one line in the notes list", async ({ page }) => {
+  const long = "A remarkably long note title that would otherwise wrap onto several lines " + Date.now();
+  await openSeed(page, "Long.", long);
+  const row = page.locator(".note-title", { hasText: "A remarkably long" }).first();
+  const lineHeight = await row.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+  const box = await row.boundingBox();
+  expect(box.height).toBeLessThan(lineHeight * 1.5);
+  expect(await row.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy();
+});
