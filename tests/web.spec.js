@@ -213,7 +213,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
 }) => {
   await openSeed(page, "# Theme test\n\nHello.");
   await openThemes(page);
-  await expect(page.locator(".theme-option")).toHaveCount(14);
+  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
   await page.locator('[data-theme-id="catppuccin-mocha"]').click();
   await expect(page.locator("html")).toHaveAttribute(
     "data-theme",
@@ -225,6 +225,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "catppuccin-mocha",
   );
   await openThemes(page);
+  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Light", exact: true }).click();
   await page.locator('[data-theme-id="light"]').hover();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.keyboard.press("Escape");
@@ -233,6 +234,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
     "catppuccin-mocha",
   );
   await openThemes(page);
+  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Light", exact: true }).click();
   await page.locator('[data-theme-id="light"]').click();
   await expect(page.locator("#rich-pane")).toHaveCSS(
     "background-color",
@@ -243,9 +245,16 @@ test("all fourteen themes, preview cancel and persistence", async ({
 test("every theme draws text, accents, pills and focus rings at AA contrast", async ({ page }) => {
   await openSeed(page, "Contrast.");
   await openThemes(page);
-  const ids = await page.locator(".theme-option").evaluateAll((options) => options.map((o) => o.dataset.themeId));
+  // The list shows light or dark themes; walk both.
+  const kinds = page.getByRole("group", { name: "Show themes" });
+  const ids = [];
+  for (const kind of ["Light", "Dark"]) {
+    await kinds.getByRole("button", { name: kind, exact: true }).click();
+    ids.push(...(await page.locator(".theme-option").evaluateAll((options) => options.map((o) => [o.dataset.themeId, o.querySelector("small").textContent]))));
+  }
   expect(ids).toHaveLength(14);
-  for (const id of ids) {
+  for (const [id, kind] of ids) {
+    if (!(await page.locator(`[data-theme-id="${id}"]`).count())) await kinds.getByRole("button", { name: kind, exact: true }).click();
     await page.locator(`[data-theme-id="${id}"]`).hover();
     await expect(page.locator("html")).toHaveAttribute("data-theme", id);
     const worst = await page.evaluate(() => {
@@ -296,12 +305,14 @@ test("settings hold the themes and writing preferences over a lightly tinted pag
   expect((await picker.boundingBox()).width).toBeLessThanOrEqual(720);
   // The same light tint as other dialogs, so theme previews stay visible.
   expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(16, 18, 24, 0.5)");
-  await expect(picker.locator(".theme-option")).toHaveCount(14);
-  await expect(picker.locator(".theme-list .theme-swatch i")).toHaveCount(56);
+  const shown = await picker.locator(".theme-option").count();
+  expect(shown).toBeGreaterThan(1);
+  await expect(picker.locator(".theme-list .theme-swatch i")).toHaveCount(4 * shown);
   const rows = await picker.locator(".theme-option").evaluateAll((els) => els.map((el) => el.getBoundingClientRect().x));
   expect(new Set(rows).size).toBe(1);
   await page.getByLabel("Find a theme").fill("catppuccin");
-  await expect(picker.locator(".theme-option")).toHaveCount(4);
+  await expect(picker.locator(".theme-option").first()).toBeVisible();
+  expect(await picker.locator(".theme-option").count()).toBeLessThan(shown);
   // Escape closes the list first, then the window.
   await page.keyboard.press("Escape");
   await expect(picker.locator(".theme-list")).toBeHidden();
@@ -317,53 +328,55 @@ test("settings hold the themes and writing preferences over a lightly tinted pag
   await expect(picker.getByRole("button", { name: "Done" })).toBeVisible();
 });
 
-test("the theme list filters to light or dark themes and groups them under All", async ({ page }) => {
+test("the theme list shows light or dark themes, starting with the current theme's kind", async ({ page }) => {
   await openSeed(page, "# Light and dark");
   const kept = (await (await page.request.get("/api/state")).json()).theme;
   await openThemes(page);
   const list = page.getByRole("listbox", { name: "Themes" });
   const filter = page.getByRole("group", { name: "Show themes" });
-  // All shows every theme, light ones first, under Light and Dark headings.
-  await expect(filter.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
-  await expect(list.getByRole("option")).toHaveCount(14);
-  await expect(list.getByRole("group", { name: "Light" }).getByRole("option")).not.toHaveCount(0);
-  await expect(list.getByRole("group", { name: "Dark" }).getByRole("option")).not.toHaveCount(0);
-  const kinds = await list.getByRole("option").evaluateAll((options) => options.map((o) => o.querySelector("small").textContent));
-  expect(kinds).toEqual([...kinds].sort((a, b) => (a === "Light" ? 0 : 1) - (b === "Light" ? 0 : 1)));
-  // Light or Dark shows only those, without headings; search narrows further.
-  await filter.getByRole("button", { name: "Dark" }).click();
-  await expect(list.locator(".theme-group")).toHaveCount(0);
-  const dark = await list.getByRole("option").count();
-  expect(await list.getByRole("option").evaluateAll((options) => options.every((o) => o.querySelector("small").textContent === "Dark"))).toBe(true);
+  await expect(filter.getByRole("button")).toHaveCount(2);
+  // It opens on the current theme's kind, and shows only that kind.
+  const keptKind = await list.locator(`[data-theme-id="${kept}"] small`).textContent();
+  await expect(filter.getByRole("button", { name: keptKind, exact: true })).toHaveAttribute("aria-pressed", "true");
+  const kindsShown = async () => list.getByRole("option").evaluateAll((options) => [...new Set(options.map((o) => o.querySelector("small").textContent))]);
+  expect(await kindsShown()).toEqual([keptKind]);
+  await filter.getByRole("button", { name: "Light", exact: true }).click();
+  expect(await kindsShown()).toEqual(["Light"]);
+  const light = await list.getByRole("option").count();
+  await filter.getByRole("button", { name: "Dark", exact: true }).click();
+  expect(await kindsShown()).toEqual(["Dark"]);
+  expect(light + (await list.getByRole("option").count())).toBe(14);
+  // Search narrows within the kind; arrows preview; Escape restores.
   const search = page.getByRole("combobox", { name: "Find a theme" });
   await search.fill("light");
   await expect(list.getByRole("option")).toHaveCount(0);
   await search.fill("catppuccin");
   await expect(list.getByRole("option")).toHaveCount(3);
-  // Arrow keys preview across what is shown; Escape restores the kept theme.
   await search.press("ArrowDown");
   await expect(page.locator("html")).toHaveAttribute("data-theme", /catppuccin/);
   await search.press("Escape");
   await expect(page.locator("html")).toHaveAttribute("data-theme", kept);
-  // Enter on a filter button switches the filter instead of choosing a theme.
+  // Enter on the switch changes the kind rather than choosing a theme.
   await openThemes(page);
-  await filter.getByRole("button", { name: "Light" }).focus();
+  await filter.getByRole("button", { name: "Light", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(filter.getByRole("button", { name: "Light" })).toHaveAttribute("aria-pressed", "true");
+  await expect(filter.getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#theme-panel")).toBeVisible();
   expect((await (await page.request.get("/api/state")).json()).theme).toBe(kept);
-  await expect(list.getByRole("option")).toHaveCount(14 - dark);
-  // The choice is remembered.
+  // The choice is remembered; a remembered "all" from before opens on the theme's kind.
   await page.reload();
   await openThemes(page);
-  await expect(filter.getByRole("button", { name: "Light" })).toHaveAttribute("aria-pressed", "true");
-  await filter.getByRole("button", { name: "All" }).click();
-  await expect(list.getByRole("option")).toHaveCount(14);
+  await expect(filter.getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.evaluate(() => localStorage.setItem("labradorite-theme-filter", "all"));
+  await page.reload();
+  await openThemes(page);
+  await expect(filter.getByRole("button", { name: keptKind, exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("theme keyboard preview wraps, cancels and commits a filtered selection", async ({ page }) => {
   await openSeed(page, "# Keyboard themes");
   await openThemes(page);
+  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
   const search = page.getByRole("combobox", { name: "Find a theme" });
   await search.fill("Labradorite Dark");
   await search.press("Enter");
@@ -391,7 +404,7 @@ test("theme keyboard preview wraps, cancels and commits a filtered selection", a
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await openThemes(page);
   await search.fill("catppuccin");
-  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(4);
+  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(3);
   const second = await page.getByRole("listbox", { name: "Themes" }).getByRole("option").nth(1).getAttribute("data-theme-id");
   await search.press("ArrowDown");
   await expect(page.locator("html")).toHaveAttribute("data-theme", second);
@@ -418,6 +431,7 @@ test("empty theme search and failed selection preserve the previous theme", asyn
   await search.press("ArrowDown");
   await search.press("Enter");
   await expect(page.locator("#modal")).toBeVisible();
+  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
   await search.fill("Nord");
   await page.route("**/api/settings", (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Settings unavailable" }) }));
   await search.press("Enter");

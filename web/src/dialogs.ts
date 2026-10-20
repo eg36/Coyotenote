@@ -473,10 +473,11 @@ function themeChooser() {
   empty.className = "theme-empty";
   empty.setAttribute("role", "status");
   empty.textContent = "No matching themes";
-  // All, Light or Dark themes; the choice is remembered in this browser.
-  const kinds = [["all", "All"], ["light", "Light"], ["dark", "Dark"]] as const;
-  let kind = storage.get("labradorite-theme-filter") || "all";
-  if (!kinds.some(([value]) => value === kind)) kind = "all";
+  // Light or dark themes: the remembered choice, or the current theme's kind.
+  const kinds = [["light", "Light"], ["dark", "Dark"]] as const;
+  let kind = storage.get("labradorite-theme-filter") || "";
+  if (!kinds.some(([value]) => value === kind))
+    kind = state.themes.find((t) => t.id === state.theme)?.light ? "light" : "dark";
   const filter = document.createElement("div");
   filter.className = "theme-filter";
   filter.setAttribute("role", "group");
@@ -517,27 +518,7 @@ function themeChooser() {
     list.replaceChildren();
     options = [];
     const query = search.value.trim().toLowerCase();
-    const shown = state.themes.filter((t) => t.name.toLowerCase().includes(query) && (kind === "all" || t.light === (kind === "light")));
-    // With All, light themes come first, then dark, each under a heading.
-    const groups = kind === "all"
-      ? [["Light", shown.filter((t) => t.light)], ["Dark", shown.filter((t) => !t.light)]] as const
-      : [["", shown]] as const;
-    for (const [heading, themes] of groups) {
-      if (!themes.length) continue;
-      let target: HTMLElement = list;
-      if (heading) {
-        target = document.createElement("div");
-        target.className = "theme-group";
-        target.setAttribute("role", "group");
-        const title = document.createElement("div");
-        title.className = "theme-group-label";
-        title.id = "theme-group-" + heading.toLowerCase();
-        title.textContent = heading;
-        title.setAttribute("role", "presentation");
-        target.setAttribute("aria-labelledby", title.id);
-        target.append(title);
-        list.append(target);
-      }
+    const themes = state.themes.filter((t) => t.name.toLowerCase().includes(query) && t.light === (kind === "light"));
     for (const theme of themes) {
       const button = document.createElement("button");
       button.type = "button";
@@ -570,8 +551,7 @@ function themeChooser() {
         }
       };
       options.push(button);
-      target.append(button);
-    }
+      list.append(button);
     }
     empty.hidden = options.length > 0;
     const selected = options.findIndex((option) => option.dataset.themeId === state.theme);

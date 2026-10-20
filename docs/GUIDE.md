@@ -197,9 +197,9 @@ not change the Markdown files or follow the vault to another browser.
   linking here. Hidden folders and symlinks are skipped.
 - **Settings → Appearance → Theme** opens a list of all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
-  neutral white/charcoal surfaces and blue accents. **All / Light / Dark** above
-  the search narrows the list; All shows light themes first and dark ones after,
-  under headings, and the choice is remembered in this browser. Hover, focus or
+  neutral white/charcoal surfaces and blue accents. **Light / Dark** above the
+  search switches between light and dark themes; it opens on the kind of the
+  current theme, and a choice made there is remembered in this browser. Hover, focus or
   ↑/↓ previews a theme; Enter/click keeps it; closing the window without
   choosing restores the kept theme. Palettes stay as
   published; where one of their text colors would fall below WCAG AA contrast (as in
