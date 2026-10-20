@@ -215,6 +215,7 @@ test("all fourteen themes, preview cancel and persistence", async ({
   await openThemes(page);
   await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
   await page.locator('[data-theme-id="catppuccin-mocha"]').click();
+  await expect(page.locator("#toast-text")).toHaveText("Theme: Catppuccin Mocha");
   await expect(page.locator("html")).toHaveAttribute(
     "data-theme",
     "catppuccin-mocha",

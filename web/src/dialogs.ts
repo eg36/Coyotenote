@@ -45,9 +45,7 @@ function applyTheme(id: string) {
 async function chooseTheme(id: string) {
   await api("/api/settings", "POST", { theme: id });
   applyTheme(id);
-  showToast(
-    `${state.themes.find((t) => t.id === id)?.name} · made for this mood`,
-  );
+  showToast(`Theme: ${state.themes.find((t) => t.id === id)?.name}`);
 }
 function openModal(
   title: string,
