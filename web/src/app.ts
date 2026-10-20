@@ -200,6 +200,12 @@ $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
 $("outline-button").onclick = () => toggleOutline();
 $("history-button").onclick = () => historyDialog().catch(showError);
+$("tags-button").onclick = () => {
+  $("tag-filter").open = !$("tag-filter").open;
+};
+$("tag-filter").addEventListener("toggle", () => {
+  $("tags-button").setAttribute("aria-expanded", String($("tag-filter").open));
+});
 $("tag-options").onclick = (event) => {
   const button = event.target instanceof Element ? event.target.closest<HTMLElement>("button[data-tag]") : null;
   if (button) filterTag(button.dataset.tag || "");

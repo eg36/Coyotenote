@@ -26,6 +26,7 @@ interface AppElements {
   "sidebar-search": HTMLButtonElement;
   "fold-folders": HTMLButtonElement;
   "tag-filter": HTMLDetailsElement;
+  "tags-button": HTMLButtonElement;
   "note-sort": HTMLSelectElement;
   "trash-button": HTMLButtonElement;
   "settings-button": HTMLButtonElement;

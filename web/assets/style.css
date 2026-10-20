@@ -2793,3 +2793,5 @@ dialog.danger #modal-submit {
 }
 .title-row > #history-back { width: 26px; height: 26px; margin-right: 6px; flex-shrink: 0; }
 .title-row > #history-back svg { width: 16px; height: 16px; }
+#tag-filter > summary { display: none; }
+#tags-button.active { background: var(--selected); color: var(--accent-text); }

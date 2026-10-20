@@ -144,6 +144,8 @@ function renderTags() {
   const list = $("tag-options");
   if (state.tag && !counts.has(state.tag.toLowerCase())) state.tag = "";
   filter.hidden = counts.size === 0;
+  $("tags-button").disabled = counts.size === 0;
+  $("tags-button").classList.toggle("active", Boolean(state.tag));
   const options = [...counts.values()]
     .sort((a, b) => noteCollator.compare(a.tag, b.tag))
     .map(({ tag, n }): [string, number] => [tag, n]);

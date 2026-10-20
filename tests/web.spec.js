@@ -1989,10 +1989,12 @@ test("tags from properties and text filter the note list", async ({ page }) => {
   await seed(page, `Untagged ${stamp}`, "Third, `#${tag}` in code only.");
   await openSeed(page, `Read about #${tag} here.`, `Reader ${stamp}`);
   const disclosure = page.locator("#tag-filter");
-  await expect(disclosure).toBeVisible();
-  await disclosure.locator("summary").focus();
+  const tagsButton = page.getByRole("button", { name: "All tags", exact: true });
+  await expect(tagsButton).toBeVisible();
+  await tagsButton.focus();
   await page.keyboard.press("Enter");
   await expect(disclosure).toHaveAttribute("open", "");
+  await expect(tagsButton).toHaveAttribute("aria-expanded", "true");
   const filter = page.getByRole("group", { name: "Show notes with a tag" });
   const choice = filter.locator(`button[data-tag="${tag}"]`);
   await expect(choice).toContainText(`#${tag}`);
