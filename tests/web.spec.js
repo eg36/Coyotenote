@@ -2231,8 +2231,16 @@ test("front matter shows as properties in Write and keeps its exact form", async
   await page.getByRole("button", { name: "Edit YAML", exact: true }).click();
   await page.getByLabel("Properties").fill("title: New\ntags: [travel, plans]");
   await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nText.");
-  await page.locator(".tiptap p").click();
+  const bodyParagraph = page.locator(".tiptap p");
+  await bodyParagraph.click();
   await page.keyboard.press("Home");
+  // Home moves the browser caret; selectionchange then updates ProseMirror.
+  // Observe the caret before typing so this exactness test also verifies
+  // where the new text is inserted under a loaded runner.
+  await expect.poll(() => bodyParagraph.evaluate((paragraph) => {
+    const selection = window.getSelection();
+    return selection?.isCollapsed && paragraph.contains(selection.anchorNode) && selection.anchorOffset === 0;
+  })).toBe(true);
   await page.keyboard.type("Typed ");
   await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nTyped Text.");
 
