@@ -21,6 +21,7 @@ const paths: Record<string, string> = {
   focus: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/>',
   back: '<path d="M19 12H5m6-6-6 6 6 6"/>',
+  forward: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
   arrowUp: '<path d="m6 11 6-6 6 6m-6-6v14"/>',
   arrowDown: '<path d="m6 13 6 6 6-6m-6-13v14"/>',
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',

@@ -97,6 +97,7 @@ export interface AppState {
   searchGeneration: number;
   trash: { id: string; trashId: string }[];
   back: string[];
+  forward: string[];
   pendingDraft: Draft | null;
   block: string;
   edits: number;

@@ -26,6 +26,7 @@ interface AppElements {
   "today-note": HTMLButtonElement;
   "sidebar-search": HTMLButtonElement;
   "fold-folders": HTMLButtonElement;
+  "collapse-sidebar": HTMLButtonElement;
   "tag-filter": HTMLDetailsElement;
   "tags-button": HTMLButtonElement;
   "note-sort": HTMLSelectElement;
@@ -34,6 +35,7 @@ interface AppElements {
   "sidebar-scrim": HTMLButtonElement;
   "sidebar-toggle": HTMLButtonElement;
   "history-back": HTMLButtonElement;
+  "history-forward": HTMLButtonElement;
   "block-type": HTMLButtonElement;
   "view-type": HTMLButtonElement;
   "compare-versions": HTMLButtonElement;
@@ -91,6 +93,7 @@ const state: AppState = {
   searchGeneration: 0,
   trash: [],
   back: [],
+  forward: [],
   pendingDraft: null,
   block: "p",
   edits: 0,

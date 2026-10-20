@@ -155,10 +155,13 @@ async function openNote(
     await save();
     if (generation !== state.openGeneration || state.current?.id === id) return;
   }
-  if (pushBack && state.current?.id && state.current.id !== id)
-    state.back.push(state.current.id);
+  if (pushBack && state.current?.id !== id) {
+    if (state.current?.id) state.back.push(state.current.id);
+    state.forward = [];
+  }
   if (reveal) revealNote(note.id);
   $("history-back").disabled = state.back.length === 0;
+  $("history-forward").disabled = state.forward.length === 0;
   clearTimeout(state.saveTimer);
   state.current = note;
   rememberNote(note.id);

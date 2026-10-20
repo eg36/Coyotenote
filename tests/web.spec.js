@@ -872,15 +872,11 @@ test("start-page navigation stays together and status sits at the right edge", a
       expect(width - status.x - status.width).toBeLessThanOrEqual(14);
       const title = await page.locator("#app-title").boundingBox();
       expect(title.x + title.width).toBeLessThanOrEqual(status.x);
-      const back = await page.locator("#history-back").boundingBox();
       const sidebarToggle = await page.locator("#sidebar-toggle").boundingBox();
       const logo = await page.locator("#brand").boundingBox();
       expect(sidebarToggle.y).toBeGreaterThanOrEqual(logo.y + logo.height);
       expect(sidebarToggle.x).toBeLessThan(60);
-      expect(back.x).toBeGreaterThanOrEqual(logo.x + logo.width);
-      expect(back.y).toBeLessThan(sidebarToggle.y);
       await expect(page.locator("#sidebar-toggle")).toBeInViewport();
-      await expect(page.locator("#history-back")).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       if (width < 800 && toggle === 1) await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
       else await page.locator("#sidebar-toggle").click();
@@ -1118,7 +1114,11 @@ test("linked-note navigation has a back button and source history stays per note
   await mode(page, "Write");
   await page.locator(".wiki-link").click();
   await expect(page.locator("#document-title")).toHaveText(target);
-  await page.getByRole("button", { name: "Go back to previous note" }).click();
+  await page.getByRole("button", { name: "Previous note", exact: true }).click();
+  await expect(page.locator("#document-title")).toHaveText(origin);
+  await page.getByRole("button", { name: "Next note", exact: true }).click();
+  await expect(page.locator("#document-title")).toHaveText(target);
+  await page.getByRole("button", { name: "Previous note", exact: true }).click();
   await expect(page.locator("#document-title")).toHaveText(origin);
   await mode(page, "Markdown");
   await page.locator(".cm-content").fill("Edit in origin.");
@@ -2493,4 +2493,29 @@ test("the rail highlights only the active notes, recent or search view", async (
   await search.click();
   await expect(search).toHaveAttribute("aria-expanded", "true");
   await expect(notes).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});
+
+
+test("notes panel actions keep navigation on the left and dismissal at the right", async ({ page }) => {
+  await openSeed(page, "Panel controls.");
+  for (const width of [1440, 900, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
+    await expect(page.locator("#collapse-sidebar")).toBeVisible();
+    const [fold, previous, next, collapse, row] = await page.locator(".sidebar-actions").evaluate(el =>
+      [el.querySelector("#fold-folders"), el.querySelector("#history-back"), el.querySelector("#history-forward"), el.querySelector("#collapse-sidebar"), el]
+        .map(node => { const r = node.getBoundingClientRect(); return { x: r.x, width: r.width }; }));
+    expect(previous.x).toBeGreaterThanOrEqual(fold.x + fold.width);
+    expect(next.x).toBeGreaterThanOrEqual(previous.x + previous.width);
+    expect(collapse.x).toBeGreaterThanOrEqual(next.x + next.width);
+    expect(Math.abs(collapse.x + collapse.width - row.x - row.width)).toBeLessThan(2);
+    await page.locator("#collapse-sidebar").click();
+    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#sidebar-toggle")).toBeFocused();
+    await page.reload();
+    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
+    await page.locator("#sidebar-toggle").click();
+    await expect(page.locator("#collapse-sidebar")).toBeInViewport();
+  }
 });

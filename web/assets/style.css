@@ -2735,7 +2735,11 @@ dialog.danger #modal-submit {
 .rail-bottom { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 16px; }
 .app.sidebar-hidden, .app.focus-mode { grid-template-columns: var(--rail-width) 0 minmax(0, 1fr); }
 .topbar .title-block { margin-left: 0; }
-.sidebar-actions { justify-content: flex-start; }
+.sidebar-actions { justify-content: flex-start; align-items: center; gap: 2px; }
+.sidebar-actions :is(#history-back, #history-forward) { width: 26px; height: 28px; }
+.sidebar-actions :is(#history-back, #history-forward) svg { width: 16px; height: 16px; }
+.sidebar-actions #collapse-sidebar { width: 26px; height: 28px; margin-left: auto; }
+.sidebar-actions #collapse-sidebar svg { width: 16px; height: 16px; }
 @media (min-width: 1550px) { .app { --notes-width: 280px; } }
 @media (max-width: 980px) { .app { --notes-width: 225px; } }
 @media (max-width: 799px) {
@@ -2791,8 +2795,6 @@ dialog.danger #modal-submit {
 @media (max-width: 530px) {
   .topbar .editor-bar { padding-left: 6px; }
 }
-.title-row > #history-back { width: 26px; height: 26px; margin-right: 6px; flex-shrink: 0; }
-.title-row > #history-back svg { width: 16px; height: 16px; }
 #tag-filter > summary { display: none; }
 #tags-button.active { background: var(--selected); color: var(--accent-text); }
 .menu-bar button { display: inline-flex; align-items: center; gap: 4px; }
@@ -2801,7 +2803,6 @@ dialog.danger #modal-submit {
 .menu-chevron svg { width: 14px; height: 14px; }
 .activity-rail .menu-bar { margin: 0; }
 .activity-rail .brand { margin-bottom: 0; }
-.title-divider { width: 1px; height: 18px; margin: 0 10px 0 0; background: var(--line); flex-shrink: 0; }
 .document-title { font-size: 18px; }
 .topbar .title-block { max-width: 400px; }
 .pinned-notes { margin: 0 0 10px; }

@@ -164,6 +164,8 @@ $("brand").onclick = (event) => {
   save()
     .then(() => {
       state.back.push(id);
+      state.forward = [];
+      $("history-forward").disabled = true;
       emptyNotebook();
     })
     .catch(showError);
@@ -171,13 +173,30 @@ $("brand").onclick = (event) => {
 $("history-back").onclick = async () => {
   const id = state.back.at(-1);
   if (!id) return;
+  const current = state.current?.id;
   try {
     await openNote(id, { pushBack: false });
+    if (state.current?.id !== id) return;
     state.back.pop();
+    if (current) state.forward.push(current);
     $("history-back").disabled = state.back.length === 0;
+    $("history-forward").disabled = state.forward.length === 0;
   } catch (error) {
     showError(error);
   }
+};
+$("history-forward").onclick = async () => {
+  const id = state.forward.at(-1);
+  if (!id) return;
+  const current = state.current?.id;
+  try {
+    await openNote(id, { pushBack: false });
+    if (state.current?.id !== id) return;
+    state.forward.pop();
+    if (current) state.back.push(current);
+    $("history-back").disabled = state.back.length === 0;
+    $("history-forward").disabled = state.forward.length === 0;
+  } catch (error) { showError(error); }
 };
 $("note-sort").onchange = () => {
   const sort = $("note-sort").value;
@@ -190,6 +209,7 @@ $("sidebar-toggle").onclick = () => {
   if ($("app").classList.contains("show-recents")) { showAllNotes(); setSidebar(true); }
   else toggleSidebar();
 };
+$("collapse-sidebar").onclick = () => { setSidebar(false); $("sidebar-toggle").focus(); };
 $("recent-notes").onclick = showRecent;
 $("show-all-notes").onclick = () => { showAllNotes(); browseFolder(null); };
 $("clear-folder").onclick = () => browseFolder(null);
