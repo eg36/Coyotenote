@@ -1969,6 +1969,30 @@ test("images show in Write and Preview, keep their Markdown, and can be pasted, 
   expect(notes.some((note) => note.startsWith("attachments/"))).toBe(false);
 });
 
+test("an image that finishes uploading after leaving its note is not added to another", async ({ page }) => {
+  const stamp = Date.now();
+  const other = await openSeed(page, "The other note.", `Upload target B ${stamp}`);
+  const id = await openSeed(page, "Started here.", `Upload source A ${stamp}`);
+  await mode(page, "Write");
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  await page.route("**/api/attachment*", async (route) => { await held; await route.continue(); });
+  await page.locator(".tiptap p").first().click();
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  await page.evaluate((png) => {
+    const data = new DataTransfer();
+    data.items.add(new File([Uint8Array.from(atob(png), (c) => c.charCodeAt(0))], "late.png", { type: "image/png" }));
+    document.querySelector(".tiptap").dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  }, png);
+  await page.locator("#note-list .note-row").filter({ hasText: `Upload target B ${stamp}` }).click();
+  await expect(page.locator("#document-title")).toHaveText(`Upload target B ${stamp}`);
+  release();
+  await expect(page.locator("#toast-text")).toContainText("finished uploading after you left");
+  await expect(page.locator("#toast-text")).toContainText("attachments/late.png");
+  expect(await diskBody(page, other)).toBe("The other note.");
+  expect(await diskBody(page, id)).toBe("Started here.");
+});
+
 test("note history shows earlier versions with changes marked and restores one", async ({
   page,
 }) => {

@@ -24,6 +24,8 @@ function uploadName(file: File) {
 // is, in whichever editor is showing.
 async function addImages(files: File[]) {
   if (!state.current || state.pendingDraft || state.busy) return;
+  // An upload belongs to the note it started in, even if another opens meanwhile.
+  const note = state.current.id;
   for (const file of files) {
     if (file.size > 20 * 1048576) {
       showToast(`“${file.name}” is over the 20 MiB image limit.`, { persistent: true });
@@ -36,6 +38,10 @@ async function addImages(files: File[]) {
         file,
       );
       const alt = (path.split("/").pop() || "image").replace(/\.\w+$/, "").replace(/-/g, " ");
+      if (state.current?.id !== note) {
+        showToast(`“${file.name}” finished uploading after you left “${note.split("/").pop()}”. It is saved as ${path}; paste ![${alt}](${path}) where you want it.`, { persistent: true });
+        continue;
+      }
       if (state.mode === "write" && state.rich) state.rich.insertImage(path, alt);
       else state.source?.insert(`![${alt}](${path})`);
     } catch (error) {
