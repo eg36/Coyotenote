@@ -84,6 +84,11 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 - User-led polish and fixes across all of the above, full regression runs,
   guide and release notes; release only on the user's word.
 
+## After 1.5.0: internal 1.6–1.9 toward the 2.0.0 release
+
+Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged; 2.0.0 is
+the next public release after 1.5.0.
+
 ## 1.6.0 — Callouts in Write
 
 - Edit callouts visually, with their type, title and folding kept exactly,
