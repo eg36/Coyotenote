@@ -8,7 +8,8 @@ this document does not authorize a release tag.
 - Keep the Labrador logo prominent without a sidebar-toggle icon to its left.
 - Collapsing the notes panel should leave a useful icon rail. Notes, search,
   recent notes, creation, settings and commands must remain reachable.
-- Keep Back available while its eventual home is explored.
+- Previous/Next visited-note arrows live after the shared folder-collapse icon;
+  a small panel-close control stays at the far right of that row.
 - One search entry point with explicit All notes / This note scopes.
 - Recently opened notes, distinct from recently modified notes.
 - Pin important notes without modifying their Markdown.
@@ -19,15 +20,22 @@ this document does not authorize a release tag.
 - Rebuild and restart the review server after each visible batch and tell the
   user to reload http://127.0.0.1:4280. Preview upcoming work as 1.5.0+dev.
 
-## Implementation choices to review as they become visible
+## Implemented choices
 
 - Persistent rail, with the logo returning home and a Notes button toggling
   the adjacent panel. Phone notes remain a drawer.
-- Recent notes get a compact panel view; pins get a section in Notes.
+- Recent notes get a compact panel view; collapsible title/date pins sit below
+  tags and above Notes. Folder and pin collapse choices survive reloads.
+- Rail shortcuts can be dragged or reordered with Alt+Shift+↑/↓ and remember
+  their order in the browser. Keep the logo and bottom utility group anchored.
+- Reserve room for the larger title and full-title tooltip; keep the editor
+  toolbar centered without shifting when note names change.
 - The rail provides Commands (the existing searchable command palette).
-  Consolidate the four document menus once command discoverability is covered.
+  One Menu sits before Write in the editor toolbar, with desktop flyouts and
+  inline phone categories; it remains available at home.
 - Search scope switching should preserve the query; existing full-text result
-  previews and find-and-replace remain useful.
+  previews remain available. This note retains case, whole-word, regex and
+  replacement controls, and restores the prior writing mode when closed.
 - Browser preferences stay scoped to the vault where appropriate. Renaming,
   moving and trashing notes must not leave broken pins or recent-note entries.
 

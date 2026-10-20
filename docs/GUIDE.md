@@ -69,28 +69,34 @@ Labradorite process can open a vault at a time; a second one is refused.
 
 ## Writing
 
-The top bar holds the Labradorite logo, the note title (click to rename),
-and **File / Edit / View / Insert** menus. These collect the same commands
-as the visible controls and keyboard shortcuts; note-only commands are disabled
-on the start page. Use ↑/↓ within a menu, ←/→ to switch menus and Escape to close.
-Beside them, in the same header row, come the notes sidebar toggle and the back
-button, the **view** dropdown (Write, Markdown, Preview or Split), the text style
-and the formatting buttons, so writing starts right below one bar. Between
-1280 and 1440 px wide, link, note link, table and image live in the Insert menu
-only; below 1280 px the editor controls take a second header row.
-On phones the menus stay under the title; note actions are available in File
-and View, leaving more room for the note name. The header's ⇄ button opens
-**Find and replace** for the open note, starting from any words in the notes search.
+The Labrador logo and a permanent icon rail sit at the left. The logo returns
+to the start page; **Notes** shows or hides the adjacent notes panel. Search,
+recent notes, new notes, commands, trash and settings stay reachable when that
+panel is closed. Desktop and phone remember their own open/closed preference.
+Drag rail icons to reorder them within the main shortcuts or bottom utility group;
+Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order.
 
-The **search** icon above the notes list (or Ctrl/⌘ Shift E) opens a search field
-at the top of the list, in the notes drawer on small screens. It stays open until
-you click the icon again or press Escape; Escape clears a search first.
+The top bar holds the clickable note title and folder breadcrumbs. Hover or focus
+a truncated title to read its full path. The **Menu** button lives immediately
+before **Write / Markdown / Preview / Split** in the editor toolbar; it remains
+available on the start page. Categories open alongside the menu on desktop and
+expand inside it on phones. Use ↑/↓ within a menu, → to enter a category, ← to
+return, and Escape to close. Note-only commands are disabled at home.
+The toolbar stays centered as titles change, with note actions inside it and a
+status dot at the far right of the header. Hover the dot for save details.
+The vertical header divider aligns with the notes panel below. Below 1280 px it takes a second row;
+phones also give formatting its own scrollable row.
+
+The rail's **Search** button (or Ctrl/⌘ Shift E) opens one query field with
+**All notes / This note** scopes. Switching scope keeps the query. Escape clears
+the query first, then closes search. All notes searches paths and contents;
+This note offers find and replace in the current note.
 
 The interface and writing pane use locally bundled **Lexend**. The writing size
 defaults to 18 px, Markdown source to 16 px, and small interface labels and shortcut hints
 are at least 12 px.
 
-**Settings** (the button at the bottom of the sidebar, View → Settings…, Quick
+**Settings** (the button at the bottom of the rail, Menu → Settings…, Quick
 open or Ctrl/⌘ Shift T) holds the theme and, under Writing, text sizes from
 14–24 px, Narrow/Standard/Wide line widths for Write and Preview, and spellcheck
 in Write. Markdown text stays 2 px smaller than the chosen size. Every change
@@ -116,10 +122,11 @@ not change the Markdown files or follow the vault to another browser.
   `![[photo.png]]` show in Preview.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
-- **Find and replace** (Edit menu or Quick open command) searches the open
-  note with case, whole-word and regular-expression options. It opens Markdown
+- **Find and replace** (Menu → Editing or Quick open command) searches the open
+  note with case, whole-word and regular-expression controls under **Search options**. It opens Markdown
   view from Write or Preview; Split stays split. Replace one match or all,
-  then Escape to return to writing. Ctrl/⌘+F also opens this panel while the
+  then close search to restore the previous writing view. Choosing a view yourself
+  during search keeps that choice. Ctrl/⌘+F also opens this panel while the
   Markdown editor has focus. Replacements autosave and can be undone.
 - Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
   You can also **drag a note** onto a folder, or onto a note in it, to move it
@@ -128,21 +135,28 @@ not change the Markdown files or follow the vault to another browser.
   externally changed files are left alone and reported.
 - **Tags** come from a `tags` (or `tag`) property in front matter, as a list or
   comma-separated, and from `#tags` in the text outside code, as in Obsidian; a
-  tag needs a letter, so `#2026` is not one. When the vault has tags, expand
-  **All tags** in the sidebar to see each tag and its note count. Choose a tag
+  tag needs a letter, so `#2026` is not one. When the vault has tags, click
+  **All tags** (#) in the sidebar to see each tag and its note count. Choose a tag
   to filter the note list, or choose All tags inside the list to reset it.
   In Preview, tags are buttons that apply the filter.
-- The icons above the notes list start a **new note**, open **today's note**, open
-  **search** and **collapse or expand every folder** at once.
+- The icons above the notes list open **today's note**, toggle **tags**, and
+  **collapse or expand all folders and pins**. **Previous / Next note** follow
+  visited-note history. The small button at the far right closes the panel.
+- **Pinned notes** sit below tags and above Notes. Use the pin button in the
+  header or the Pin/Unpin command; this section has compact title/date rows and
+  remembers whether it is collapsed. **Recently opened** in the rail shows your
+  last 30 opened notes. Pins and recents stay in this browser for this vault;
+  renaming or moving through the app follows the note's new path.
 - Click a folder's name in the sidebar to **collapse** it. Collapsed folders show
   how many notes they hold and stay collapsed in this browser; searching still
-  lists their matches, and opening a note inside one expands it.
+  lists their matches. Opening a note deliberately reveals its folder; reloading
+  preserves your collapsed folders.
 - **Quick open** (Ctrl/⌘+K, or the footer hint) jumps to a note by a few letters of
   its path, such as `qp` for *Quarterly plan*; matched letters are highlighted.
   Start with `#` to jump to a heading of the open note, or `>` to run a command
   such as a view change, rename or theme. Anything typed can also become a
   content search or a new note.
-- **Today's note** (File menu, Quick open command, or Alt+J) opens
+- **Today's note** (Menu, Quick open command, or Alt+J) opens
   `Journal/YYYY-MM-DD` using your computer's local date, creating an empty note
   when it does not exist. Repeating the command keeps the same note and its text.
 - **Templates:** keep reusable notes in a `Templates/` folder. The New note
@@ -154,12 +168,12 @@ not change the Markdown files or follow the vault to another browser.
   indented by level. Click one to bring it into view in any view; the outline
   marks the section you are reading as you scroll. It stays open across reloads
   on wide screens and slides over the text on narrow ones.
-- **Search notes** (the search icon above the list or Ctrl/⌘ Shift E) matches **paths and note contents** and reveals
+- **Search notes** (the rail search icon or Ctrl/⌘ Shift E) matches **paths and note contents** and reveals
   the notes sidebar when you use it. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
-  **Alt+Up / Alt+Down** (or View → Previous / Next note) cycles the visible sorted notes; the back arrow returns
-  from linked-note navigation. The backlink count in the footer lists notes
+  **Alt+Up / Alt+Down** (or Menu → View options → Previous / Next note) cycles the visible sorted notes; the sidebar arrows move backward and forward
+  through visited notes. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
 - **Settings → Appearance → Theme** opens a list of all **14 palettes**, including the four Catppuccin
   flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
@@ -168,7 +182,7 @@ not change the Markdown files or follow the vault to another browser.
   kept theme. Palettes stay as
   published; where one of their text colors would fall below WCAG AA contrast (as in
   Ayu Light or Nord), the app darkens or lightens just that text until it passes.
-- **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
+- **Menu → View options → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 
 ### WYSIWYG round trips
