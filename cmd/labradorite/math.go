@@ -108,7 +108,8 @@ func (blockMathParser) Continue(node ast.Node, reader text.Reader, _ parser.Cont
 	}
 	line, segment := reader.PeekLine()
 	if bytes.Equal(bytes.TrimSpace(line), []byte("$$")) {
-		reader.Advance(len(line) - 1)
+		// The closing line may end the note without a line break.
+		reader.Advance(len(bytes.TrimRight(line, "\r\n")))
 		return parser.Close
 	}
 	n.Lines().Append(segment)

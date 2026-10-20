@@ -1001,6 +1001,7 @@ func TestMathMarkersInPreview(t *testing.T) {
 		"$a < b & c$":                    `<span class="math">a &lt; b &amp; c</span>`,
 		"$$\nx^2\n\n+ y^2\n$$\n\nAfter.": "<div class=\"math\">x^2\n\n+ y^2</div>\n<p>After.</p>",
 		"$$x^2$$\n\nAfter.":              "<div class=\"math\">x^2</div>\n<p>After.</p>",
+		"- item\n  $$\n  y\n  $$":        "<li>item\n<div class=\"math\">y</div>\n</li>",
 		"$$\nunclosed":                   "<p>$$\nunclosed</p>",
 		"```mermaid\nflowchart LR\n A --> B\n```": `<code class="language-mermaid">flowchart LR`,
 	} {
@@ -1008,5 +1009,11 @@ func TestMathMarkersInPreview(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("render(%q)=%q, want %q", body, got, want)
 		}
+	}
+	// A closing $$ that ends the note leaves nothing behind.
+	body := "Before.\n\n$$\nx\n$$"
+	got := request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Math"}, 200)["html"].(string)
+	if want := "<p>Before.</p>\n<div class=\"math\">x</div>\n"; got != want {
+		t.Errorf("render(%q)=%q, want %q", body, got, want)
 	}
 }
