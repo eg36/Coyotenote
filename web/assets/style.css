@@ -891,7 +891,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--muted);
   transition: transform 0.15s ease;
 }
-.view-type[aria-expanded="true"] svg:last-child {
+.view-type[aria-expanded="true"] [data-icon="chevronDown"] svg {
   transform: rotate(180deg);
 }
 .view-menu {

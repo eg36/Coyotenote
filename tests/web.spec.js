@@ -2751,6 +2751,9 @@ test("the editor view selector sits at the header's left end and views stay reac
   await expect(area).toHaveAttribute("data-mode", "split");
   await view.press("ArrowDown");
   await expect(page.locator("#view-menu")).toBeFocused();
+  // Only the chevron turns while the menu is open; the view icon stays upright.
+  expect(await page.locator("#view-type-icon svg").evaluate((el) => getComputedStyle(el).transform)).toBe("none");
+  expect(await page.locator('#view-type [data-icon="chevronDown"] svg').evaluate((el) => getComputedStyle(el).transform)).not.toBe("none");
   await page.keyboard.press("Home");
   await page.keyboard.press("Enter");
   await expect(area).toHaveAttribute("data-mode", "write");
