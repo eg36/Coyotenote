@@ -561,7 +561,7 @@ input[type="search"]::-webkit-search-cancel-button {
   grid-area: top;
   min-height: 58px;
   background: var(--chrome);
-  border-bottom: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
   display: flex;
   align-items: center;
   padding: 6px 12px 6px 14px;
@@ -2864,7 +2864,6 @@ dialog.danger #modal-submit {
 .app-title { white-space: nowrap; flex-shrink: 0; }
 @media (min-width: 1280px) {
   .header-divider { display: block; position: absolute; top: 0; bottom: 0; left: calc(var(--notes-width) - 1px); width: 1px; background: color-mix(in srgb, var(--line) 60%, transparent); pointer-events: none; }
-  .topbar { background: linear-gradient(to right, var(--chrome) 0 var(--notes-width), var(--surface) var(--notes-width) 100%); }
   .topbar #save-state { margin-left: 0; }
   .app.at-home .header-tools { margin: 0 auto; }
 }

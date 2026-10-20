@@ -2593,7 +2593,7 @@ test("note actions stay in the writing toolbar and every save state uses an edge
     }
     const label = await page.locator("#save-label").boundingBox();
     expect(label.width).toBeLessThanOrEqual(1);
-    expect(await page.locator(".topbar").evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe("0px");
+    expect(await page.locator(".topbar").evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe("1px");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
