@@ -15,6 +15,9 @@ async function openSeed(page, body, name) {
   await seed(page, id, body);
   await page.goto("/?note=" + encodeURIComponent(id));
   await expect(page.locator("#document-title")).toHaveText(id.split("/").pop());
+  // The title is set before the lazy editor is ready. Initial sidebar
+  // restoration follows openNote, after the editor has finished loading.
+  await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", /true|false/);
   return id;
 }
 // searchBox opens the header search, which is a button until used.
