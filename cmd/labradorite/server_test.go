@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/eg36/labradorite/internal/vault"
+	"github.com/eg36/labradorite/web"
 )
 
 func testApp(t *testing.T) *webApp {
@@ -719,6 +722,27 @@ func TestManifestMakesTheAppInstallable(t *testing.T) {
 	}
 	if page := raw(t, a, "GET", "/", nil, nil).Body.String(); !strings.Contains(page, `rel="manifest" href="/assets/manifest.webmanifest"`) {
 		t.Error("page does not link the manifest")
+	}
+}
+
+func TestEmbeddedAssetsHaveFixedTypes(t *testing.T) {
+	a := testApp(t)
+	seen := map[string]bool{}
+	err := fs.WalkDir(web.Files, "assets", func(name string, d fs.DirEntry, err error) error {
+		ext := path.Ext(name)
+		if err != nil || d.IsDir() || seen[ext] {
+			return err
+		}
+		seen[ext] = true
+		if want, ok := assetTypes[ext]; !ok {
+			t.Errorf("%s: no fixed type for %s", name, ext)
+		} else if got := raw(t, a, "GET", "/"+name, nil, nil).Header().Get("Content-Type"); got != want {
+			t.Errorf("%s: %q, want %q", name, got, want)
+		}
+		return nil
+	})
+	if err != nil || !seen[".js"] {
+		t.Fatalf("walk: %v %v", err, seen)
 	}
 }
 

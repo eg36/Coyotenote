@@ -107,9 +107,25 @@ type apiError struct {
 
 func (e *apiError) Error() string { return e.message }
 
+// assetTypes fixes the type of every embedded asset. Go otherwise takes them
+// from the host, and a Windows registry can map .js to text/plain, which
+// browsers refuse to run as a module.
+var assetTypes = map[string]string{
+	".css":         "text/css; charset=utf-8",
+	".ico":         "image/vnd.microsoft.icon",
+	".js":          "text/javascript; charset=utf-8",
+	".png":         "image/png",
+	".ttf":         "font/ttf",
+	".txt":         "text/plain; charset=utf-8",
+	".webmanifest": "application/manifest+json", // makes the app installable
+	".woff":        "font/woff",
+	".woff2":       "font/woff2",
+}
+
 func init() {
-	// Browsers read the manifest that makes the app installable by this type.
-	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+	for ext, typ := range assetTypes {
+		_ = mime.AddExtensionType(ext, typ)
+	}
 }
 
 func newWebApp(s *vault.Store) (*webApp, error) {
