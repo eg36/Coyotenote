@@ -872,7 +872,17 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   await expect(page.locator("#preview-pane")).toBeVisible();
   await page.locator("#sidebar-toggle").click();
   await expect(page.locator("#sidebar-search")).toBeVisible();
-  await page.locator("#sidebar-scrim").click();
+  // Tab never reaches the note hidden beneath the open drawer.
+  await page.waitForFunction(() => document.querySelector("#sidebar").getAnimations().length === 0);
+  for (let i = 0; i < 25; i++) {
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => !!document.activeElement?.closest(".workspace, #format-panel"))).toBe(false);
+  }
+  // Tap the backdrop where it shows beside the drawer, not under it.
+  const drawer = await page.locator("#sidebar").boundingBox();
+  await page.locator("#sidebar-scrim").click({ position: { x: (drawer.x + drawer.width + 390) / 2, y: 400 } });
+  await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".workspace")).not.toHaveAttribute("inert", "");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
