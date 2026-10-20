@@ -2519,3 +2519,28 @@ test("notes panel actions keep navigation on the left and dismissal at the right
     await expect(page.locator("#collapse-sidebar")).toBeInViewport();
   }
 });
+
+test("editor toolbar stays anchored when note titles change", async ({ page }) => {
+  const suffix = Date.now();
+  const short = `Hi ${suffix}`;
+  const long = `A much longer note title that must not move the writing controls ${suffix}`;
+  await seed(page, short, "Short title.");
+  await seed(page, long, "Long title.");
+  for (const width of [1280, 1440, 1840, 1999]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/?note=" + encodeURIComponent(short));
+    await expect(page.locator("#document-title")).toHaveText(short);
+    if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
+    const initial = await page.locator(".header-tools").boundingBox();
+    await page.locator(`#note-list [data-note="${long}"]`).click();
+    await expect(page.locator("#document-title")).toHaveText(long);
+    const changed = await page.locator(".header-tools").boundingBox();
+    expect(Math.abs(changed.x - initial.x)).toBeLessThan(1);
+    const title = await page.locator("#document-title").boundingBox();
+    expect(title.x + title.width).toBeLessThanOrEqual(changed.x);
+    await page.locator("#collapse-sidebar").click();
+    const collapsed = await page.locator(".header-tools").boundingBox();
+    expect(Math.abs(collapsed.x - initial.x)).toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  }
+});

@@ -2834,3 +2834,16 @@ dialog.danger #modal-submit {
 @media (max-width: 530px) {
   .app.at-home .header-tools { grid-column: 1; grid-row: 2; justify-self: start; margin: 0; }
 }
+/* Reserve the title's space so note names cannot shift the writing controls. */
+@media (min-width: 1280px) {
+  .topbar .title-block {
+    flex: 0 0 calc(var(--notes-width) - 16px);
+    min-width: 0;
+    max-width: none;
+  }
+  .header-tools, .app.at-home .header-tools {
+    position: static;
+    transform: none;
+    margin: 0 auto 0 0;
+  }
+}
