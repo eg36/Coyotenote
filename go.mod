@@ -2,6 +2,9 @@ module github.com/eg36/labradorite
 
 go 1.26.0
 
+// Builds and releases use this maintained patch release.
+toolchain go1.26.10
+
 require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/yuin/goldmark v1.7.17

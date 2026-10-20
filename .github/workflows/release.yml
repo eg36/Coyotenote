@@ -4,8 +4,9 @@ on:
   push:
     tags: ['v*']
 
+# Only the publishing job may write; everything before it reads.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -18,7 +19,7 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Require a commit on main and release notes
@@ -37,9 +38,11 @@ jobs:
   release:
     needs: checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: Build and package
@@ -54,8 +57,10 @@ jobs:
           notes="$PWD/.github/release-notes/$GITHUB_REF_NAME.md"
           cd dist
           sha256sum labradorite_* > SHA256SUMS
+          # A published release is never replaced: its archives and checksums
+          # stay as they were first downloaded.
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" labradorite_* SHA256SUMS --clobber
-          else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$notes" labradorite_* SHA256SUMS
+            echo "::error::$GITHUB_REF_NAME is already published; release a new version instead"
+            exit 1
           fi
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$notes" labradorite_* SHA256SUMS
