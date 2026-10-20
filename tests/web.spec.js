@@ -1742,7 +1742,7 @@ test("quick open finds notes by a few letters, jumps to headings and runs comman
   await expect(page.locator(".palette-option")).toHaveCount(1);
   await expect(page.locator(".palette-option")).toContainText("Budget");
   await page.keyboard.press("Enter");
-  await expect(page.locator(".cm-activeLineGutter")).toHaveText("9");
+  await expect(page.locator(".cm-lineNumbers .cm-activeLineGutter")).toHaveText("9");
 
   // > runs commands; what was typed can become a new note.
   await page.keyboard.press("Control+k");
@@ -1795,7 +1795,7 @@ test("the outline lists headings, jumps to them, follows scrolling and stays ope
   await page.keyboard.type("\n\n## Added later", { delay: 20 });
   await expect(outline.getByRole("button")).toHaveText(["Top", "Middle section", "Deep end", "Added later"]);
   await outline.getByRole("button", { name: "Middle section" }).click();
-  await expect(page.locator(".cm-activeLineGutter")).toHaveText("83");
+  await expect(page.locator(".cm-lineNumbers .cm-activeLineGutter")).toHaveText("83");
   await expect(outline.locator("[aria-current]")).toHaveText("Middle section");
   await expect.poll(() => diskBody(page, id)).toContain("## Added later");
 
