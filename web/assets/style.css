@@ -2903,11 +2903,11 @@ dialog.danger #modal-submit {
   .header-tools .menu-bar { flex-wrap: wrap; justify-content: center; }
   .header-tools .editor-bar { flex: 0 0 100%; justify-content: center; margin: 4px 0 0; }
 }
-/* ==Highlights== in the preview: a 30% tint, with text kept at AA contrast
-   by the theme's computed --mark-text. */
-#preview mark { --hl: var(--warn); background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); border-radius: 3px; padding: 0 2px; }
-#preview mark.hl-red { --hl: var(--danger); }
-#preview mark.hl-orange { --hl: color-mix(in srgb, var(--danger) 50%, var(--warn)); }
-#preview mark.hl-green { --hl: var(--good); }
-#preview mark.hl-blue { --hl: var(--blue); }
-#preview mark.hl-purple { --hl: var(--pink); }
+/* ==Highlights== in Preview and Write: a 30% tint, with text kept at AA
+   contrast by the theme's computed --mark-text. */
+:is(#preview, #rich-editor) mark { --hl: var(--warn); background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); border-radius: 3px; padding: 0 2px; }
+:is(#preview, #rich-editor) mark.hl-red { --hl: var(--danger); }
+:is(#preview, #rich-editor) mark.hl-orange { --hl: color-mix(in srgb, var(--danger) 50%, var(--warn)); }
+:is(#preview, #rich-editor) mark.hl-green { --hl: var(--good); }
+:is(#preview, #rich-editor) mark.hl-blue { --hl: var(--blue); }
+:is(#preview, #rich-editor) mark.hl-purple { --hl: var(--pink); }

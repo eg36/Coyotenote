@@ -205,7 +205,7 @@ Beyond GitHub Flavored Markdown, Preview understands:
 
 - **Highlights:** `==marked text==`. Start with a colour emoji for a coloured
   highlight: `==🔴red==`, 🟠 orange, 🟡 yellow, 🟢 green, 🔵 blue, 🟣 purple.
-  Write keeps the `==` markers as typed.
+  Write shows them too and saves the `==` markers exactly as typed.
 
 ### WYSIWYG round trips
 

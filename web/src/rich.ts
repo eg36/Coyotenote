@@ -13,7 +13,7 @@ interface RichOptions {
 }
 
 import { marked } from "marked";
-import { Editor, Node, InputRule } from "@tiptap/core";
+import { Editor, Mark, Node, InputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
@@ -87,6 +87,46 @@ const WikiLink = Node.create({
         },
       }),
     ];
+  },
+});
+
+// Highlight is ==marked text==, matching the preview's rules: exactly two
+// equals signs, touching the text inside. A leading colour emoji such as 🔴
+// is kept as the mark's colour and written back in front of the text.
+const highlightColours: Record<string, string> = {
+  "🔴": "red", "🟠": "orange", "🟡": "yellow", "🟢": "green", "🔵": "blue", "🟣": "purple",
+};
+const Highlight = Mark.create({
+  name: "highlight",
+  // Outside bold, italic and links, so one highlight stays one piece.
+  priority: 1001,
+  addAttributes() {
+    return { colour: { default: "" } };
+  },
+  parseHTML() {
+    return [{ tag: "mark", getAttrs: (el) => ({ colour: el.getAttribute("data-colour") || "" }) }];
+  },
+  renderHTML({ mark }) {
+    const colour = mark.attrs.colour || "";
+    const name = highlightColours[colour];
+    return ["mark", { "data-colour": colour, class: name ? "hl-" + name : null }, 0];
+  },
+  markdownTokenName: "highlight",
+  markdownTokenizer: {
+    name: "highlight",
+    level: "inline",
+    start: "==",
+    tokenize(src, _tokens, helpers) {
+      const match = /^==(?!=)(🔴|🟠|🟡|🟢|🔵|🟣)?(?=\S)((?:[^=\n]|=(?!=))*?[^\s=])==(?!=)/u.exec(src);
+      if (!match) return undefined;
+      return { type: "highlight", raw: match[0], colour: match[1] || "", tokens: helpers.inlineTokens(match[2]) };
+    },
+  },
+  parseMarkdown(token, helpers) {
+    return helpers.applyMark("highlight", helpers.parseInline(token.tokens || []), { colour: token.colour || "" });
+  },
+  renderMarkdown(node, helpers) {
+    return `==${node.attrs?.colour || ""}${helpers.renderChildren(node)}==`;
   },
 });
 
@@ -223,6 +263,7 @@ export function createRich(
         }),
         ImageParagraph,
         WikiLink,
+        Highlight,
         imageNode(fileUrl),
       ],
       editorProps: {

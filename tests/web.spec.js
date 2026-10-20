@@ -2786,19 +2786,23 @@ test("pin sits right after the note title and pins the open note", async ({ page
   await expect(pin).toBeHidden();
 });
 
-test("highlights render in Preview and Write keeps their == markers", async ({ page }) => {
-  const id = await openSeed(page, "Plain ==marked== and ==🟢green== words.\n\nSecond line.");
-  await mode(page, "Preview");
-  await expect(page.locator("#preview mark")).toHaveCount(2);
-  await expect(page.locator("#preview mark").first()).toHaveText("marked");
-  await expect(page.locator("#preview mark.hl-green")).toHaveText("green");
-  const tint = await page.locator("#preview mark").first().evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(tint).not.toBe("rgba(0, 0, 0, 0)");
-  // Editing elsewhere in Write saves the highlights unchanged.
-  await mode(page, "Write");
-  await page.getByRole("textbox", { name: "WYSIWYG editor" }).locator("p").last().click();
+test("highlights render in Preview and Write, and Write saves their == markers exactly", async ({ page }) => {
+  const text = "Plain ==marked== and ==🟢green== words, ==**bold** inside==.\n\nKeep a == b, ===three=== and `==code==`.\n\nSecond line.";
+  const id = await openSeed(page, text);
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  await expect(editor.locator("mark")).toHaveCount(3);
+  await expect(editor.locator("mark.hl-green")).toHaveText("green");
+  await expect(editor.locator("mark").nth(2).locator("strong")).toHaveText("bold");
+  await expect(editor).toContainText("Keep a == b, ===three===");
+  // Editing elsewhere in Write saves every marker unchanged.
+  await editor.locator("p").last().click();
   await page.keyboard.press("End");
   await page.keyboard.type(" Added.");
   await page.keyboard.press("Control+s");
-  await expect.poll(() => diskBody(page, id)).toBe("Plain ==marked== and ==🟢green== words.\n\nSecond line. Added.");
+  await expect.poll(() => diskBody(page, id)).toBe(text + " Added.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview mark")).toHaveCount(3);
+  await expect(page.locator("#preview mark.hl-green")).toHaveText("green");
+  const tint = await page.locator("#preview mark").first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(tint).not.toBe("rgba(0, 0, 0, 0)");
 });
