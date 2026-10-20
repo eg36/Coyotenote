@@ -2052,6 +2052,27 @@ test("images show in Write and Preview, keep their Markdown, and can be pasted, 
   expect(notes.some((note) => note.startsWith("attachments/"))).toBe(false);
 });
 
+for (const gap of ["\n", "\n\n"]) {
+  test(`highlighting text in a ${gap.length === 1 ? "tight" : "loose"} numbered list keeps wiki links`, async ({ page }) => {
+    const text = ["3) Why small tools last longer", "4) A year of [[Habits|habit tracking]] in plain text", "5) What [[Reading/Design]] taught me"].join(gap) + "\n";
+    const id = await openSeed(page, text);
+    await mode(page, "Write");
+    await expect(page.locator(".tiptap ol .wiki-link")).toHaveCount(2);
+    await expect(page.locator(".tiptap ol")).toHaveAttribute("start", "3");
+    const item = page.locator(".tiptap ol li").nth(1);
+    await item.click();
+    await page.keyboard.press("Home");
+    for (let i = 0; i < "A year of".length; i++) await page.keyboard.press("Shift+ArrowRight");
+    await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe("A year of");
+    await page.locator('[data-format="highlight"][data-colour="🟠"]').click();
+    const edited = text.replace("A year of", "==🟠A year of==");
+    await expect.poll(() => diskBody(page, id)).toBe(edited);
+    await mode(page, "Markdown"); await mode(page, "Write");
+    await expect(page.locator(".tiptap ol .wiki-link")).toHaveCount(2);
+    expect(await diskBody(page, id)).toBe(edited);
+  });
+}
+
 test("a slow rename is not mistaken for a change made outside the app", async ({ page }) => {
   const id = await openSeed(page, "Slow rename body.", "Slow original");
   await openSeed(page, "Links to [[Slow original]].", "Slow linker");

@@ -267,6 +267,16 @@ const hasFormula = (node: JSONContent): boolean => (node.content || []).some(chi
 // re-indents blocks inside an item, which would move their lines.
 export const NumberedList = OrderedList.extend({
   markdownTokenizer: { name: "orderedList", level: "block", start: () => -1, tokenize: () => undefined },
+  // Items go through the list item reader, as bullet items do. The stock
+  // reader makes a tight item's text a paragraph without reading the links,
+  // footnotes and formatting inside it.
+  parseMarkdown(token, helpers) {
+    if (token.type !== "list" || !token.ordered) return [];
+    const attrs: Record<string, unknown> = {};
+    if (token.start && token.start !== 1) attrs.start = token.start;
+    if (token.typeMarker) attrs.type = token.typeMarker;
+    return { type: "orderedList", ...(Object.keys(attrs).length ? { attrs } : {}), content: token.items ? helpers.parseChildren(token.items) : [] };
+  },
 });
 
 export const MathListItem = ListItem.extend({
