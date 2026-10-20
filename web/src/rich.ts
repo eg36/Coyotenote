@@ -25,7 +25,7 @@ import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, in
 import { writingSettings } from "./preferences.js";
 import { SourceBlocks, stampSources } from "./source-blocks.js";
 import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
-import { InlineMath, MathBlock, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
+import { InlineMath, MathBlock, NumberedList, splitLazyFormulas, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -241,9 +241,9 @@ function previewFormulas(text: string) {
   return found;
 }
 
-// Formulas stay exact when Write finds the same ones as the preview. Display
-// formulas may sit anywhere but in numbered lists, whose items Write
-// re-indents, and must not be lazily continued from a list or quote above.
+// Formulas stay exact when Write finds the same ones as the preview. A
+// display formula lazily below a list or quote is split off at the top
+// level, as Write's reader does; deeper inside, the note stays in Markdown.
 function mathReason(tokens: Token[]) {
   let reason = "";
   function formulas(list: Token[] | undefined, found: string[]) {
@@ -257,8 +257,6 @@ function mathReason(tokens: Token[]) {
     if (formulas(list, []).join("\n") !== previewFormulas(raw).join("\n"))
       reason = "Showing Markdown: Write would change this note's math. Edit its TeX in Markdown.";
   }
-  const display = (list: Token[]): boolean => list.some(token => token.type === "mathBlock"
-    || (token.type === "list" ? (token.items as Tokens.ListItem[]).some(item => display(item.tokens)) : display((token as Tokens.Generic).tokens || [])));
   const lazy = "Showing Markdown: Write would move this display formula into the list or quote above it. Indent it or add a blank line.";
   function walk(list: Token[]) {
     for (const token of list) {
@@ -271,15 +269,13 @@ function mathReason(tokens: Token[]) {
           if (item.raw.split("\n").slice(1).some(line => line.trim().startsWith("$$") && /^ */.exec(line)![0].length < indent)) reason = lazy;
           walk(item.tokens);
         }
-        if (token.ordered && display(token.items.flatMap((item: Tokens.ListItem) => item.tokens)))
-          reason = "Showing Markdown: Write would re-indent display math inside a numbered list. Edit it in Markdown.";
       } else if (token.type === "blockquote") {
         if (token.raw.split("\n").some(line => !/^ {0,3}>/.test(line) && line.trim().startsWith("$$"))) reason = lazy;
         walk(token.tokens || []);
       } else if ((token as Tokens.Generic).tokens && token.type !== "inlineFootnote") walk((token as Tokens.Generic).tokens!);
     }
   }
-  walk(tokens);
+  walk(splitLazyFormulas(tokens, text => richMarkdown.lexer(text)));
   return reason;
 }
 
@@ -367,6 +363,7 @@ export function createRich(
           document: false,
           blockquote: false,
           listItem: false,
+          orderedList: false,
           // Lists can exit naturally with Enter; an automatic paragraph
           // would leave a second, invisible blank block after that exit.
           trailingNode: { notAfter: ["taskList", "bulletList", "orderedList"] },
@@ -394,6 +391,7 @@ export function createRich(
         Highlight,
         InlineMath,
         MathBlock,
+        NumberedList,
         MathListItem,
         MathBlockquote,
         SourceBlocks,

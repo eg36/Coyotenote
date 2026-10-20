@@ -1,7 +1,8 @@
 import { Node, InputRule } from "@tiptap/core";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Blockquote } from "@tiptap/extension-blockquote";
-import { ListItem } from "@tiptap/extension-list";
+import { ListItem, OrderedList } from "@tiptap/extension-list";
+import { MarkdownManager } from "@tiptap/markdown";
 
 // These mirror the preview's dollar grammar in cmd/labradorite/math.go, so a
 // formula is a formula in Write exactly when the preview renders it.
@@ -227,24 +228,63 @@ export function maskFormulas(masked: string) {
 // A display formula keeps sitting directly below a line of text, or after a
 // blank line, inside a bullet or a quote as at the top level.
 export function attachedBelow(previous: JSONContent | undefined, child: JSONContent) {
-  return child.type === "mathBlock" && !!child.attrs?.attached && ["paragraph", "heading"].includes(previous?.type || "");
+  return child.type === "mathBlock" && !!child.attrs?.attached
+    && ["paragraph", "heading", "bulletList", "orderedList", "blockquote"].includes(previous?.type || "");
 }
+
+// A $$ line directly below a list item or quote, not indented under it, ends
+// that list or quote in the preview, where a display formula interrupts it.
+// The Markdown reader would continue them instead, so split them there.
+type Lexed = { type?: string; raw: string; attached?: boolean };
+export function splitLazyFormulas<T extends Lexed>(tokens: T[], lex: (text: string) => T[]): T[] {
+  return tokens.flatMap(token => {
+    const lines = token.raw.split("\n");
+    let at = -1;
+    if (token.type === "list") {
+      const indent = /^[ \t]*(?:[-+*]|\d+[.)])[ \t]*/.exec(lines[0])?.[0].length || 0;
+      at = lines.findIndex((line, i) => i > 0 && line.trim().startsWith("$$") && /^ */.exec(line)![0].length < indent);
+    } else if (token.type === "blockquote") at = lines.findIndex(line => !/^ {0,3}>/.test(line) && line.trim().startsWith("$$"));
+    const rest = lines.slice(at).join("\n");
+    if (at < 1 || !mathBlockToken(rest)) return [token];
+    const after = splitLazyFormulas(lex(rest), lex);
+    if (after[0]?.type === "mathBlock") after[0].attached = true;
+    return [...lex(lines.slice(0, at).join("\n") + "\n"), ...after];
+  });
+}
+const reader = MarkdownManager.prototype as unknown as { parseTokens(tokens: Lexed[], top?: boolean): JSONContent[]; createLexer(): { lex(text: string): Lexed[] } };
+const parseTokens = reader.parseTokens;
+reader.parseTokens = function (tokens, top) {
+  return parseTokens.call(this, top ? splitLazyFormulas(tokens, text => this.createLexer().lex(text)) : tokens, top);
+};
 function tightAfter(previous: JSONContent | undefined) {
   return previous?.type === "mathBlock" && previous.attrs?.after === "\n";
 }
 type Helpers = { renderChild?: (node: JSONContent, index: number) => string; renderChildren: (nodes: JSONContent[]) => string; indent: (text: string) => string };
 const hasFormula = (node: JSONContent): boolean => (node.content || []).some(child => child.type === "mathBlock" || hasFormula(child));
 
+// Numbered lists are read like bullet lists, by the standard CommonMark list
+// rules, as the preview reads them. The editor's own numbered-list reader
+// re-indents blocks inside an item, which would move their lines.
+export const NumberedList = OrderedList.extend({
+  markdownTokenizer: { name: "orderedList", level: "block", start: () => -1, tokenize: () => undefined },
+});
+
 export const MathListItem = ListItem.extend({
   renderMarkdown(node, h, ctx) {
-    if (ctx?.parentType !== "bulletList" || !hasFormula(node)) return this.parent!(node, h, ctx);
+    if (!["bulletList", "orderedList"].includes(ctx?.parentType || "") || !hasFormula(node)) return this.parent!(node, h, ctx);
     const helpers = h as unknown as Helpers, children = node.content || [];
-    let output = "- " + helpers.renderChildren([children[0]]);
+    // The item's own marker, as the stock writer numbers it, and the indent
+    // that lines up with the text after it.
+    const first = helpers.renderChildren([children[0]]);
+    const opened = this.parent!({ ...node, content: [children[0]] }, h, ctx);
+    const marker = opened.slice(0, opened.length - first.length);
+    const indent = ctx?.parentType === "orderedList" ? " ".repeat(Math.max(marker.length, helpers.indent("").length)) : helpers.indent("");
+    let output = marker + first;
     children.slice(1).forEach((child, i) => {
       const previous = children[i];
       const text = helpers.renderChild?.(child, i + 1) ?? helpers.renderChildren([child]);
       // Blank lines stay blank, as they were written, rather than indented.
-      const lines = text.split("\n").map(line => line ? helpers.indent(line) : "").join("\n");
+      const lines = text.split("\n").map(line => line ? indent + line : "").join("\n");
       const gap = child.type === "mathBlock" ? (attachedBelow(previous, child) ? "\n" : "\n\n")
         : previous.type === "mathBlock" ? (tightAfter(previous) ? "\n" : "\n\n")
         : child.type === "paragraph" ? "\n\n" : "\n";

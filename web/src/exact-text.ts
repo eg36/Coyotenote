@@ -41,7 +41,7 @@ export const WrittenStyle = Extension.create({
     const kept = { default: null, rendered: false };
     return [
       { types: ["bold", "italic", "strike", "code", "link"], attributes: { written: kept } },
-      { types: ["hardBreak", "bulletList", "orderedList", "codeBlock", "heading", "horizontalRule"], attributes: { written: kept } },
+      { types: ["hardBreak", "bulletList", "orderedList", "listItem", "codeBlock", "heading", "horizontalRule"], attributes: { written: kept } },
     ];
   },
 });
@@ -121,6 +121,11 @@ const blockHandlersFor = (proto as unknown as { getHandlersForToken(type: string
     const written = blockWritten(token);
     const node = Array.isArray(result) ? result[0] : result;
     if (node && written !== null) node.attrs = { ...node.attrs, written };
+    // Whether a blank line follows each item, as in a loose list.
+    if (node && token.items && node.content?.length === token.items.length)
+      node.content.forEach((item, i) => {
+        if (item.type === "listItem") item.attrs = { ...item.attrs, written: /\n[ \t]*\n$/.test(token.items![i].raw || "") ? "\n\n" : "\n" };
+      });
     return result;
   } });
 };
@@ -184,6 +189,11 @@ const renderNode = proto.renderNodeToMarkdown;
 proto.renderNodeToMarkdown = function (node, parent, index, level, meta) {
   const written = node.attrs?.written;
   if (mode !== "plain" && node.type === "hardBreak" && typeof written === "string" && /^(?: {2,}|\\)\n$/.test(written)) return written;
+  // The writer puts list items on consecutive lines; keep blank lines that
+  // separated them.
+  if (["bulletList", "orderedList"].includes(node.type || "") && node.content?.some(item => item.attrs?.written === "\n\n"))
+    return node.content.map((item, i) => (i ? node.content![i - 1].attrs?.written === "\n\n" ? "\n\n" : "\n" : "")
+      + proto.renderNodeToMarkdown.call(this, item, node, i, (level || 0) + 1)).join("");
   return writtenBlock(node, parent, renderNode.call(this, node, parent, index, level, meta));
 };
 const encode = proto.encodeTextForMarkdown;

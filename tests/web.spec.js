@@ -3539,12 +3539,39 @@ test("Write creates formulas by typing and keeps unsupported math layouts in Mar
   await expect(display).toBeFocused();
   await display.fill("c^2"); await display.press("Control+Enter");
   await expect.poll(() => diskBody(page, id)).toBe("Start. Costs $5 and $6. Then $a+b$ done.\n\n$$\nc^2\n$$");
-  for (const body of ["1. item\n\n   $$\n   x\n   $$", "- item\n$$\nx\n$$", "> quote\n$$\nx\n$$"]) {
-    const other = await openSeed(page, body);
+  // A formula lazily below a list nested in a quote still keeps Markdown.
+  const nested = "> - item\n> $$\n> x\n> $$";
+  const other = await openSeed(page, nested);
+  await mode(page, "Write");
+  await expect(page.locator("#toast-text")).toContainText("Showing Markdown");
+  await expect(page.locator("#source-pane")).toBeVisible();
+  expect(await diskBody(page, other)).toBe(nested);
+});
+
+test("display formulas in numbered lists and directly below lists or quotes stay exact", async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    "1. Body. item\n\n   $$\n   x\n   $$\n\n2. second",
+    "1. Body. item\n   $$\n   x\n   $$\n2. next",
+    "10. Body. ten\n\n    $$\n    y\n    $$",
+    "- Body. item\n$$\nx\n$$\n\nAfter.",
+    "> Body. quote\n$$\nx\n$$\nAfter.",
+    "1. Body. loose\n\n2. items",
+    "- Body. loose\n\n- bullets\n- tight after",
+  ];
+  for (const body of cases) {
+    const id = await openSeed(page, body);
     await mode(page, "Write");
-    await expect(page.locator("#source-pane"), body).toBeVisible();
-    expect(await diskBody(page, other)).toBe(body);
+    await expect(page.locator("#rich-pane"), body).toBeVisible();
+    await page.locator(".tiptap").getByText("Body.", { exact: false }).first().click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id), body).toBe(body.replace("Body.", "Edited Body."));
   }
+  // Preview, too, ends the list before such a formula.
+  const id = await openSeed(page, "- item\n$$\nx\n$$");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview > ul + .math .katex")).toHaveCount(1);
+  expect(await diskBody(page, id)).toBe("- item\n$$\nx\n$$");
 });
 
 test("Write keeps numbered and named footnote definitions exact through body edits", async ({ page }) => {
