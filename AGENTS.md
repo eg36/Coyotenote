@@ -15,8 +15,16 @@
   plain title, what and why, and how to tell it is done. A bug found along the
   way gets its own issue before it is fixed. Commits reference their issue,
   and the commit that completes it says `Fixes #N` in its message. When it is
-  done, comment on the issue with what changed and how it was verified. Keep
-  committing to main until the user switches to branches and pull requests.
+  done, tick its `Done when:` checkboxes and comment on the issue with what
+  changed and how it was verified. Keep committing to main until the user
+  switches to branches and pull requests.
+- Issues are written impersonally (what happens now, what to build, then
+  `Done when:` as `- [ ]` checkboxes). Linear (team Labradorite, LBT) mirrors
+  them: assign each issue to the user, put it in the matching project
+  (Labradorite 1.5 or Labradorite 2.0), and label it with one Type (Feature,
+  Improvement, Bug, Docs, Maintenance, Tech debt, Research), its areas
+  (Frontend, Backend, Web, UX, API, Infra…) and, when relevant, an Impact
+  (Reliability, Security, Performance, Accessibility). Labels sync both ways.
 - Give each feature, fix or independent change its own focused commit. Include
   its relevant tests and generated bundle changes; do not bundle unrelated work.
 - Validate relevant changes with `go vet ./...`, `go test -race ./...`,
