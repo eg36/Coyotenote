@@ -30,8 +30,8 @@ function place(el: HTMLElement) {
   const box = el.getBoundingClientRect();
   const width = tip.offsetWidth,
     height = tip.offsetHeight;
-  const below = box.bottom + 6 + height <= innerHeight - 8;
-  tip.style.top = (below ? box.bottom + 6 : box.top - 6 - height) + "px";
+  const below = box.bottom + 7 + height <= innerHeight - 8;
+  tip.style.top = (below ? box.bottom + 7 : box.top - 7 - height) + "px";
   tip.style.left =
     Math.max(8, Math.min(box.left + box.width / 2 - width / 2, innerWidth - width - 8)) + "px";
 }

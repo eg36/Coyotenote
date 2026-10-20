@@ -3132,3 +3132,13 @@ test("long note titles take one line in the notes list", async ({ page }) => {
   expect(box.height).toBeLessThan(lineHeight * 1.5);
   expect(await row.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy();
 });
+
+test("tooltips sit 7px below the control they describe", async ({ page }) => {
+  await openSeed(page, "Tooltip spacing.");
+  const control = page.locator("#history-button");
+  await control.hover();
+  const tip = page.getByRole("tooltip");
+  await expect(tip).toBeVisible();
+  const [box, tipBox] = [await control.boundingBox(), await tip.boundingBox()];
+  expect(Math.abs(tipBox.y - box.y - box.height - 7)).toBeLessThan(0.6);
+});
