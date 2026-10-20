@@ -101,9 +101,14 @@ test("document menus and note actions stay above the left formatting panel", asy
   await page.keyboard.press("Escape");
   await expect(page.locator('[data-menu="view"]')).toBeFocused();
   const homeMenus = await page.locator("#menu-bar").boundingBox();
+  const homeWorkspace = await page.locator(".workspace").boundingBox();
   await openSeed(page, "A document with menus.");
   const menus = await page.locator("#menu-bar").boundingBox();
-  expect(Math.abs(menus.x + menus.width / 2 - homeMenus.x - homeMenus.width / 2)).toBeLessThan(1);
+  // At home and in a note, the menus centre over the content beside the open panels.
+  const homeContent = homeWorkspace;
+  expect(Math.abs(homeMenus.x + homeMenus.width / 2 - homeContent.x - homeContent.width / 2)).toBeLessThan(1);
+  const noteContent = await page.locator(".workspace").boundingBox();
+  expect(Math.abs(menus.x + menus.width / 2 - noteContent.x - noteContent.width / 2)).toBeLessThan(1);
   const writing = await page.locator(".editor-bar").boundingBox();
   await expect(page.locator("#format-panel")).toBeVisible();
   const panel = await page.locator("#format-panel").boundingBox();
@@ -885,7 +890,9 @@ test("start-page navigation stays centered and its save indicator is hidden", as
       await expect(page.locator("#app-title")).toBeEmpty();
       const headerBox = await page.locator(".topbar").boundingBox();
       const menuBox = await page.locator("#menu-bar").boundingBox();
-      expect(Math.abs(menuBox.x + menuBox.width / 2 - headerBox.x - headerBox.width / 2)).toBeLessThan(2);
+      // Centred over the page content beside the notes panel, and in the header's height.
+      const content = await page.locator(".workspace").boundingBox();
+      expect(Math.abs(menuBox.x + menuBox.width / 2 - content.x - content.width / 2)).toBeLessThan(2);
       expect(Math.abs(menuBox.y + menuBox.height / 2 - headerBox.y - headerBox.height / 2)).toBeLessThan(2);
       for (const name of ["file", "edit", "view", "insert"])
         await expect(page.locator(`[data-menu="${name}"]`)).toBeInViewport();

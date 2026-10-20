@@ -2851,8 +2851,20 @@ dialog.danger #modal-submit {
 .view-tools #format-toggle { padding: 0 10px 0 8px; }
 .view-tools #format-toggle[aria-expanded="true"] { background: var(--selected); border-color: transparent; color: var(--accent-text); }
 .view-tools #format-toggle[aria-expanded="true"] svg { color: currentColor; }
-.app:not(.at-home) .topbar .title-block { max-width: min(680px, calc(100% - 2 * var(--view-gutter))); }
-.app:not(.at-home) .topbar .header-tools { padding: 0 var(--view-gutter); }
+/* The title and menus centre over the content beside the open panels, not
+   over the whole header: --content-offset is the width of the notes and
+   formatting panels to the content's left. */
+.app { --content-offset: var(--notes-width); }
+.app.sidebar-hidden, .app.focus-mode { --content-offset: 0px; }
+@media (min-width: 1100px) {
+  .app.formatting-open { --content-offset: calc(var(--notes-width) + 224px); }
+  .app.sidebar-hidden.formatting-open { --content-offset: 224px; }
+}
+@media (max-width: 799px) { .app { --content-offset: 0px; } }
+.topbar .title-block { margin-left: var(--content-offset); }
+.app:not(.at-home) .topbar .title-block { max-width: min(680px, calc(100% - 2 * var(--view-gutter) - var(--content-offset))); }
+.app:not(.at-home) .topbar .header-tools { padding: 0 var(--view-gutter) 0 calc(var(--view-gutter) + var(--content-offset)); }
+.app.at-home .topbar .header-tools { padding-left: var(--content-offset); }
 /* Narrower headers show the current view as an icon only. */
 @media (max-width: 999px) {
   .topbar { --view-gutter: 90px; }
