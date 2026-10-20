@@ -2807,6 +2807,36 @@ test("highlights render in Preview and Write, and Write saves their == markers e
   expect(tint).not.toBe("rgba(0, 0, 0, 0)");
 });
 
+test("the formatting panel applies, recolours and removes highlights, and typing ==text== marks it", async ({ page }) => {
+  const id = await openSeed(page, "Mark this word please.");
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  const panel = page.locator("#format-panel");
+  await expect(panel.locator(".hl-swatch")).toHaveCount(6);
+  // Select "this" and highlight it in the default colour.
+  await editor.locator("p").first().click();
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+  for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+ArrowRight");
+  await panel.getByRole("button", { name: "Highlight", exact: true }).click();
+  await expect(editor.locator("mark")).toHaveText("this");
+  await expect(panel.getByRole("button", { name: "Highlight", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("Mark ==this== word please.");
+  // Another colour replaces it; choosing that colour again removes it.
+  await panel.getByRole("button", { name: "Green highlight" }).click();
+  await expect(editor.locator("mark.hl-green")).toHaveText("this");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("Mark ==🟢this== word please.");
+  await panel.getByRole("button", { name: "Green highlight" }).click();
+  await expect(editor.locator("mark")).toHaveCount(0);
+  // Typing ==text== turns into a highlight as you write.
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Then ==typed== ok");
+  await expect(editor.locator("mark")).toHaveText("typed");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("Mark this word please. Then ==typed== ok");
+});
+
 test("spaces typed after bold or highlighted words save as ordinary spaces", async ({ page }) => {
   const id = await openSeed(page, "Start.");
   const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });

@@ -425,7 +425,8 @@ function updateToolbar() {
   if (!editor) return;
   for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
     const format = button.dataset.format;
-    button.setAttribute("aria-pressed", String(editor.isActive(format || "")));
+    const colour = button.dataset.colour;
+    button.setAttribute("aria-pressed", String(editor.isActive(format || "", colour === undefined ? undefined : { colour })));
   }
   let block = "p";
   for (let level = 1; level <= 6; level++)

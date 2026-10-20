@@ -251,7 +251,7 @@ for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
     if (name === "wiki") linkDialog(true);
     else if (name === "link") linkDialog();
     else if (name === "image") chooseImages();
-    else state.rich?.command(name || "");
+    else state.rich?.command(name || "", button.dataset.colour);
   };
 }
 $("block-type").onmousedown = (e) => e.preventDefault();

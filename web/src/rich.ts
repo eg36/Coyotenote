@@ -13,7 +13,7 @@ interface RichOptions {
 }
 
 import { marked } from "marked";
-import { Editor, Mark, Node, InputRule } from "@tiptap/core";
+import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
@@ -127,6 +127,16 @@ const Highlight = Mark.create({
   },
   renderMarkdown(node, helpers) {
     return `==${node.attrs?.colour || ""}${helpers.renderChildren(node)}==`;
+  },
+  // Typing ==text== (or ==🟢text==) after a space or at a line start marks it.
+  addInputRules() {
+    return [
+      markInputRule({
+        find: /(?:^|\s)(==(🔴|🟠|🟡|🟢|🔵|🟣)?([^=\s](?:[^=]*[^=\s])?)==)$/u,
+        type: this.type,
+        getAttributes: (match) => ({ colour: match[2] || "" }),
+      }),
+    ];
   },
 });
 
@@ -424,6 +434,11 @@ export function createRich(
           break;
         case "strike":
           chain.toggleStrike().run();
+          break;
+        // Choosing the colour already applied removes the highlight.
+        case "highlight":
+          if (editor.isActive("highlight", { colour: value || "" })) chain.unsetMark("highlight").run();
+          else chain.setMark("highlight", { colour: value || "" }).run();
           break;
         case "code":
           chain.toggleCode().run();
