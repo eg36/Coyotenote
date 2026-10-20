@@ -1724,25 +1724,18 @@ input[type="search"]::-webkit-search-cancel-button {
   width: 16px;
   height: 16px;
 }
+/* The start page's create action: a large button that says what it does. */
 #first-note {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  padding: 0;
+  height: 52px;
+  margin: 0 auto;
+  padding: 0 24px 0 18px;
+  gap: 10px;
   border-radius: 12px;
+  font-size: 16px;
 }
 #first-note svg {
-  width: 36px;
-  height: 36px;
-}
-#first-note-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  width: 24px;
+  height: 24px;
 }
 .secondary-button {
   background: var(--surface);

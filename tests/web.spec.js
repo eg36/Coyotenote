@@ -2871,3 +2871,19 @@ test("formatting around a wiki link or image keeps the note in Markdown instead 
   await mode(page, "Write");
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
 });
+
+test("the start page's create button says what it does", async ({ page }) => {
+  await page.goto("/");
+  const button = page.locator("#first-note");
+  await expect(button).toBeVisible();
+  await expect(page.locator("#first-note-label")).toBeVisible();
+  await expect(page.locator("#first-note-label")).toHaveText(/^(Create your first note|New note)$/);
+  const box = await button.boundingBox(), label = await page.locator("#first-note-label").boundingBox();
+  expect(label.width).toBeGreaterThan(40);
+  expect(label.x + label.width).toBeLessThanOrEqual(box.x + box.width);
+  // Centred under the start page text.
+  const text = await page.locator("#home-text").boundingBox();
+  expect(Math.abs(box.x + box.width / 2 - text.x - text.width / 2)).toBeLessThan(2);
+  await button.click();
+  await expect(page.getByLabel("Name your note")).toBeVisible();
+});
