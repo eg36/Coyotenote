@@ -75,6 +75,9 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   longer fall back to Markdown view.
 
 ### 1.5.0 — Smooth everything, then release
+- Rename a note in place: clicking the title turns it into a text field
+  (Enter renames, Escape cancels, a folder path moves the note), instead of
+  opening the rename dialog.
 - Theme picker: an All / Light / Dark switch above the list, and the list
   grouped under Light and Dark headings; search and keyboard preview keep
   working across groups.
