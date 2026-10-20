@@ -49,6 +49,8 @@ GitHub issues are the source of truth and Linear team Labradorite mirrors them.
   replacement controls, and restores the prior writing mode when closed.
 - Folder breadcrumb glyphs use the text baseline and font cap height, with
   measured font metrics as a fallback for older browsers.
+- Inline title editing changes only the note name and preserves its folder.
+  File → Rename or move… remains the entry point for moving a note.
 - Browser preferences stay scoped to the vault where appropriate. Renaming,
   moving and trashing notes must not leave broken pins or recent-note entries.
 

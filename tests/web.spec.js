@@ -547,7 +547,7 @@ test("create in folders, body search, rename, trash and undo", async ({
   await expect(page.locator(".note-row").first()).toBeVisible();
   await page.locator("#document-title").click();
   const renamed = id + " revised";
-  await page.getByLabel("Note path: rename or move this note").fill(renamed);
+  await page.getByLabel("Note name").fill(renamed.split("/").pop());
   await page.keyboard.press("Enter");
   await expect(page.locator("#document-title")).toHaveText(
     renamed.split("/").pop(),
@@ -2113,7 +2113,7 @@ test("a slow rename is not mistaken for a change made outside the app", async ({
     await route.fulfill({ response });
   });
   await page.locator("#document-title").click();
-  await page.getByLabel("Note path: rename or move this note").fill("Slow renamed");
+  await page.getByLabel("Note name").fill("Slow renamed");
   await page.keyboard.press("Enter");
   await expect(page.locator("#document-title")).toHaveText("Slow renamed");
   await expect.poll(() => diskBody(page, "Slow linker")).toBe("Links to [[Slow renamed]].");
@@ -2122,15 +2122,15 @@ test("a slow rename is not mistaken for a change made outside the app", async ({
   await expect(page.getByText("moved or deleted outside Labradorite")).toHaveCount(0);
 });
 
-test("clicking the note title renames or moves the note in place", async ({ page }) => {
+test("clicking the note title renames its name while the dialog can move it", async ({ page }) => {
   const stamp = Date.now();
   const id = await openSeed(page, "Title rename body.", `Inline rename ${stamp}`);
   await openSeed(page, "Links to [[Inline rename " + stamp + "]].", `Inline linker ${stamp}`);
   await openSeed(page, "Already here.", `Taken ${stamp}`);
   await page.goto("/?note=" + encodeURIComponent(id));
   const title = page.locator("#document-title");
-  const field = page.getByLabel("Note path: rename or move this note");
-  // The field holds the path with the name selected; Escape cancels.
+  const field = page.getByLabel("Note name");
+  // The field holds only the name, selected; Escape cancels.
   await title.click();
   await expect(field).toBeFocused();
   await expect(field).toHaveValue(id);
@@ -2151,10 +2151,16 @@ test("clicking the note title renames or moves the note in place", async ({ page
   await expect(page.getByRole("alert").filter({ hasText: "already exists" })).toBeVisible();
   await expect(field).toHaveAttribute("aria-invalid", "true");
   expect(await diskBody(page, id)).toBe("Title rename body.");
-  // A folder path moves it and the address follows; a short link to it still
-  // finds it, so it is left as written.
+  // Inline paths are refused; moving remains in the File menu.
   await field.fill(`Moved ${stamp}/Inline rename ${stamp}`);
   await page.keyboard.press("Enter");
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("alert")).toContainText("To move this note");
+  await page.keyboard.press("Escape");
+  await menu(page, "file");
+  await page.getByRole("menuitem", { name: /^Rename or move…/ }).click();
+  await page.getByLabel("Note path", { exact: true }).fill(`Moved ${stamp}/Inline rename ${stamp}`);
+  await page.getByRole("button", { name: "Rename note", exact: true }).click();
   await expect(field).toHaveCount(0);
   await expect(title).toHaveText(`Inline rename ${stamp}`);
   await expect(page.locator("#note-folder")).toContainText(`Moved ${stamp}`);
@@ -2162,7 +2168,8 @@ test("clicking the note title renames or moves the note in place", async ({ page
   expect(await diskBody(page, `Inline linker ${stamp}`)).toBe(`Links to [[Inline rename ${stamp}]].`);
   // Renaming it does rewrite that link.
   await title.click();
-  await field.fill(`Moved ${stamp}/Renamed ${stamp}`);
+  await expect(field).toHaveValue(`Inline rename ${stamp}`);
+  await field.fill(`Renamed ${stamp}`);
   await page.keyboard.press("Enter");
   await expect(title).toHaveText(`Renamed ${stamp}`);
   await expect.poll(() => diskBody(page, `Inline linker ${stamp}`)).toBe(`Links to [[Renamed ${stamp}]].`);
@@ -2172,6 +2179,57 @@ test("clicking the note title renames or moves the note in place", async ({ page
   await expect(field).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.keyboard.press("Escape");
+});
+
+test("inline title editing preserves a nested folder, links, pins and recent notes", async ({ page }) => {
+  const stamp = Date.now();
+  const folder = `Work/Nested ${stamp}/`;
+  const name = `Original ${stamp}`;
+  const id = folder + name;
+  const taken = `Taken ${stamp}`;
+  const renamed = "Renamed café 🐾";
+  const target = folder + renamed;
+  const linker = await openSeed(page, `Links to [[${id}]] and [[${name}]].`, `Linker ${stamp}`);
+  await seed(page, folder + taken, "Already here.");
+  await openSeed(page, "Keep this body.", id);
+  await page.getByRole("button", { name: "Pin note", exact: true }).click();
+  const title = page.locator("#document-title");
+  const field = page.getByRole("textbox", { name: "Note name", exact: true });
+  await title.focus(); await page.keyboard.press("Enter");
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue(name);
+  await expect(page.locator("#note-folder")).toBeVisible();
+  const breadcrumbBox = await page.locator("#note-folder").boundingBox();
+  const nameBox = await field.boundingBox();
+  expect(nameBox.x).toBeGreaterThanOrEqual(breadcrumbBox.x + breadcrumbBox.width);
+  expect(await field.evaluate(input => input.value.slice(input.selectionStart, input.selectionEnd))).toBe(name);
+  await field.fill("Cancelled"); await page.keyboard.press("Escape");
+  await expect(title).toHaveText(name);
+  await expect(title).toBeFocused();
+  await title.click(); await page.keyboard.press("Enter");
+  await expect(field).toHaveCount(0);
+  await title.click(); await field.fill(""); await page.keyboard.press("Enter");
+  await expect(field).toHaveCount(0);
+  await title.click();
+  for (const invalid of ["Elsewhere/Name", "Elsewhere\\Name", ".", ".."]) {
+    await field.fill(invalid); await page.keyboard.press("Enter");
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByRole("alert")).toContainText("To move this note");
+    expect(new URL(page.url()).searchParams.get("note")).toBe(id);
+  }
+  await field.fill(taken); await page.keyboard.press("Enter");
+  await expect(page.getByRole("alert")).toContainText("already exists");
+  await expect(field).toHaveValue(taken);
+  await field.fill(renamed); await page.keyboard.press("Enter");
+  await expect(title).toHaveText(renamed);
+  await expect.poll(() => new URL(page.url()).searchParams.get("note")).toBe(target);
+  await expect(page.locator("#note-folder")).toContainText(`Nested ${stamp}`);
+  await expect(page.locator("#pinned-list .navigation-note")).toHaveAttribute("data-note", target);
+  await expect.poll(() => diskBody(page, linker)).toBe(`Links to [[${target}]] and [[${renamed}]].`);
+  expect(await diskBody(page, target)).toBe("Keep this body.");
+  await page.locator("#recent-notes").click();
+  await expect(page.locator("#recent-list .navigation-note").first()).toHaveAttribute("data-note", target);
+  await expect(page.locator(`#recent-list [data-note="${id}"]`)).toHaveCount(0);
 });
 
 test("an image that finishes uploading after leaving its note is not added to another", async ({ page }) => {

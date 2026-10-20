@@ -164,22 +164,24 @@ async function renameCurrent(name: string) {
   if (result.warnings.length)
     showToast(result.warnings.join(" · "), { persistent: true });
 }
-// renameInPlace turns the note's title into a field holding its path, with
-// the name selected. Enter renames or moves the note, as the dialog does;
-// Escape, an unchanged path or leaving the field cancels. Errors show at
-// the field, and nothing changes.
+// Inline editing changes only the name shown in the title. Its folder stays
+// in the breadcrumb; moving remains available through Rename or move….
+// Escape, an unchanged name or leaving the field cancels.
 function renameInPlace() {
   const head = $("document-head");
   if (!state.current || state.pendingDraft || state.busy || head.classList.contains("renaming")) return;
   const original = state.current.id;
+  const slash = original.lastIndexOf("/");
+  const folder = original.slice(0, slash + 1);
+  const originalName = original.slice(slash + 1);
   const form = document.createElement("span");
   form.className = "title-rename";
   const input = document.createElement("input");
   input.className = "title-rename-input";
-  input.value = original;
+  input.value = originalName;
   input.spellcheck = false;
   input.autocomplete = "off";
-  input.setAttribute("aria-label", "Note path: rename or move this note");
+  input.setAttribute("aria-label", "Note name");
   const error = document.createElement("span");
   error.className = "title-rename-error";
   error.id = "title-rename-error";
@@ -191,7 +193,7 @@ function renameInPlace() {
   const fit = () => { input.size = Math.max(12, input.value.length + 1); };
   fit();
   input.focus();
-  input.setSelectionRange(original.lastIndexOf("/") + 1, original.length);
+  input.select();
   let working = false, closed = false;
   const close = (focusTitle: boolean) => {
     // Removing the field blurs it, which would close it a second time.
@@ -217,11 +219,16 @@ function renameInPlace() {
     if (event.key !== "Enter" || event.isComposing || working) return;
     event.preventDefault();
     const name = input.value.trim();
-    if (!name || name === original) return close(true);
+    if (!name || name === originalName) return close(true);
+    if (/[\/\\]/.test(name) || name === "." || name === "..") {
+      error.textContent = "Enter a note name. To move this note, use File → Rename or move….";
+      input.setAttribute("aria-invalid", "true");
+      return;
+    }
     working = true;
     input.readOnly = true;
     try {
-      await renameCurrent(name);
+      await renameCurrent(folder + name);
       close(true);
     } catch (failure) {
       error.textContent = failure instanceof Error ? failure.message : String(failure);
