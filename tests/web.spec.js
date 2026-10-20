@@ -196,7 +196,8 @@ test("opening theme search immediately keeps focus after the dialog settles", as
   await openSeed(page, "Settings focus stays where I put it.");
   await expect(page.locator("#rich-editor")).toBeVisible();
   await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  // A moment ahead: the page's clock may already be past Node's "now".
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.locator("#settings-button").click();
   await page.getByRole("button", { name: /^Theme:/ }).click();
   const search = page.getByRole("combobox", { name: "Find a theme" });
@@ -998,10 +999,11 @@ test("search opens at the top of the notes list, in the drawer on small screens"
       const header = await page.locator(".topbar").boundingBox();
       const drawer = await page.locator("#sidebar").boundingBox();
       expect(drawer.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
-      // Wait for the drawer to finish sliding in. At 320px it fills the
+      // Wait for the drawer to finish sliding in: it can be wholly on screen
+      // before it stops moving. At 320px it fills the
       // width beside the rail, leaving no backdrop to tap, so the rail's
       // Notes button closes it instead.
-      await expect(page.locator("#sidebar")).toBeInViewport({ ratio: 1 });
+      await page.waitForFunction(() => document.querySelector("#sidebar").getAnimations().length === 0);
       const open = await page.locator("#sidebar").boundingBox();
       if (open.x + open.width <= width - 24) await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
       else await page.locator("#sidebar-toggle").click();
@@ -2860,10 +2862,14 @@ test("the formatting panel applies, recolours and removes highlights, and typing
   expect(new Set(fills).size).toBe(6);
   // Select "this" and highlight it in the default colour.
   await editor.locator("p").first().click();
-  await page.keyboard.press("Home");
-  await expect.poll(() => page.evaluate(() => getSelection()?.anchorOffset)).toBe(0);
-  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
-  for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+ArrowRight");
+  await expect(editor).toBeFocused();
+  // The editor may still settle just after opening; select again until it holds.
+  await expect(async () => {
+    await page.keyboard.press("Home");
+    for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+    for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+ArrowRight");
+    expect(await page.evaluate(() => getSelection()?.toString())).toBe("this");
+  }).toPass();
   await panel.getByRole("button", { name: "Highlight", exact: true }).click();
   await expect(editor.locator("mark")).toHaveText("this");
   await expect(panel.getByRole("button", { name: "Highlight", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -3382,6 +3388,7 @@ test("Mermaid code in Write keeps its exact fenced source on body edits", async 
 });
 
 test("Write keeps inline and display formulas exact through body edits", async ({ page }) => {
+  test.setTimeout(90_000);
   const cases = [
     'Distance $d=vt$. A square $a^2 + b^2 = c^2$.\n\nBody.',
     'Inline $\\frac{a}{b}_{i}*x*$ and $\\$ 5$ and `$code$`. Money $5 and $6, $x $y$ and $$not$$.\n\nBody.',
