@@ -84,6 +84,9 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   nested brackets and escapes, and validate changes before applying.
 - Math in Write: inline and display formulas render with the bundled KaTeX,
   open their TeX for editing in place, and keep delimiters and spacing exact.
+- Exact saving from Write: blocks you do not edit, and the gaps between them,
+  are saved as written; edited text keeps its escapes, delimiters, markers,
+  fences and table rows, and typed characters are escaped only when needed.
 - Rename a note in place: clicking the title turns it into a text field
   (Enter renames, Escape cancels, a folder path moves the note), instead of
   opening the rename dialog.
