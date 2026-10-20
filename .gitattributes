@@ -1,3 +1,6 @@
+# Check out identical bytes on every platform, so Windows builds embed and
+# package the same files as Linux.
+* text=auto eol=lf
 # Bundled dependencies contain intentional spaces inside Markdown template literals.
 web/assets/*.js -whitespace linguist-generated=true
 web/assets/THIRD_PARTY_LICENSES.txt linguist-generated=true
