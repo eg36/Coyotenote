@@ -295,6 +295,8 @@ export function supportsRich(body: string) {
     if (token.type === "paragraph" || token.type === "text") {
       const text = withoutInlineFootnotes(token.raw.replace(/(`+)[\s\S]*?\1/g, ""));
       if (/\\\[\^/.test(text)) reason = "Showing Markdown: Write would change this escaped footnote reference.";
+      // Labels with spaces are not footnotes; Write would escape their brackets.
+      if (/\[\^[^\]\n]*\s[^\]\n]*\]/.test(text)) reason = "Showing Markdown: Write would change this footnote label with a space in it.";
       if (/\\\^\[/.test(text)) reason = "Showing Markdown: Write would change this escaped inline footnote.";
       if (/\^\[/.test(text)) reason = "Showing Markdown: Write would change this unfinished inline footnote.";
     }

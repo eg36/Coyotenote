@@ -3530,6 +3530,9 @@ test("unsupported footnote layouts fall back and unresolved references stay exac
     "**Bold[^a] text.**\n\n[^a]: Note.",
   ]) {
     const id = await openSeed(page, text); await mode(page, "Write");
+    // The Markdown view may still show from the previous note; the message
+    // only appears once Write has declined this one.
+    await expect(page.locator("#toast-text"), text).toContainText("Showing Markdown");
     await expect(page.locator("#source-pane")).toBeVisible();
     expect(await diskBody(page, id)).toBe(text);
   }
