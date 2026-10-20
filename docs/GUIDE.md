@@ -233,6 +233,10 @@ Beyond GitHub Flavored Markdown, Preview understands:
   height: `![[photo.png|200]]`, `![[photo.png|A trail|200x150]]` or
   `![Sunrise|200](attachments/photo.png)`. With only a width the picture keeps
   its proportions. Write and Preview both show the size.
+- **Note embeds:** `![[Note]]` shows another note inside this one in Preview,
+  `![[Note#Heading]]` just that section and `![[Note#^id]]` just that block,
+  with the note's name as a link above. Embeds nest two notes deep; a note
+  that would show itself again appears as a link instead.
 
 ### Markdown editor
 

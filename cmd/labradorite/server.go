@@ -814,6 +814,12 @@ func (a *webApp) localImages(document ast.Node, source []byte, from string) {
 }
 
 func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
+	return a.renderEmbedding(body, from, notes, map[string]bool{from: true})
+}
+
+// renderEmbedding renders body, and the notes it embeds with ![[Note]],
+// skipping the notes in embedding: those it is already inside.
+func (a *webApp) renderEmbedding(body, from string, notes []vault.Note, embedding map[string]bool) (string, error) {
 	// Front matter is properties, not text: show it apart, as written.
 	front, body := vault.SplitFrontMatter(body)
 	body = inlineFootnotes(stripComments(body))
@@ -824,6 +830,7 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 		properties = `<pre class="front-matter" aria-label="Properties">` + html.EscapeString(inner) + "</pre>\n"
 	}
 	resolver := vault.NewResolver(notes)
+	embeds := map[string]vault.Link{}
 	links := append(vault.ParseLinks(body), vault.SameNoteLinks(body)...)
 	sort.Slice(links, func(i, j int) bool { return links[i].Start < links[j].Start })
 	for i := len(links) - 1; i >= 0; i-- {
@@ -840,6 +847,13 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 		}
 		if image := embedImage(body, l); image != "" {
 			body = body[:l.Start-1] + image + body[l.End:]
+			continue
+		}
+		// Other ![[Note]] embeds become a placeholder, filled in after rendering.
+		if l.Start > 0 && body[l.Start-1] == '!' && !escapedAt(body, l.Start-1) {
+			token := embedToken(len(embeds))
+			embeds[token] = l
+			body = body[:l.Start-1] + token + body[l.End:]
 			continue
 		}
 		label := l.Alias
@@ -868,7 +882,13 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	}
 	// No remote images in a local notebook: replace other image tags with
 	// their alt text so opening a note cannot make a tracking request.
-	return properties + suppressImages(output.String()), nil
+	rendered := suppressImages(output.String())
+	for token, l := range embeds {
+		embedded := a.embedNote(l, from, notes, resolver, embedding)
+		rendered = strings.ReplaceAll(rendered, "<p>"+token+"</p>", embedded)
+		rendered = strings.ReplaceAll(rendered, token, embedded)
+	}
+	return properties + rendered, nil
 }
 
 // snippet is the passage of body around the first match of the lower-case

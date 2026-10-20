@@ -3106,3 +3106,19 @@ test("the Markdown editor folds headings and lists and edits with several cursor
   await expect(page.locator("#document-title")).not.toHaveText(title || "");
   expect(await diskBody(page, id)).toBe("# One\n\nalpha line!\n\n- item\n  - nested\n\n# Two\n\nbeta line!\n\nZ Z word");
 });
+
+test("note embeds show the other note's text in Preview and link to it", async ({ page }) => {
+  const source = `Embedded ${Date.now()}`;
+  await seed(page, source, "# Source\n\nShared paragraph.\n\n## Part\n\nOnly this part. ^bit");
+  const text = `Host text.\n\n![[${source}]]\n\n![[${source}#^bit]]`;
+  const id = await openSeed(page, text);
+  await mode(page, "Preview");
+  const embeds = page.locator("#preview .embed");
+  await expect(embeds).toHaveCount(2);
+  await expect(embeds.first()).toContainText("Shared paragraph.");
+  await expect(embeds.nth(1)).toContainText("Only this part.");
+  await expect(embeds.nth(1)).not.toContainText("Shared paragraph.");
+  await embeds.first().locator(".embed-title").click();
+  await expect(page.locator("#document-title")).toHaveText(source);
+  expect(await diskBody(page, id)).toBe(text);
+});

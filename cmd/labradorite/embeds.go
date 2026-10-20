@@ -1,0 +1,141 @@
+package main
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"html"
+	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/eg36/labradorite/internal/vault"
+)
+
+// maxEmbedDepth is how many notes deep ![[Note]] embeds are shown; deeper
+// ones, and notes that would embed themselves, show as a link.
+const maxEmbedDepth = 2
+
+// embedNonce makes embed placeholders unguessable, so text in a note cannot
+// pose as one.
+var embedNonce = func() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}()
+
+// embedToken is a placeholder for the n-th embed of a note: letters and
+// digits only, so Markdown leaves it as plain text.
+func embedToken(n int) string { return "lbembed" + embedNonce + "x" + strconv.Itoa(n) + "x" }
+
+// escapedAt reports whether an odd run of backslashes precedes body[at].
+func escapedAt(body string, at int) bool {
+	run := 0
+	for at-run-1 >= 0 && body[at-run-1] == '\\' {
+		run++
+	}
+	return run%2 == 1
+}
+
+// embedNote renders the note, heading section or block that the embed l
+// points to, framed with a link to it.
+func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolver vault.Resolver, embedding map[string]bool) string {
+	id, found := resolver.Resolve(l.Target, from)
+	label := l.Alias
+	if label == "" {
+		label = l.Target
+		if l.Heading != "" {
+			label += " › " + strings.TrimPrefix(l.Heading, "^")
+		}
+	}
+	href := "/?note=" + url.QueryEscape(id)
+	if l.Heading != "" {
+		href += "#" + url.PathEscape(l.Heading)
+	}
+	title := `<a class="embed-title" href="` + html.EscapeString(href) + `">` + html.EscapeString(label) + "</a>"
+	if !found {
+		return `<div class="embed embed-missing">` + html.EscapeString(label) + " — this note does not exist yet</div>\n"
+	}
+	if embedding[id] || len(embedding) > maxEmbedDepth {
+		return `<div class="embed embed-link">` + title + "</div>\n"
+	}
+	body := ""
+	for _, n := range notes {
+		if n.ID == id {
+			body = n.Body
+			break
+		}
+	}
+	_, body = vault.SplitFrontMatter(body)
+	if l.Heading != "" {
+		section, ok := noteSection(body, l.Heading)
+		if !ok {
+			return `<div class="embed embed-missing">` + title + " — not found in that note</div>\n"
+		}
+		body = section
+	}
+	inner := map[string]bool{id: true}
+	for note := range embedding {
+		inner[note] = true
+	}
+	rendered, err := a.renderEmbedding(body, id, notes, inner)
+	if err != nil {
+		rendered = "<p>" + html.EscapeString(err.Error()) + "</p>"
+	}
+	return `<div class="embed" data-note="` + html.EscapeString(id) + `">` + title + `<div class="embed-content">` + rendered + "</div></div>\n"
+}
+
+var atxHeading = regexp.MustCompile(`^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$`)
+
+// noteSection is the part of body that a link to heading points at: a
+// heading with everything up to the next heading of the same or a higher
+// level, or for "^id" the paragraph or list item ending with that block id.
+func noteSection(body, heading string) (string, bool) {
+	lines := strings.SplitAfter(body, "\n")
+	inCode := make([]bool, len(lines))
+	fence := ""
+	for i, line := range lines {
+		switch {
+		case fence != "":
+			inCode[i] = true
+			if closesFence(line, fence) {
+				fence = ""
+			}
+		case openingFence(line) != "":
+			inCode[i], fence = true, openingFence(line)
+		}
+	}
+	if id, ok := strings.CutPrefix(heading, "^"); ok {
+		mark := regexp.MustCompile(`(?:^|[ \t])\^` + regexp.QuoteMeta(id) + `[ \t]*\r?\n?$`)
+		for i, line := range lines {
+			if inCode[i] || !mark.MatchString(line) {
+				continue
+			}
+			start := i
+			if !listItem.MatchString(line) {
+				for start > 0 && strings.TrimSpace(lines[start-1]) != "" && !inCode[start-1] {
+					start--
+				}
+			}
+			return strings.Join(lines[start:i+1], ""), true
+		}
+		return "", false
+	}
+	want := headingID(heading)
+	for i, line := range lines {
+		m := atxHeading.FindStringSubmatch(strings.TrimRight(line, "\r\n"))
+		if inCode[i] || m == nil || (!strings.EqualFold(m[2], heading) && headingID(m[2]) != want) {
+			continue
+		}
+		end := i + 1
+		for ; end < len(lines); end++ {
+			if next := atxHeading.FindStringSubmatch(strings.TrimRight(lines[end], "\r\n")); next != nil && !inCode[end] && len(next[1]) <= len(m[1]) {
+				break
+			}
+		}
+		return strings.Join(lines[i:end], ""), true
+	}
+	return "", false
+}
+
+var listItem = regexp.MustCompile(`^\s*(?:[-*+]|\d+[.)])[ \t]`)

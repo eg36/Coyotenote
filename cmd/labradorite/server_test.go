@@ -914,3 +914,42 @@ func TestImageSizesRender(t *testing.T) {
 		t.Errorf("a size stayed in the description: %s", html)
 	}
 }
+
+func TestNoteEmbedsRenderInPreview(t *testing.T) {
+	a := testApp(t)
+	request(t, a, "POST", "/api/note", mutation{ID: "Recipe", Body: "---\ntags: [food]\n---\n# Recipe\n\nIntro text.\n\n## Steps\n\n1. Boil water\n2. Add **pasta**\n\n## Notes\n\nKey point here. ^key\n\n- A list point ^item"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Loop", Body: "Loop start ![[Loop]] and ![[Other]]"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Other", Body: "Other says ![[Loop]]"}, 201)
+	render := func(body string) string {
+		return request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Host"}, 200)["html"].(string)
+	}
+	whole := render("Before.\n\n![[Recipe]]\n\nAfter.")
+	for _, want := range []string{`<div class="embed" data-note="Recipe">`, `<a class="embed-title" href="/?note=Recipe">Recipe</a>`, "Intro text.", "<strong>pasta</strong>", "<p>Before.</p>", "<p>After.</p>"} {
+		if !strings.Contains(whole, want) {
+			t.Errorf("whole embed is missing %q:\n%s", want, whole)
+		}
+	}
+	if strings.Contains(whole, "tags: [food]") || strings.Contains(whole, "lbembed") {
+		t.Errorf("whole embed leaked front matter or a placeholder:\n%s", whole)
+	}
+	section := render("![[Recipe#Steps]]")
+	if !strings.Contains(section, "Boil water") || strings.Contains(section, "Intro text") || strings.Contains(section, "Key point") {
+		t.Errorf("heading embed shows the wrong part:\n%s", section)
+	}
+	if block := render("![[Recipe#^key]]"); !strings.Contains(block, "Key point here.") || strings.Contains(block, "Boil water") {
+		t.Errorf("block embed shows the wrong part:\n%s", block)
+	}
+	if item := render("![[Recipe#^item|the list point]]"); !strings.Contains(item, "A list point") || !strings.Contains(item, ">the list point</a>") {
+		t.Errorf("list item embed:\n%s", item)
+	}
+	if missing := render("![[Nowhere]]"); !strings.Contains(missing, "embed-missing") {
+		t.Errorf("missing note embed:\n%s", missing)
+	}
+	loop := request(t, a, "POST", "/api/render", mutation{Body: "Loop start ![[Loop]] and ![[Other]]", ID: "Loop"}, 200)["html"].(string)
+	if !strings.Contains(loop, "embed-link") || strings.Count(loop, "Other says") != 1 {
+		t.Errorf("embed loops are not cut short:\n%s", loop)
+	}
+	if escaped := render("Not an embed: \\![[Recipe]]"); strings.Contains(escaped, `class="embed"`) {
+		t.Errorf("an escaped embed was embedded:\n%s", escaped)
+	}
+}

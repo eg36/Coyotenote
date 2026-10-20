@@ -2985,3 +2985,13 @@ dialog.danger #modal-submit {
 #source-pane .cm-foldGutter span { color: var(--muted); opacity: 0; transition: opacity 0.15s ease; cursor: pointer; }
 #source-pane .cm-gutters:hover .cm-foldGutter span, #source-pane .cm-foldGutter span[title="Unfold line"] { opacity: 1; }
 #source-pane .cm-foldPlaceholder { margin: 0 4px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--hover); color: var(--muted); }
+/* Embedded notes in the preview: a framed excerpt headed by a link to its
+   source note. */
+#preview .embed { margin: 1em 0; padding: 10px 16px 12px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; background: color-mix(in srgb, var(--text) 3%, transparent); }
+#preview .embed-title { display: inline-block; margin-bottom: 6px; font-size: 0.8em; font-weight: 600; color: var(--muted); text-decoration: none; }
+#preview .embed-title:hover { color: var(--accent-text); }
+#preview .embed-content > :first-child { margin-top: 0; }
+#preview .embed-content > :last-child { margin-bottom: 0; }
+#preview .embed-link, #preview .embed-missing { padding: 6px 12px; }
+#preview .embed-link .embed-title { margin: 0; }
+#preview .embed-missing { color: var(--muted); font-style: italic; border-left-color: var(--line); }
