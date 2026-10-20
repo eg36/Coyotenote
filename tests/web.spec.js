@@ -39,6 +39,11 @@ async function mode(page, name) {
   await page.getByRole("option", { name, exact: true }).click();
   await expect(page.locator("#view-menu")).toBeHidden();
 }
+async function menu(page, section) {
+  await page.locator('[data-menu="workspace"]').click();
+  const names = { file: "Notes and files…", edit: "Editing…", view: "View options…", insert: "Insert…" };
+  await page.getByRole("menuitem", { name: names[section], exact: true }).click();
+}
 async function diskBody(page, id) {
   return (
     (
@@ -77,27 +82,30 @@ test("empty notebook, create a note, WYSIWYG writing and autosave", async ({
   await expect(editor).toContainText("A thought worth keeping.");
 });
 
-test("document menus switch views, close with Escape and disable note actions at home", async ({ page }) => {
+test("one menu opens categories, supports keyboard return and disables note actions at home", async ({ page }) => {
   await page.goto("/");
-  const file = page.locator('[data-menu="file"]');
-  const view = page.locator('[data-menu="view"]');
+  const trigger = page.locator('[data-menu="workspace"]');
   const popup = page.locator("#menu-popup");
-  await file.click();
+  await expect(page.locator("#menu-bar button")).toHaveCount(1);
+  await menu(page, "file");
   await expect(popup.getByRole("menuitem", { name: "Rename or move…" })).toBeDisabled();
+  await page.keyboard.press("ArrowLeft");
+  await expect(popup.getByRole("menuitem", { name: "View options…" })).toBeVisible();
+  await popup.getByRole("menuitem", { name: "View options…" }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator('[data-menu="edit"]')).toHaveAttribute("aria-expanded", "true");
+  await expect(popup.getByRole("menuitem", { name: "Split", exact: true })).toBeDisabled();
   await page.keyboard.press("Escape");
   await expect(popup).toBeHidden();
-  await expect(page.locator('[data-menu="edit"]')).toBeFocused();
+  await expect(trigger).toBeFocused();
   await openSeed(page, "A document with menus.");
-  await view.click();
+  await menu(page, "view");
   await popup.getByRole("menuitem", { name: "Split", exact: true }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
   await expect(popup).toBeHidden();
-  await view.click();
+  await trigger.click();
   await page.keyboard.press("Escape");
   await expect(popup).toBeHidden();
-  await expect(view).toBeFocused();
+  await expect(trigger).toBeFocused();
 });
 
 test("rich formatting and Markdown survive source, split and preview modes", async ({
@@ -380,7 +388,7 @@ test("note sorting remembers titles, uses edit times and follows search navigati
   await expect(sort).toHaveValue("title-desc");
   await (await searchBox(page)).fill(folder);
   await expect(page.locator("#note-count")).toHaveText("3");
-  await page.locator('[data-menu="view"]').click();
+  await menu(page, "view");
   await page.getByRole("menuitem", { name: "Next note" }).click();
   await expect(page.locator("#document-title")).toHaveText("alpha10");
   await sort.selectOption("modified");
@@ -921,7 +929,7 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeVisible();
-    await page.locator('[data-menu="view"]').click();
+    await menu(page, "view");
     await page.getByRole("menuitem", { name: "Focus mode" }).click();
     await expect(page.locator("#sidebar")).toBeHidden();
     expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 57);
@@ -2118,7 +2126,7 @@ test.describe("daily notes", () => {
     await expect(page.locator("#save-label")).toHaveText("Ready when you are");
     // UTC is already November 4; the writer's date is still November 3.
     await page.clock.setFixedTime(new Date("2026-11-04T03:00:00Z"));
-    await page.locator('[data-menu="file"]').click();
+    await menu(page, "file");
     await page.getByRole("menuitem", { name: "Today's note" }).click();
     await expect(page.locator("#document-title")).toHaveText("2026-11-03");
     await mode(page, "Markdown");
@@ -2191,7 +2199,7 @@ test("an unavailable template keeps the new-note dialog and name for retry", asy
 test("find and replace opens from Write, autosaves replacements and supports undo", async ({ page }) => {
   const id = await openSeed(page, "alpha alpha beta");
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).fill("alpha alpha beta with edits");
-  await page.locator('[data-menu="edit"]').click();
+  await menu(page, "edit");
   await page.getByRole("menuitem", { name: "Find and replace…" }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
   const find = page.locator("#search");
@@ -2238,7 +2246,7 @@ test("find and replace keeps Split open and fits a narrow screen", async ({ page
 
 test("writing settings persist across modes, reloads and rich editor recreation", async ({ page }) => {
   const id = await openSeed(page, "Text made comfortable.");
-  await page.locator('[data-menu="view"]').click();
+  await menu(page, "view");
   await page.getByRole("menuitem", {name:"Settings…"}).click();
   const dialog = page.getByRole("dialog", {name:"Settings"});
   await dialog.getByLabel("Text size", {exact:true}).selectOption("22");
@@ -2276,7 +2284,7 @@ test("invalid saved preferences fall back safely and unavailable storage is expl
   await expect(page.locator("#rich-editor")).toHaveCSS("max-width", "760px");
   await expect(page.locator(".tiptap")).toHaveAttribute("spellcheck", "true");
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException("Full", "QuotaExceededError"); }; });
-  await page.locator('[data-menu="view"]').click();
+  await menu(page, "view");
   await page.getByRole("menuitem", {name:"Settings…"}).click();
   await page.getByLabel("Text size", {exact:true}).selectOption("20");
   await expect(page.locator("#rich-editor")).toHaveCSS("font-size", "20px");
@@ -2296,20 +2304,20 @@ test("phone menus keep journal commands and settings reachable without a keyboar
   await expect(page.locator("#toast")).toBeVisible();
   for (const width of [320, 390, 530]) {
     await page.setViewportSize({width,height:720});
-    await page.locator('[data-menu="view"]').click();
+    await menu(page, "view");
     const item = page.getByRole("menuitem", {name:"Settings…"});
     await expect(item).toBeInViewport();
     await item.click();
     await page.getByLabel("Text size", {exact:true}).scrollIntoViewIfNeeded();
     await expect(page.getByLabel("Text size", {exact:true})).toBeInViewport();
     await page.getByRole("button", {name:"Done",exact:true}).click();
-    await page.locator('[data-menu="file"]').click();
+    await menu(page, "file");
     await expect(page.getByRole("menuitem", {name:"Today's note"})).toBeInViewport();
     await page.keyboard.press("Escape");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
   await page.setViewportSize({width:390,height:320});
-  await page.locator('[data-menu="view"]').click();
+  await menu(page, "view");
   const popup = page.locator("#menu-popup");
   expect(await popup.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy();
   await page.getByRole("menuitem", {name:"Settings…"}).click();

@@ -2795,3 +2795,12 @@ dialog.danger #modal-submit {
 .title-row > #history-back svg { width: 16px; height: 16px; }
 #tag-filter > summary { display: none; }
 #tags-button.active { background: var(--selected); color: var(--accent-text); }
+.menu-bar button { display: inline-flex; align-items: center; gap: 4px; }
+.menu-bar button svg { width: 12px; height: 12px; }
+.menu-chevron { margin-left: auto; transform: rotate(-90deg); color: var(--muted); }
+.menu-chevron svg { width: 14px; height: 14px; }
+.activity-rail .menu-bar { margin: 0; }
+.activity-rail .brand { margin-bottom: 0; }
+.title-divider { width: 10px; height: 1px; margin: 0 8px 0 0; background: var(--line); flex-shrink: 0; }
+.document-title { font-size: 18px; }
+.topbar .title-block { max-width: 400px; }

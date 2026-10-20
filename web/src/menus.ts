@@ -1,5 +1,5 @@
-// The menu row under the note title: File, Edit, View and Insert hold the
-// app's commands with their shortcuts, as a document editor's menus do.
+import { icon } from "./icons.js";
+// One menu keeps commands discoverable without a row of document menus.
 import { $, showError, state } from "./core.js";
 import { chooseImages } from "./attachments.js";
 import { historyDialog } from "./history.js";
@@ -26,7 +26,22 @@ const rich = (name: string) => () => state.rich?.command(name);
 
 // Each item is [label, shortcut, action, when it is available]; "-" separates.
 type MenuEntry = "-" | [label: string, shortcut: string, run: () => unknown, when?: () => boolean];
+const sections: Record<string, string> = { "Notes and files…": "file", "Editing…": "edit", "View options…": "view", "Insert…": "insert" };
 const menus: Record<string, MenuEntry[]> = {
+  workspace: [
+    ["New note", "Ctrl N", newNoteDialog],
+    ["Today's note", "Alt J", () => dailyNote().catch(showError)],
+    ["Search", "Ctrl Shift E", findNotes],
+    ["Commands…", "Ctrl K", () => paletteDialog(">")],
+    "-",
+    ["Notes and files…", "", () => openMenu("file")],
+    ["Editing…", "", () => openMenu("edit")],
+    ["View options…", "", () => openMenu("view")],
+    ["Insert…", "", () => openMenu("insert")],
+    "-",
+    ["Settings…", "Ctrl Shift T", () => settingsDialog()],
+    ["Keyboard shortcuts", "F1", helpDialog],
+  ],
   file: [
     ["New note", "Ctrl N", newNoteDialog],
     ["Today's note", "Alt J", () => dailyNote().catch(showError)],
@@ -76,7 +91,7 @@ const menus: Record<string, MenuEntry[]> = {
 let openName = "";
 function closeMenu(refocus = false) {
   if (!openName) return;
-  const button = $("menu-bar").querySelector<HTMLButtonElement>(`[data-menu="${openName}"]`);
+  const button = $("menu-bar").querySelector<HTMLButtonElement>('[data-menu="workspace"]');
   button?.setAttribute("aria-expanded", "false");
   $("menu-popup").hidden = true;
   openName = "";
@@ -85,11 +100,12 @@ function closeMenu(refocus = false) {
 
 function openMenu(name: string, focusItem = 0) {
   closeMenu();
-  const button = $("menu-bar").querySelector<HTMLButtonElement>(`[data-menu="${name}"]`);
+  const button = $("menu-bar").querySelector<HTMLButtonElement>('[data-menu="workspace"]');
   if (!button || !menus[name]) return;
   const popup = $("menu-popup");
   popup.replaceChildren();
-  for (const entry of menus[name]) {
+  const entries: MenuEntry[] = name === "workspace" ? menus[name] : [["Back to menu", "←", () => openMenu("workspace")], "-", ...menus[name]];
+  for (const entry of entries) {
     if (entry === "-") {
       const line = document.createElement("div");
       line.className = "menu-separator";
@@ -103,9 +119,20 @@ function openMenu(name: string, focusItem = 0) {
     item.className = "menu-item";
     item.setAttribute("role", "menuitem");
     item.disabled = when ? !when() : false;
+    if (name === "workspace" && sections[label]) {
+      item.dataset.submenu = sections[label];
+      item.setAttribute("aria-haspopup", "menu");
+    }
     const text = document.createElement("span");
     text.textContent = label;
     item.append(text);
+    if (item.dataset.submenu) {
+      const arrow = document.createElement("span");
+      arrow.className = "menu-chevron";
+      arrow.setAttribute("aria-hidden", "true");
+      arrow.innerHTML = icon("chevronDown");
+      item.append(arrow);
+    }
     if (shortcut) {
       const kbd = document.createElement("kbd");
       kbd.textContent = keys(shortcut);
@@ -119,9 +146,10 @@ function openMenu(name: string, focusItem = 0) {
   }
   const box = button.getBoundingClientRect();
   popup.hidden = false;
-  popup.style.top = box.bottom + 4 + "px";
-  popup.style.left = Math.min(box.left, innerWidth - popup.offsetWidth - 8) + "px";
-  popup.setAttribute("aria-label", button.textContent || "");
+  const rail = document.querySelector(".activity-rail")?.getBoundingClientRect();
+  popup.style.top = Math.max(8, Math.min(box.top, innerHeight - popup.offsetHeight - 8)) + "px";
+  popup.style.left = Math.max(8, Math.min(rail ? rail.right + 8 : box.left, innerWidth - popup.offsetWidth - 8)) + "px";
+  popup.setAttribute("aria-label", name === "workspace" ? "Menu" : ({file:"Notes and files", edit:"Editing", view:"View options", insert:"Insert"}[name] || name));
   button.setAttribute("aria-expanded", "true");
   openName = name;
   const items = [...popup.querySelectorAll<HTMLButtonElement>(".menu-item:not(:disabled)")];
@@ -130,14 +158,9 @@ function openMenu(name: string, focusItem = 0) {
 
 function setupMenus() {
   const bar = $("menu-bar");
-  const names = Object.keys(menus);
   for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-menu]")) {
     button.onclick = () =>
-      openName === button.dataset.menu ? closeMenu() : openMenu(button.dataset.menu || "");
-    // Once a menu is open, pointing at another one switches to it.
-    button.onmouseenter = () => {
-      if (openName && openName !== button.dataset.menu) openMenu(button.dataset.menu || "");
-    };
+      openName ? closeMenu() : openMenu(button.dataset.menu || "");
     button.onkeydown = (event) => {
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -153,9 +176,11 @@ function setupMenus() {
     else if (event.key === "Home") items[0]?.focus();
     else if (event.key === "End") items.at(-1)?.focus();
     else if (event.key === "Escape") closeMenu(true);
-    else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-      const next = names[(names.indexOf(openName) + (event.key === "ArrowRight" ? 1 : -1) + names.length) % names.length];
-      openMenu(next);
+    else if (event.key === "ArrowLeft" && openName !== "workspace") {
+      openMenu("workspace");
+    } else if (event.key === "ArrowRight") {
+      const next = items[index]?.dataset.submenu;
+      if (next) openMenu(next);
     } else if (event.key === "Tab") closeMenu();
     else return;
     event.preventDefault();

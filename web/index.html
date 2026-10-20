@@ -17,6 +17,7 @@
     <div class="app" id="app">
       <nav class="activity-rail" aria-label="Workspace">
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
+        <nav class="menu-bar" id="menu-bar" aria-label="Menu"><button type="button" class="icon-button" data-menu="workspace" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false"><span data-icon="menu"></span></button></nav>
         <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
         <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
         <button id="recent-notes" class="icon-button" aria-label="Recently opened notes" title="Recently opened notes" aria-pressed="false"><span data-icon="history"></span></button>
@@ -30,7 +31,7 @@
       <header class="topbar">
         <div class="title-block">
           <div class="title-row">
-        <button id="history-back" class="icon-button" title="Go back to previous note" aria-label="Go back to previous note" disabled><span data-icon="back"></span></button>
+        <button id="history-back" class="icon-button" title="Go back to previous note" aria-label="Go back to previous note" disabled><span data-icon="back"></span></button><span class="title-divider" aria-hidden="true"></span>
             <span class="app-title" id="app-title">Labradorite</span>
             <div class="note-heading" id="document-head" hidden>
               <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
@@ -39,12 +40,7 @@
               </button>
             </div>
           </div>
-          <nav class="menu-bar" id="menu-bar" aria-label="Menu">
-            <button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button
-            ><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button
-            ><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button
-            ><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>
-          </nav>
+
         </div>
         <div class="header-tools">
         <div class="editor-bar">

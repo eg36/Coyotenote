@@ -35,6 +35,7 @@ import {
 import { headings, jumpToHeading, toggleOutline } from "./outline.js";
 import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
 import { dailyNote } from "./daily.js";
+import { showRecent, togglePin } from "./navigation.js";
 import { settingsDialog } from "./settings.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
@@ -99,6 +100,9 @@ function addProperties() {
 // Commands name what they do; those needing an open note hide without one.
 const commandDefinitions: Command[] = [
   ["New note", "Ctrl N", newNoteDialog],
+  ["Search all notes", "Ctrl Shift E", findNotes],
+  ["Recently opened notes", "", showRecent],
+  ["Pin or unpin this note", "", togglePin, true],
   ["Open today's note", "Alt J", () => dailyNote().catch(showError)],
   ["Rename or move note", "Ctrl Shift R", renameDialog, true],
   ["Move note to trash", "Ctrl Shift D", deleteDialog, true],
