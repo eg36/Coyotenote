@@ -941,6 +941,23 @@ func TestImageSizesRender(t *testing.T) {
 	}
 }
 
+func TestEmbedsStayWithinAPageBudget(t *testing.T) {
+	a := testApp(t)
+	request(t, a, "POST", "/api/note", mutation{ID: "Big", Body: strings.Repeat("A long paragraph of embedded text. ", 2000)}, 201)
+	repeat := strings.Repeat("![[Big]]\n\n", 100) + "![[Tail]]"
+	request(t, a, "POST", "/api/note", mutation{ID: "Tail", Body: "Tail text."}, 201)
+	got := request(t, a, "POST", "/api/render", mutation{Body: repeat, ID: "Page"}, 200)["html"].(string)
+	if len(got) > maxEmbedBytes+(1<<20) {
+		t.Fatalf("rendered %d bytes", len(got))
+	}
+	if !strings.Contains(got, "not shown: this page already embeds as much as it can") {
+		t.Fatal("embeds beyond the budget should show as links")
+	}
+	if strings.Contains(got, "Tail text.") {
+		t.Fatal("the budget goes to embeds in reading order")
+	}
+}
+
 func TestNoteEmbedsRenderInPreview(t *testing.T) {
 	a := testApp(t)
 	request(t, a, "POST", "/api/note", mutation{ID: "Recipe", Body: "---\ntags: [food]\n---\n# Recipe\n\nIntro text.\n\n## Steps\n\n1. Boil water\n2. Add **pasta**\n\n## Notes\n\nKey point here. ^key\n\n- A list point ^item"}, 201)

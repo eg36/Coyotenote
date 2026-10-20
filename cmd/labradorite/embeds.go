@@ -6,6 +6,7 @@ import (
 	"html"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -15,6 +16,22 @@ import (
 // maxEmbedDepth is how many notes deep ![[Note]] embeds are shown; deeper
 // ones, and notes that would embed themselves, show as a link.
 const maxEmbedDepth = 2
+
+// A page shows at most maxEmbeds embedded notes and maxEmbedBytes of their
+// HTML, however they nest or repeat; further embeds show as links. Without
+// this, a short note repeating a long embed could render megabytes while
+// every other request waits.
+const (
+	maxEmbeds     = 64
+	maxEmbedBytes = 2 << 20
+)
+
+// embedBudget is what is left of a page's embed allowance. A note embedded
+// again inside the same notes is rendered once.
+type embedBudget struct {
+	notes, bytes int
+	shown        map[string]string
+}
 
 // embedNonce makes embed placeholders unguessable, so text in a note cannot
 // pose as one.
@@ -39,7 +56,7 @@ func escapedAt(body string, at int) bool {
 
 // embedNote renders the note, heading section or block that the embed l
 // points to, framed with a link to it.
-func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolver vault.Resolver, embedding map[string]bool) string {
+func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolver vault.Resolver, embedding map[string]bool, budget *embedBudget) string {
 	id, found := resolver.Resolve(l.Target, from)
 	label := l.Alias
 	if label == "" {
@@ -58,6 +75,21 @@ func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolv
 	}
 	if embedding[id] || len(embedding) > maxEmbedDepth {
 		return `<div class="embed embed-link">` + title + "</div>\n"
+	}
+	if budget.notes <= 0 || budget.bytes <= 0 {
+		return `<div class="embed embed-link">` + title + " — not shown: this page already embeds as much as it can</div>\n"
+	}
+	// What an embed shows depends on the notes it sits inside.
+	inside := make([]string, 0, len(embedding))
+	for note := range embedding {
+		inside = append(inside, note)
+	}
+	sort.Strings(inside)
+	key := strings.Join(inside, "\x00") + "\x01" + id + "\x01" + l.Heading
+	if shown, ok := budget.shown[key]; ok {
+		budget.notes--
+		budget.bytes -= len(shown)
+		return shown
 	}
 	body := ""
 	for _, n := range notes {
@@ -78,11 +110,15 @@ func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolv
 	for note := range embedding {
 		inner[note] = true
 	}
-	rendered, err := a.renderEmbedding(body, id, notes, inner)
+	budget.notes--
+	rendered, err := a.renderEmbedding(body, id, notes, inner, budget)
 	if err != nil {
 		rendered = "<p>" + html.EscapeString(err.Error()) + "</p>"
 	}
-	return `<div class="embed" data-note="` + html.EscapeString(id) + `">` + title + `<div class="embed-content">` + rendered + "</div></div>\n"
+	shown := `<div class="embed" data-note="` + html.EscapeString(id) + `">` + title + `<div class="embed-content">` + rendered + "</div></div>\n"
+	budget.bytes -= len(shown)
+	budget.shown[key] = shown
+	return shown
 }
 
 var atxHeading = regexp.MustCompile(`^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$`)

@@ -830,12 +830,12 @@ func (a *webApp) localImages(document ast.Node, source []byte, from string) {
 }
 
 func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
-	return a.renderEmbedding(body, from, notes, map[string]bool{from: true})
+	return a.renderEmbedding(body, from, notes, map[string]bool{from: true}, &embedBudget{notes: maxEmbeds, bytes: maxEmbedBytes, shown: map[string]string{}})
 }
 
 // renderEmbedding renders body, and the notes it embeds with ![[Note]],
 // skipping the notes in embedding: those it is already inside.
-func (a *webApp) renderEmbedding(body, from string, notes []vault.Note, embedding map[string]bool) (string, error) {
+func (a *webApp) renderEmbedding(body, from string, notes []vault.Note, embedding map[string]bool, budget *embedBudget) (string, error) {
 	// Front matter is properties, not text: show it apart, as written.
 	front, body := vault.SplitFrontMatter(body)
 	body = inlineFootnotes(stripComments(body))
@@ -899,8 +899,11 @@ func (a *webApp) renderEmbedding(body, from string, notes []vault.Note, embeddin
 	// No remote images in a local notebook: replace other image tags with
 	// their alt text so opening a note cannot make a tracking request.
 	rendered := previewPolicy.Sanitize(suppressImages(output.String()))
-	for token, l := range embeds {
-		embedded := a.embedNote(l, from, notes, resolver, embedding)
+	// In reading order, so the budget goes to the first embeds in the note;
+	// placeholders were numbered from the end of the note.
+	for n := len(embeds) - 1; n >= 0; n-- {
+		token := embedToken(n)
+		embedded := a.embedNote(embeds[token], from, notes, resolver, embedding, budget)
 		rendered = strings.ReplaceAll(rendered, "<p>"+token+"</p>", embedded)
 		rendered = strings.ReplaceAll(rendered, token, embedded)
 	}
