@@ -90,8 +90,15 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged; 2.0.0 is
 the next public release after 1.5.0.
 
-## 1.6.0 — Callouts in Write
+## 1.6.0 — Maintainable code, full documentation, callouts in Write
 
+- Work moves to issue-based development: issues planned together in the
+  tracker (synced to GitHub), each change on its own branch with a pull
+  request, review and merge.
+- Reread the whole codebase and make it easy for people to maintain and
+  read: clear structure, names and comments, no dead code.
+- Full technical documentation: architecture, data flow, vault format and
+  safety rules, frontend and server internals, testing and release process.
 - Edit callouts visually, with their type, title and folding kept exactly,
   so notes with callouts no longer open in Markdown.
 
