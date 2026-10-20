@@ -10,11 +10,12 @@ import urllib.error
 import urllib.request
 
 # Actions may start Python without a console. Give the Windows child a shared
-# console so CTRL_BREAK can exercise Go's graceful interrupt handler.
+# console so CTRL_BREAK can exercise Go's graceful interrupt handler. A
+# pseudo-console has no window, so ask whether any process is attached.
 if os.name == 'nt':
     import ctypes
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
-    if not kernel.GetConsoleWindow() and not kernel.AllocConsole():
+    if not kernel.GetConsoleProcessList((ctypes.c_ulong * 1)(), 1) and not kernel.AllocConsole():
         raise ctypes.WinError(ctypes.get_last_error())
 
 BINARY = os.environ.get('LABRADORITE_BINARY', str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / ('labradorite.exe' if os.name == 'nt' else 'labradorite')))
