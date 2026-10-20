@@ -105,6 +105,12 @@ export interface AppState {
   ready: boolean;
   restoring: boolean;
   busy: boolean;
+  // Note-changing requests in flight, and how many have finished in total
+  // and as of the latest list, so the change watcher can tell this tab's own
+  // changes from changes made elsewhere.
+  changing: number;
+  changes: number;
+  listedChanges: number;
   tag: string;
   folder: string | null;
   stamp?: string;

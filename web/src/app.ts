@@ -483,14 +483,18 @@ document.addEventListener("visibilitychange", () => {
 // On return, refresh the list and reload the open note only when it has no
 // local edits, so a background change never replaces unsaved work.
 let syncing = false;
+// ownChanges is true while this tab's own rename, move, trash or other note
+// change is under way or not yet in the list; the stamp then changed here.
+const ownChanges = () => state.changing > 0 || state.changes !== state.listedChanges;
 async function syncFromDisk() {
-  if (!state.ready || syncing || document.hidden) return;
+  if (!state.ready || syncing || document.hidden || ownChanges()) return;
   syncing = true;
   try {
     const id = state.current?.id,
       before = state.current?.revision;
     await refresh();
     if (
+      ownChanges() ||
       !id ||
       state.current?.id !== id ||
       state.current.revision !== before ||
@@ -519,7 +523,7 @@ window.addEventListener("focus", syncFromDisk);
 // While the tab stays open, a cheap stamp of the vault shows when notes
 // changed elsewhere; only then is the list fetched and synced as above.
 setInterval(async () => {
-  if (!state.ready || syncing || document.hidden || !state.stamp) return;
+  if (!state.ready || syncing || document.hidden || !state.stamp || ownChanges()) return;
   try {
     const { stamp } = await api<{ stamp: string }>("/api/stamp");
     if (stamp !== state.stamp) await syncFromDisk();

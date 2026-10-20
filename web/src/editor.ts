@@ -97,6 +97,7 @@ async function save(): Promise<void> {
 }
 async function refresh({ query = state.search } = {}) {
   const generation = ++state.searchGeneration;
+  const changes = state.changes;
   const data = await api<StateResponse>(
     "/api/state" + (query ? "?q=" + encodeURIComponent(query) : ""),
   );
@@ -118,6 +119,7 @@ async function refresh({ query = state.search } = {}) {
   versionLink.hidden = false;
   state.notes = data.notes;
   state.stamp = data.stamp;
+  if (!state.changing) state.listedChanges = Math.max(state.listedChanges, changes);
   state.filteredIds = query ? new Set(data.matches) : null;
   state.snippets = query ? data.snippets : {};
   state.searched = query;

@@ -107,6 +107,9 @@ const state: AppState = {
   ready: false,
   restoring: false,
   busy: false,
+  changing: 0,
+  changes: 0,
+  listedChanges: 0,
   tag: "",
   folder: null,
 };

@@ -22,6 +22,25 @@ async function api<T = unknown>(
   data?: Blob | Record<string, unknown>,
   retried = false,
 ): Promise<T> {
+  // Saves report the stamps they move between; other writes may rename, move
+  // or remove notes, which the change watcher must not mistake for others'.
+  const changesNotes = method !== "GET" && !(method === "PUT" && path === "/api/note") &&
+    !["/api/render", "/api/settings", "/api/recovery"].includes(path) && !path.startsWith("/api/attachment");
+  if (!changesNotes) return request<T>(path, method, data, retried);
+  state.changing++;
+  try {
+    return await request<T>(path, method, data, retried);
+  } finally {
+    state.changing--;
+    state.changes++;
+  }
+}
+async function request<T>(
+  path: string,
+  method: string,
+  data: Blob | Record<string, unknown> | undefined,
+  retried: boolean,
+): Promise<T> {
   const file = data instanceof Blob;
   let response;
   try {

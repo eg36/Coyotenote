@@ -2052,6 +2052,28 @@ test("images show in Write and Preview, keep their Markdown, and can be pasted, 
   expect(notes.some((note) => note.startsWith("attachments/"))).toBe(false);
 });
 
+test("a slow rename is not mistaken for a change made outside the app", async ({ page }) => {
+  const id = await openSeed(page, "Slow rename body.", "Slow original");
+  await openSeed(page, "Links to [[Slow original]].", "Slow linker");
+  await page.goto("/?note=" + encodeURIComponent(id));
+  await expect(page.locator("#document-title")).toHaveText(id);
+  // The vault changes at once, but the answer arrives after the 3-second
+  // change watcher has looked again.
+  await page.route("**/api/rename", async (route) => {
+    const response = await route.fetch();
+    await new Promise((done) => setTimeout(done, 4000));
+    await route.fulfill({ response });
+  });
+  await page.locator("#document-title").click();
+  await page.getByLabel("Note path: rename or move this note").fill("Slow renamed");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#document-title")).toHaveText("Slow renamed");
+  await expect.poll(() => diskBody(page, "Slow linker")).toBe("Links to [[Slow renamed]].");
+  await page.waitForTimeout(3500);
+  await expect(page.locator("#document-title")).toHaveText("Slow renamed");
+  await expect(page.getByText("moved or deleted outside Labradorite")).toHaveCount(0);
+});
+
 test("clicking the note title renames or moves the note in place", async ({ page }) => {
   const stamp = Date.now();
   const id = await openSeed(page, "Title rename body.", `Inline rename ${stamp}`);
