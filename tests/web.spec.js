@@ -2848,3 +2848,16 @@ test("spaces typed after bold or highlighted words save as ordinary spaces", asy
   await expect.poll(() => diskBody(page, id)).toBe("Start. Then **bold** and ==marked== end");
 });
 
+test("formatting around a wiki link or image keeps the note in Markdown instead of splitting it", async ({ page }) => {
+  for (const body of ["Some **bold [[Target]] text** here.", "Some ==marked [[Target]] text== here.", "An *image ![alt](attachments/a.png) inside* emphasis."]) {
+    const id = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+    await expect(page.locator("#toast-text")).toContainText("split formatting around a link or image");
+    expect(await diskBody(page, id)).toBe(body);
+  }
+  // Formatting next to a link, not around it, stays in Write.
+  await openSeed(page, "Some **bold** [[Target]] and ==marked== text.");
+  await mode(page, "Write");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+});

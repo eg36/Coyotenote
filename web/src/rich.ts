@@ -93,6 +93,8 @@ const WikiLink = Node.create({
 // Highlight is ==marked text==, matching the preview's rules: exactly two
 // equals signs, touching the text inside. A leading colour emoji such as 🔴
 // is kept as the mark's colour and written back in front of the text.
+const highlightPattern = /==(?!=)(🔴|🟠|🟡|🟢|🔵|🟣)?(?=\S)((?:[^=\n]|=(?!=))*?[^\s=])==(?!=)/gu;
+const highlightAtStart = new RegExp("^" + highlightPattern.source, "u");
 const highlightColours: Record<string, string> = {
   "🔴": "red", "🟠": "orange", "🟡": "yellow", "🟢": "green", "🔵": "blue", "🟣": "purple",
 };
@@ -117,7 +119,7 @@ const Highlight = Mark.create({
     level: "inline",
     start: "==",
     tokenize(src, _tokens, helpers) {
-      const match = /^==(?!=)(🔴|🟠|🟡|🟢|🔵|🟣)?(?=\S)((?:[^=\n]|=(?!=))*?[^\s=])==(?!=)/u.exec(src);
+      const match = highlightAtStart.exec(src);
       if (!match) return undefined;
       return { type: "highlight", raw: match[0], colour: match[1] || "", tokens: helpers.inlineTokens(match[2]) };
     },
@@ -231,6 +233,15 @@ export function supportsRich(body: string) {
   });
   if (/^\s*\[\^[^\]]+\]:/m.test(body))
     reason = "Showing Markdown: Write would change this note's footnotes.";
+  // Write closes bold, italic, strikethrough and highlights before a wiki
+  // link or image and reopens them after it, which would rewrite the text.
+  const split = "Showing Markdown: Write would split formatting around a link or image in this note.";
+  marked.walkTokens(marked.lexer(body, { gfm: true }), (token) => {
+    if (["strong", "em", "del"].includes(token.type) && /\[\[|!\[/.test(token.raw)) reason = split;
+    if (token.type === "text" || token.type === "paragraph")
+      for (const match of token.raw.matchAll(highlightPattern))
+        if (/\[\[|!\[/.test(match[2])) reason = split;
+  });
   return reason;
 }
 
