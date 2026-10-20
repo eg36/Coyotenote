@@ -210,6 +210,11 @@
           >
         </div>
         <section id="note-search-options" class="note-search-options" aria-label="Find and replace" hidden>
+          <details class="search-flags"><summary>Search options</summary>
+            <label><input type="checkbox" id="search-case" />Match case</label>
+            <label><input type="checkbox" id="search-word" />Whole words</label>
+            <label><input type="checkbox" id="search-regex" />Regular expression</label>
+          </details>
           <p id="search-matches" role="status">Type something to find in this note.</p>
           <div class="search-step"><button id="search-previous">Previous</button><button id="search-next">Next</button></div>
           <label for="search-replacement">Replace with</label>

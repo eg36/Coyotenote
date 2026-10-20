@@ -13,6 +13,9 @@ interface AppElements {
   "search": HTMLInputElement;
   "search-all": HTMLButtonElement;
   "search-replacement": HTMLInputElement;
+  "search-case": HTMLInputElement;
+  "search-word": HTMLInputElement;
+  "search-regex": HTMLInputElement;
   "search-previous": HTMLButtonElement;
   "search-next": HTMLButtonElement;
   "search-replace": HTMLButtonElement;

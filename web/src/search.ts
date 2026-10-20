@@ -1,4 +1,4 @@
-// One query field serves both vault search and literal find/replace in a note.
+// One query field serves both vault search and find/replace in a note.
 import { $, closeSearch, showError, state } from "./core.js";
 import { refresh, setMode } from "./editor.js";
 import { showNotes } from "./shortcuts.js";
@@ -11,12 +11,16 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 function updateMatches() {
   if (scope !== "note") return;
   const count = state.source?.matchCount() || 0;
-  $("search-matches").textContent = !$("search").value ? "Type something to find in this note." : `${count} ${count === 1 ? "match" : "matches"}`;
+  $("search-matches").textContent = !$("search").value ? "Type something to find in this note." : count < 0 ? "Invalid regular expression." : `${count} ${count === 1 ? "match" : "matches"}`;
   for (const id of ["search-previous", "search-next", "search-replace", "search-replace-all"] as const)
-    $(id).disabled = count === 0 || Boolean(state.pendingDraft) || state.busy;
+    $(id).disabled = count <= 0 || Boolean(state.pendingDraft) || state.busy;
 }
 function searchNote() {
-  state.source?.search($("search").value, $("search-replacement").value);
+  state.source?.search($("search").value, $("search-replacement").value, {
+    caseSensitive: $("search-case").checked,
+    wholeWord: $("search-word").checked,
+    regexp: $("search-regex").checked,
+  });
   updateMatches();
 }
 async function openSearch(next: Scope, query?: string) {
@@ -96,6 +100,7 @@ function setupSearch() {
     }
   };
   $("search-replacement").oninput = searchNote;
+  for (const id of ["search-case", "search-word", "search-regex"] as const) $(id).onchange = searchNote;
   $("search-previous").onclick = () => state.source?.nextMatch(true);
   $("search-next").onclick = () => state.source?.nextMatch();
   $("search-replace").onclick = () => { state.source?.replaceMatch(); updateMatches(); };

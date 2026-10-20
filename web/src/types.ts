@@ -60,7 +60,7 @@ export interface SourceEditor {
   replace(body: string, options?: { reset?: boolean }): void;
   focus(): void;
   find(query?: string): void;
-  search(query: string, replacement: string): void;
+  search(query: string, replacement: string, options?: { caseSensitive: boolean; wholeWord: boolean; regexp: boolean }): void;
   matchCount(): number;
   nextMatch(previous?: boolean): void;
   replaceMatch(all?: boolean): void;

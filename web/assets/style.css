@@ -2788,6 +2788,9 @@ dialog.danger #modal-submit {
 .note-search-options { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 16px; }
 .note-search-options label, .note-search-options p { margin: 0; font-size: 12px; color: var(--muted); }
 .note-search-options input { width: 100%; min-height: 36px; padding: 6px 8px; }
+.search-flags summary { padding: 6px 0; cursor: pointer; font-size: 12px; color: var(--muted); }
+.search-flags label { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.search-flags input[type="checkbox"] { width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent); }
 .search-step { display: flex; gap: 6px; }
 .search-step button { flex: 1; min-height: 32px; border-radius: 6px; padding: 6px; background: var(--hover); font-size: 12px; }
 .search-open.search-in-note .sidebar > :is(.note-list, .list-heading, .tag-filter, .pinned-notes, .sidebar-actions) { display: none !important; }

@@ -2544,3 +2544,30 @@ test("editor toolbar stays anchored when note titles change", async ({ page }) =
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
+
+test("this-note search supports case, whole words, regex captures and invalid patterns", async ({ page }) => {
+  const id = await openSeed(page, "cat Cat catalog cat-1 cat-2");
+  await expect(page.locator("#rich-editor")).toBeVisible();
+  const query = await searchBox(page);
+  await page.locator("#find-replace").click();
+  await query.fill("cat");
+  await expect(page.locator("#search-matches")).toHaveText("5 matches");
+  await page.locator(".search-flags summary").click();
+  await page.getByLabel("Match case", { exact: true }).check();
+  await expect(page.locator("#search-matches")).toHaveText("4 matches");
+  await page.getByLabel("Whole words", { exact: true }).check();
+  await expect(page.locator("#search-matches")).toHaveText("3 matches");
+  await page.getByLabel("Whole words", { exact: true }).uncheck();
+  await page.getByLabel("Regular expression", { exact: true }).check();
+  await query.fill("cat-(\\d)");
+  await expect(page.locator("#search-matches")).toHaveText("2 matches");
+  await page.locator("#search-replacement").fill("dog-$1");
+  await page.locator("#search-replace-all").click();
+  await expect.poll(() => diskBody(page, id)).toBe("cat Cat catalog dog-1 dog-2");
+  await query.fill("[");
+  await expect(page.locator("#search-matches")).toHaveText("Invalid regular expression.");
+  await expect(page.locator("#search-replace-all")).toBeDisabled();
+  expect(await diskBody(page, id)).toBe("cat Cat catalog dog-1 dog-2");
+});
+
+

@@ -208,13 +208,14 @@ export function createSource(
       // The panel exists only once opened, so the query follows it.
       if (query) view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: query })) });
     },
-    search(query, replacement) {
+    search(query, replacement, options) {
       closeSearchPanel(view);
-      view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: query, replace: replacement, literal: true })) });
+      view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: query, replace: replacement, literal: true, ...options })) });
     },
     matchCount() {
       const query = getSearchQuery(view.state);
-      if (!query.search || !query.valid) return 0;
+      if (!query.search) return 0;
+      if (!query.valid) return -1;
       const cursor = query.getCursor(view.state);
       let count = 0;
       while (!cursor.next().done) count++;
