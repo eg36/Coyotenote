@@ -84,6 +84,8 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   nested brackets and escapes, and validate changes before applying.
 - Math in Write: inline and display formulas render with the bundled KaTeX,
   open their TeX for editing in place, and keep delimiters and spacing exact.
+- Callouts in Write (moved up from 1.6): shown as in Preview, with the type,
+  title and folding edited in the header and the first line kept exactly.
 - Exact saving from Write: blocks you do not edit, and the gaps between them,
   are saved as written; edited text keeps its escapes, delimiters, markers,
   fences and table rows, and typed characters are escaped only when needed.
@@ -101,7 +103,7 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged; 2.0.0 is
 the next public release after 1.5.0.
 
-## 1.6.0 — Maintainable code, full documentation, callouts in Write
+## 1.6.0 — Maintainable code, full documentation
 
 - Work moves to issue-based development: issues planned together in the
   tracker (synced to GitHub), each change on its own branch with a pull
@@ -110,8 +112,6 @@ the next public release after 1.5.0.
   read: clear structure, names and comments, no dead code.
 - Full technical documentation: architecture, data flow, vault format and
   safety rules, frontend and server internals, testing and release process.
-- Edit callouts visually, with their type, title and folding kept exactly,
-  so notes with callouts no longer open in Markdown.
 
 ## 2.0.0 and later
 

@@ -25,6 +25,7 @@ import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, in
 import { writingSettings } from "./preferences.js";
 import { SourceBlocks, stampSources } from "./source-blocks.js";
 import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
+import { Callout, continuedCallout } from "./write-callout.js";
 import { InlineMath, MathBlock, NumberedList, splitLazyFormulas, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
 
 const WikiLink = Node.create({
@@ -316,8 +317,8 @@ export function supportsRich(body: string) {
         "Showing Markdown: Write would show codes such as &copy; as text instead of the symbol (©) and save them that way.";
   });
   reason = mathReason(richMarkdown.lexer(body)) || reason;
-  if (/^ {0,3}>[ \t]*\[![^\]\s]+\]/m.test(body))
-    reason = "Showing Markdown: Write would change this note's callouts.";
+  if (continuedCallout(body))
+    reason = "Showing Markdown: Write would change the line that continues this callout. Start it with > or leave a blank line before it.";
   // Write closes bold, italic, strikethrough and highlights before a wiki
   // link or image and reopens them after it, which would rewrite the text.
   const split = "Showing Markdown: Write would split formatting around a link or image in this note.";
@@ -394,6 +395,7 @@ export function createRich(
         NumberedList,
         MathListItem,
         MathBlockquote,
+        Callout,
         SourceBlocks,
         EscapedChar,
         CharacterReference,

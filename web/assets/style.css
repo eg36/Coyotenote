@@ -2974,6 +2974,29 @@ dialog.danger #modal-submit {
 #preview details.callout[open] > summary.callout-title::after { transform: rotate(90deg); }
 #preview .callout-content { margin-top: 6px; }
 #preview .callout-content > :last-child { margin-bottom: 0; }
+
+/* Callouts in Write look as in Preview, with their type, title and folding
+   editable in the header. */
+.tiptap .write-callout { --callout: var(--blue); margin: 1em 0; padding: 10px 14px; border-radius: 8px; border-left: 3px solid var(--callout); background: color-mix(in srgb, var(--callout) 10%, transparent); }
+.tiptap .write-callout.callout-abstract, .tiptap .write-callout.callout-tip { --callout: var(--cyan); }
+.tiptap .write-callout.callout-success { --callout: var(--good); }
+.tiptap .write-callout.callout-question, .tiptap .write-callout.callout-warning { --callout: var(--warn); }
+.tiptap .write-callout.callout-failure, .tiptap .write-callout.callout-danger, .tiptap .write-callout.callout-bug { --callout: var(--danger); }
+.tiptap .write-callout.callout-example { --callout: var(--pink); }
+.tiptap .write-callout.callout-quote { --callout: var(--muted); }
+.write-callout-header { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text); flex-wrap: wrap; }
+.write-callout-header .callout-icon { display: inline-flex; flex: none; color: var(--callout); }
+.write-callout-header .callout-icon svg { width: 18px; height: 18px; }
+.write-callout-header select, .write-callout-header input { min-height: 32px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); font: inherit; }
+.write-callout-header select { padding: 2px 4px; cursor: pointer; }
+.write-callout-header select:last-child { margin-left: auto; font-weight: 400; color: var(--muted); font-size: var(--font-small); }
+.write-callout-header input { flex: 1 1 12ch; min-width: 0; padding: 2px 6px; }
+.write-callout-header :is(select, input):hover { border-color: var(--line); }
+.write-callout-header :is(select, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.write-callout-header input::placeholder { color: var(--muted); }
+.tiptap .write-callout .callout-content { margin-top: 6px; }
+.tiptap .write-callout .callout-content > :first-child { margin-top: 0; }
+.tiptap .write-callout .callout-content > :last-child { margin-bottom: 0; }
 /* Custom task marks in the preview, such as [?] or [-]: a small box the
    size of a checkbox showing the mark, tinted by what it usually means. */
 #preview .task-mark { --task: var(--accent); display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin: 0 8px 0 0; vertical-align: middle; border: 1.5px solid var(--task); border-radius: 3px; color: var(--task); font: 700 10px/1 var(--font-ui); }

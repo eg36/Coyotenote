@@ -3110,12 +3110,12 @@ test("inline footnote fields work on phones and in structured text", async ({ pa
   expect(width.page).toBeLessThanOrEqual(width.view);
 });
 
-test("callouts render in Preview with icons and folding, and keep the note in Markdown for Write", async ({ page }) => {
+test("callouts render in Preview with icons and folding, and open in Write", async ({ page }) => {
   const text = "> [!warning] Mind the gap\n> Stand behind the line.\n\n> [!faq]- Why fold?\n> Hidden until opened.";
   const id = await openSeed(page, text);
   await mode(page, "Write");
-  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
-  await expect(page.locator("#toast-text")).toContainText("callouts");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+  await expect(page.locator(".tiptap .write-callout")).toHaveCount(2);
   await mode(page, "Preview");
   const warning = page.locator("#preview .callout-warning");
   await expect(warning.locator(".callout-title-text")).toHaveText("Mind the gap");
@@ -3126,6 +3126,66 @@ test("callouts render in Preview with icons and folding, and keep the note in Ma
   await folded.locator("summary").click();
   await expect(folded.getByText("Hidden until opened.")).toBeVisible();
   expect(await diskBody(page, id)).toBe(text);
+});
+
+test("Write keeps callouts exact through body edits", async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    "> [!note] Title\n> Body. text here\n\nAfter.",
+    "> [!Warning]- Mind the gap\n> Body. careful\n>\n> - one\n> - two",
+    "> [!tip]+\n> Body. tight\n> - list right after\n\nMore.",
+    "> [!info] Only a title\n\nBody. after",
+    "> [!question] Nested\n> Body. outer\n>\n> > [!bug] Inner\n> > inner text",
+    "> [!example]\n> Body. with $x^2$\n>\n> $$\n> y\n> $$",
+    ">[!note] no space\n>Body. tight prefix",
+    "> [!custom] Unknown\n> Body. unknown type",
+    "Body. top\n\n- item\n  > [!note] In a list\n  > listed text",
+  ];
+  for (const body of cases) {
+    const id = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane"), body).toBeVisible();
+    await page.locator(".tiptap").getByText("Body.", { exact: false }).first().click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id), body).toBe(body.replace("Body.", "Edited Body."));
+  }
+});
+
+test("callout headers edit the type, title and folding, and typing makes a callout", async ({ page }) => {
+  const body = "> [!Warning] Mind the gap\n> Stand back.";
+  const id = await openSeed(page, body);
+  await mode(page, "Write");
+  const callout = page.locator(".tiptap .write-callout");
+  await expect(callout).toHaveClass(/callout-warning/);
+  await expect(callout.getByLabel("Callout type")).toHaveValue("Warning");
+  await callout.getByLabel("Callout title (Markdown)").fill("Mind the step");
+  await expect.poll(() => diskBody(page, id)).toBe("> [!Warning] Mind the step\n> Stand back.");
+  await callout.getByLabel("Callout folding").selectOption("-");
+  await expect.poll(() => diskBody(page, id)).toBe("> [!Warning]- Mind the step\n> Stand back.");
+  await callout.getByLabel("Callout type").selectOption("tip");
+  await expect(callout).toHaveClass(/callout-tip/);
+  await expect.poll(() => diskBody(page, id)).toBe("> [!tip]- Mind the step\n> Stand back.");
+  await callout.getByLabel("Callout title (Markdown)").fill("");
+  await expect.poll(() => diskBody(page, id)).toBe("> [!tip]- \n> Stand back.");
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toBe("> [!tip]- Mind the step\n> Stand back.");
+  // Typing [!type] at the start of a quote turns it into a callout.
+  const fresh = await openSeed(page, "Start.");
+  await mode(page, "Write");
+  await page.locator(".tiptap p").click(); await expect(page.locator(".tiptap")).toBeFocused();
+  await expect.poll(() => page.evaluate(() => getSelection()?.anchorOffset)).toBeGreaterThan(0);
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter"); await page.keyboard.type("> [!todo] ");
+  await expect(page.locator(".tiptap .write-callout.callout-todo")).toHaveCount(1);
+  await expect(page.getByLabel("Callout title (Markdown)")).toBeFocused();
+  await page.keyboard.type("Shopping"); await page.keyboard.press("Enter"); await page.keyboard.type("Bread");
+  await expect.poll(() => diskBody(page, fresh)).toBe("Start.\n\n> [!todo] Shopping\n> Bread");
+  // A line that continues a callout lazily keeps the note in Markdown.
+  const lazy = "> [!note] Lazy\n> text\ncontinued";
+  const other = await openSeed(page, lazy);
+  await mode(page, "Write");
+  await expect(page.locator("#toast-text")).toContainText("continues this callout");
+  expect(await diskBody(page, other)).toBe(lazy);
 });
 
 test("folder breadcrumbs match the note title's size", async ({ page }) => {

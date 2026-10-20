@@ -221,7 +221,12 @@ Beyond GitHub Flavored Markdown, Preview understands:
   attention), failure (fail, missing), danger (error), bug, example and quote
   (cite); others look like a note. `[!type]-` starts folded and `[!type]+`
   open; nest callouts with `> >`. Leave out the body for a title-only callout.
-  Write shows notes with callouts in Markdown, so their syntax stays exact.
+  Write shows callouts as Preview does and edits their body as text. The
+  header holds the type, the title (as Markdown) and whether it folds; the
+  first line is saved exactly as written until one of those changes. Typing
+  `[!type]` and a space at the start of a quote turns it into a callout and
+  moves to its title; Enter there moves on to the body. A line that continues
+  a callout without starting with `>` keeps the note in Markdown.
 - **Links within a note:** `[[#Heading]]` jumps to a heading of the same note,
   and `[[#Heading|label]]` shows a label. End a paragraph or list item with
   ` ^an-id` to name that block, then link to it with `[[Note#^an-id]]` or
