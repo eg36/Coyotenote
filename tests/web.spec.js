@@ -2629,7 +2629,7 @@ test("note actions stay in the writing toolbar and the save dot precedes the not
     }
     const status = await page.locator("#save-state").boundingBox();
     const title = await page.locator("#document-title").boundingBox();
-    expect(status.x + status.width).toBeLessThanOrEqual(title.x);
+    expect(title.x - status.x - status.width).toBeGreaterThanOrEqual(3);
     expect(Math.abs(status.y + status.height / 2 - title.y - title.height / 2)).toBeLessThan(2);
     await expect(page.locator(".header-divider")).toHaveCount(0);
     expect(await page.locator("#menu-bar #document-actions").count()).toBe(1);

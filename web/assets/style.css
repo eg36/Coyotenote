@@ -2864,7 +2864,7 @@ dialog.danger #modal-submit {
 .app.at-home .topbar .header-tools { display: flex; grid-row: 1; margin: 0; }
 .app.at-home .topbar #save-state { display: none; }
 .app.at-home .editor-bar { display: none; }
-.topbar #save-state { display: inline-flex; align-self: center; margin: 0 8px 0 0; padding: 0; flex-shrink: 0; }
+.topbar #save-state { display: inline-flex; align-self: center; margin: 0 12px 0 0; padding: 0; flex-shrink: 0; }
 .topbar #save-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .header-tools .document-actions { display: flex; min-width: 0; overflow-x: auto; gap: 2px; margin: 0; }
 .header-tools .document-actions .icon-button { width: 28px; height: 28px; padding: 0; }
