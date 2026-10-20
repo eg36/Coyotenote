@@ -41,6 +41,7 @@ function cycleMode() {
 }
 function toggleFocus() {
   $("app").classList.toggle("focus-mode");
+  document.dispatchEvent(new Event("workspace-focus-change"));
   state.source?.refresh();
 }
 // One table drives both the key handler and the help dialog. Chords name

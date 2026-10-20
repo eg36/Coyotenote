@@ -1,5 +1,6 @@
 const paths: Record<string, string> = {
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  textStyle: '<path d="M4 19 10 4l6 15M6 14h8m3-4h5m-2-3v12"/>',
   vault:
     '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M8 5V3h8v2m-4 5v5m-3-2h6"/>',
   notebook:

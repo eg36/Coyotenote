@@ -60,86 +60,9 @@
             ><span data-icon="chevronDown"></span>
           </button>
         </div>
-        <section
-          class="editor-toolbar"
-          id="editor-toolbar"
-          aria-label="Formatting"
-          hidden
-        >
-          <button
-            id="block-type"
-            class="block-type"
-            type="button"
-            title="Text style"
-            aria-haspopup="listbox"
-            aria-controls="block-menu"
-            aria-expanded="false"
-          >
-            <span id="block-type-label">Normal text</span
-            ><span data-icon="chevronDown"></span></button
-          ><span class="toolbar-divider"></span
-          ><button data-format="bold" title="Bold · Ctrl/⌘ B" aria-label="Bold">
-            <b>B</b></button
-          ><button
-            data-format="italic"
-            title="Italic · Ctrl/⌘ I"
-            aria-label="Italic"
-          >
-            <i>I</i></button
-          ><button
-            data-format="strike"
-            title="Strikethrough"
-            aria-label="Strikethrough"
-          >
-            <s>S</s></button
-          ><button
-            data-format="code"
-            title="Inline code"
-            aria-label="Inline code"
-          >
-            <span data-icon="code"></span></button
-          ><span class="toolbar-divider"></span
-          ><button
-            data-format="bulletList"
-            title="Bullet list"
-            aria-label="Bullet list"
-          >
-            <span data-icon="list"></span></button
-          ><button
-            data-format="orderedList"
-            title="Numbered list"
-            aria-label="Numbered list"
-          >
-            <span data-icon="ordered"></span></button
-          ><button
-            data-format="taskList"
-            title="Checklist"
-            aria-label="Checklist"
-          >
-            <span data-icon="checkSquare"></span></button
-          ><button data-format="blockquote" title="Quote" aria-label="Quote">
-            <span data-icon="quote"></span></button
-          ><span class="toolbar-divider"></span
-          ><button data-format="link" title="Link" aria-label="Insert link">
-            <span data-icon="link"></span></button
-          ><button
-            data-format="wiki"
-            title="Link another note"
-            aria-label="Link another note"
-          >
-            <span data-icon="noteLink"></span></button
-          ><button data-format="table" title="Table" aria-label="Insert table">
-            <span data-icon="table"></span></button
-          ><button data-format="image" title="Insert image · or paste or drop one" aria-label="Insert image">
-            <span data-icon="image"></span></button
-          ><span class="toolbar-spacer"></span
-          ><button data-format="undo" title="Undo edit" aria-label="Undo edit">
-            <span data-icon="undo"></span></button
-          ><button data-format="redo" title="Redo edit" aria-label="Redo edit">
-            <span data-icon="redo"></span>
-          </button>
-        </section>
+
           <div class="document-actions" id="document-actions" hidden>
+            <button id="format-toggle" class="icon-button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
             <button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
             <button
               id="outline-button"
@@ -247,6 +170,90 @@
         class="sidebar-scrim"
         aria-label="Close notes"
       ></button>
+      <aside id="format-panel" class="format-panel" aria-label="Text formatting" hidden>
+        <div class="format-heading"><h2>Text</h2><button id="close-formatting" class="icon-button" aria-label="Close text formatting" title="Close text formatting"><span data-icon="close"></span></button></div>
+        <section
+          class="editor-toolbar"
+          id="editor-toolbar"
+          aria-label="Formatting"
+          hidden
+        >
+          <h3 class="format-label">Paragraph style</h3>
+          <button
+            id="block-type"
+            class="block-type"
+            type="button"
+            title="Text style"
+            aria-haspopup="listbox"
+            aria-controls="block-menu"
+            aria-expanded="false"
+          >
+            <span id="block-type-label">Normal text</span
+            ><span data-icon="chevronDown"></span></button
+          ><h3 class="format-label">Text style</h3>
+          <button data-format="bold" title="Bold · Ctrl/⌘ B" aria-label="Bold">
+            <b>B</b></button
+          ><button
+            data-format="italic"
+            title="Italic · Ctrl/⌘ I"
+            aria-label="Italic"
+          >
+            <i>I</i></button
+          ><button
+            data-format="strike"
+            title="Strikethrough"
+            aria-label="Strikethrough"
+          >
+            <s>S</s></button
+          ><button
+            data-format="code"
+            title="Inline code"
+            aria-label="Inline code"
+          >
+            <span data-icon="code"></span></button
+          ><h3 class="format-label">Lists and quotes</h3>
+          <button
+            data-format="bulletList"
+            title="Bullet list"
+            aria-label="Bullet list"
+          >
+            <span data-icon="list"></span></button
+          ><button
+            data-format="orderedList"
+            title="Numbered list"
+            aria-label="Numbered list"
+          >
+            <span data-icon="ordered"></span></button
+          ><button
+            data-format="taskList"
+            title="Checklist"
+            aria-label="Checklist"
+          >
+            <span data-icon="checkSquare"></span></button
+          ><button data-format="blockquote" title="Quote" aria-label="Quote">
+            <span data-icon="quote"></span></button
+          ><h3 class="format-label">Insert</h3>
+          <button data-format="link" title="Link" aria-label="Insert link">
+            <span data-icon="link"></span></button
+          ><button
+            data-format="wiki"
+            title="Link another note"
+            aria-label="Link another note"
+          >
+            <span data-icon="noteLink"></span></button
+          ><button data-format="table" title="Table" aria-label="Insert table">
+            <span data-icon="table"></span></button
+          ><button data-format="image" title="Insert image · or paste or drop one" aria-label="Insert image">
+            <span data-icon="image"></span></button
+          ><h3 class="format-label">History</h3>
+          <button data-format="undo" title="Undo edit" aria-label="Undo edit">
+            <span data-icon="undo"></span></button
+          ><button data-format="redo" title="Redo edit" aria-label="Redo edit">
+            <span data-icon="redo"></span>
+          </button>
+        </section>
+      </aside>
+      <button id="formatting-scrim" class="formatting-scrim" aria-label="Close text formatting panel" hidden></button>
       <main class="workspace">
         <section
           id="error-banner"

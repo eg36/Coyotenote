@@ -80,7 +80,7 @@ test("empty notebook, create a note, WYSIWYG writing and autosave", async ({
   await expect(editor).toContainText("A thought worth keeping.");
 });
 
-test("document menus sit above writing controls and support keyboard navigation at home", async ({ page }) => {
+test("document menus and note actions stay above the left formatting panel", async ({ page }) => {
   await page.goto("/");
   const popup = page.locator("#menu-popup");
   await expect(page.locator("#menu-bar button")).toHaveCount(4);
@@ -97,7 +97,12 @@ test("document menus sit above writing controls and support keyboard navigation 
   const menus = await page.locator("#menu-bar").boundingBox();
   expect(Math.abs(menus.x - homeMenus.x)).toBeLessThan(1);
   const writing = await page.locator(".editor-bar").boundingBox();
-  expect(menus.y + menus.height).toBeLessThanOrEqual(writing.y);
+  await expect(page.locator("#format-panel")).toBeVisible();
+  const panel = await page.locator("#format-panel").boundingBox();
+  const workspace = await page.locator(".workspace").boundingBox();
+  expect(menus.y + menus.height).toBeLessThanOrEqual(panel.y);
+  expect(writing.y + writing.height).toBeLessThanOrEqual(panel.y);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(workspace.x);
   await menu(page, "view");
   await page.getByRole("menuitem", { name: "Split", exact: true }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
@@ -2625,4 +2630,38 @@ test("rail icons can be dragged, reordered by keyboard and remembered after relo
   await expect(page.locator(".activity-rail > button").nth(1)).toHaveAttribute("id", "commands-button");
   await commands.click();
   await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toBeVisible();
+});
+
+
+test("left text formatting panel edits, remembers visibility and folds away on phones", async ({ page }) => {
+  const id = await openSeed(page, "A paragraph to style.");
+  const pane = page.locator("#format-panel"), toggle = page.locator("#format-toggle");
+  await expect(pane).toBeVisible();
+  const sidebar = await page.locator("#sidebar").boundingBox(), panel = await pane.boundingBox();
+  expect(panel.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width);
+  await page.getByRole("textbox", { name: "WYSIWYG editor" }).click();
+  await page.keyboard.press("Control+a");
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe("A paragraph to style.");
+  await pane.getByRole("button", { name: "Bold", exact: true }).click();
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toContain("**A paragraph to style.**");
+  await page.locator("#close-formatting").click();
+  await expect(pane).toBeHidden();
+  await expect(toggle).toBeFocused();
+  await page.reload();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(pane).toBeVisible();
+  await mode(page, "Preview");
+  await expect(pane).toBeHidden();
+  await mode(page, "Write");
+  await expect(pane).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(pane).toBeHidden();
+  await toggle.click();
+  await expect(pane).toBeInViewport();
+  await expect(pane.getByRole("button", { name: "Insert image", exact: true })).toBeInViewport();
+  await page.locator("#formatting-scrim").click({position:{x:325,y:250}});
+  await expect(pane).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
