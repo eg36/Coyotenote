@@ -142,7 +142,11 @@ not change the Markdown files or follow the vault to another browser.
   then close search to restore the previous writing view. Choosing a view yourself
   during search keeps that choice. Ctrl/⌘+F also opens this panel while the
   Markdown editor has focus. Replacements autosave and can be undone.
-- Click the note name to **rename or move** it. `Work/Plan` is `Work/Plan.md`.
+- Click the note name to **rename or move** it in place: the title becomes a
+  field with the note's path, its name selected. Enter renames it, a folder
+  path such as `Work/Plan` moves it (`Work/Plan.md`), and Escape or clicking
+  away cancels; an error shows at the field. File → Rename or move… and
+  Ctrl/⌘+Shift+R open the same rename as a dialog.
   You can also **drag a note** onto a folder, or onto a note in it, to move it
   there; while dragging, a zone at the end of the list moves it out of folders.
   Resolved wiki links in other notes are rewritten to keep pointing at it;

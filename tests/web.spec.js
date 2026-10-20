@@ -487,8 +487,8 @@ test("create in folders, body search, rename, trash and undo", async ({
   await expect(page.locator(".note-row").first()).toBeVisible();
   await page.locator("#document-title").click();
   const renamed = id + " revised";
-  await page.getByLabel("Note path").fill(renamed);
-  await page.getByRole("button", { name: "Rename note", exact: true }).click();
+  await page.getByLabel("Note path: rename or move this note").fill(renamed);
+  await page.keyboard.press("Enter");
   await expect(page.locator("#document-title")).toHaveText(
     renamed.split("/").pop(),
   );
@@ -2028,6 +2028,58 @@ test("images show in Write and Preview, keep their Markdown, and can be pasted, 
   expect(notes.some((note) => note.startsWith("attachments/"))).toBe(false);
 });
 
+test("clicking the note title renames or moves the note in place", async ({ page }) => {
+  const stamp = Date.now();
+  const id = await openSeed(page, "Title rename body.", `Inline rename ${stamp}`);
+  await openSeed(page, "Links to [[Inline rename " + stamp + "]].", `Inline linker ${stamp}`);
+  await openSeed(page, "Already here.", `Taken ${stamp}`);
+  await page.goto("/?note=" + encodeURIComponent(id));
+  const title = page.locator("#document-title");
+  const field = page.getByLabel("Note path: rename or move this note");
+  // The field holds the path with the name selected; Escape cancels.
+  await title.click();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue(id);
+  expect(await field.evaluate((input) => input.value.slice(input.selectionStart, input.selectionEnd))).toBe(id);
+  await page.keyboard.press("Escape");
+  await expect(field).toHaveCount(0);
+  await expect(title).toBeFocused();
+  await expect(title).toHaveText(id);
+  // Enter with the same path, or leaving the field, changes nothing.
+  await title.click(); await page.keyboard.press("Enter");
+  await expect(field).toHaveCount(0);
+  await title.click(); await page.locator(".tiptap").click();
+  await expect(field).toHaveCount(0);
+  // An existing name is refused at the field, and nothing is renamed.
+  await title.click();
+  await field.fill(`Taken ${stamp}`);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("alert").filter({ hasText: "already exists" })).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  expect(await diskBody(page, id)).toBe("Title rename body.");
+  // A folder path moves it and the address follows; a short link to it still
+  // finds it, so it is left as written.
+  await field.fill(`Moved ${stamp}/Inline rename ${stamp}`);
+  await page.keyboard.press("Enter");
+  await expect(field).toHaveCount(0);
+  await expect(title).toHaveText(`Inline rename ${stamp}`);
+  await expect(page.locator("#note-folder")).toContainText(`Moved ${stamp}`);
+  await expect.poll(() => new URL(page.url()).searchParams.get("note")).toBe(`Moved ${stamp}/Inline rename ${stamp}`);
+  expect(await diskBody(page, `Inline linker ${stamp}`)).toBe(`Links to [[Inline rename ${stamp}]].`);
+  // Renaming it does rewrite that link.
+  await title.click();
+  await field.fill(`Moved ${stamp}/Renamed ${stamp}`);
+  await page.keyboard.press("Enter");
+  await expect(title).toHaveText(`Renamed ${stamp}`);
+  await expect.poll(() => diskBody(page, `Inline linker ${stamp}`)).toBe(`Links to [[Renamed ${stamp}]].`);
+  // On a phone the field fits the narrower title row.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await title.click();
+  await expect(field).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.keyboard.press("Escape");
+});
+
 test("an image that finishes uploading after leaving its note is not added to another", async ({ page }) => {
   const stamp = Date.now();
   const other = await openSeed(page, "The other note.", `Upload target B ${stamp}`);
@@ -2533,7 +2585,8 @@ test("pins and recently opened notes survive reload and follow an app rename", a
     await gate;
     await route.fulfill({ response }).catch(() => {});
   });
-  await page.locator("#document-title").click();
+  // The dialog stays available from the keyboard.
+  await page.keyboard.press("Control+Shift+R");
   await page.getByLabel("Note path").fill(renamed);
   await page.getByRole("button", { name: "Rename note", exact: true }).click();
   await expect(page.locator("#pinned-list .navigation-note")).toHaveAttribute("data-note", renamed);

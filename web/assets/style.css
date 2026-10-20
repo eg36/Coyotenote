@@ -3088,3 +3088,12 @@ dialog.danger #modal-submit {
 .prose li[data-marker="-"] > div { color: var(--muted); text-decoration: line-through; }
 
 .prose ul[data-type="taskList"] > li > label:has(.write-task-status) { min-width: 70px; justify-content: flex-end; }
+
+/* Renaming in place: the title becomes a field holding the note's path. */
+.note-heading.renaming :is(.note-folder, .document-title) { display: none; }
+.title-rename { position: relative; display: inline-flex; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.title-rename-input { min-width: 0; max-width: min(60vw, 520px); margin-left: -8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--chrome); color: var(--text); font: inherit; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.title-rename-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.title-rename-input[aria-invalid="true"] { border-color: var(--danger); }
+.title-rename-error { position: absolute; top: calc(100% + 6px); left: -8px; z-index: 40; width: max-content; max-width: min(86vw, 360px); padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--chrome); color: var(--text); font-size: var(--font-small); font-weight: 400; white-space: normal; box-shadow: 0 6px 18px rgb(0 0 0 / 0.18); }
+.title-rename-error:empty { display: none; }

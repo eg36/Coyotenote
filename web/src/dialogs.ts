@@ -149,27 +149,99 @@ function newNoteDialog() {
     await createNote(input.value.trim(), template?.body || "");
   }, { submit: "Create note" });
 }
+// renameCurrent renames or moves the open note to name. Links to it, its
+// image paths, pins and recent notes follow; a failure throws its message.
+async function renameCurrent(name: string) {
+  await save();
+  if (!state.current) return;
+  const previousId = state.current.id;
+  const result = await api<RenameResponse>("/api/rename", "POST", {
+    id: state.current.id,
+    name,
+    revision: state.current.revision,
+  });
+  renameNavigation(previousId, result.note.id);
+  await refresh();
+  await openNote(result.note.id, { skipSave: true, pushBack: false });
+  if (result.warnings.length)
+    showToast(result.warnings.join(" · "), { persistent: true });
+}
+// renameInPlace turns the note's title into a field holding its path, with
+// the name selected. Enter renames or moves the note, as the dialog does;
+// Escape, an unchanged path or leaving the field cancels. Errors show at
+// the field, and nothing changes.
+function renameInPlace() {
+  const head = $("document-head");
+  if (!state.current || state.pendingDraft || state.busy || head.classList.contains("renaming")) return;
+  const original = state.current.id;
+  const form = document.createElement("span");
+  form.className = "title-rename";
+  const input = document.createElement("input");
+  input.className = "title-rename-input";
+  input.value = original;
+  input.spellcheck = false;
+  input.autocomplete = "off";
+  input.setAttribute("aria-label", "Note path: rename or move this note");
+  const error = document.createElement("span");
+  error.className = "title-rename-error";
+  error.id = "title-rename-error";
+  error.setAttribute("role", "alert");
+  input.setAttribute("aria-describedby", error.id);
+  form.append(input, error);
+  $("document-title").after(form);
+  head.classList.add("renaming");
+  const fit = () => { input.size = Math.max(12, input.value.length + 1); };
+  fit();
+  input.focus();
+  input.setSelectionRange(original.lastIndexOf("/") + 1, original.length);
+  let working = false, closed = false;
+  const close = (focusTitle: boolean) => {
+    // Removing the field blurs it, which would close it a second time.
+    if (closed) return;
+    closed = true;
+    form.remove();
+    head.classList.remove("renaming");
+    if (focusTitle) $("document-title").focus();
+  };
+  input.oninput = () => {
+    fit();
+    error.textContent = "";
+    input.removeAttribute("aria-invalid");
+  };
+  input.onblur = () => { if (!working) close(false); };
+  input.onkeydown = async (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      close(true);
+      return;
+    }
+    if (event.key !== "Enter" || event.isComposing || working) return;
+    event.preventDefault();
+    const name = input.value.trim();
+    if (!name || name === original) return close(true);
+    working = true;
+    input.readOnly = true;
+    try {
+      await renameCurrent(name);
+      close(true);
+    } catch (failure) {
+      error.textContent = failure instanceof Error ? failure.message : String(failure);
+      input.setAttribute("aria-invalid", "true");
+      input.readOnly = false;
+      input.focus();
+    } finally {
+      working = false;
+    }
+  };
+}
 function renameDialog() {
   if (!state.current) return;
   inputDialog(
     "Rename note",
     "Note path",
     state.current.id,
-    async (name) => {
-      await save();
-      if (!state.current) return;
-      const previousId = state.current.id;
-      const result = await api<RenameResponse>("/api/rename", "POST", {
-        id: state.current.id,
-        name,
-        revision: state.current.revision,
-      });
-      renameNavigation(previousId, result.note.id);
-      await refresh();
-      await openNote(result.note.id, { skipSave: true, pushBack: false });
-      if (result.warnings.length)
-        showToast(result.warnings.join(" · "), { persistent: true });
-    },
+    renameCurrent,
     {
       submit: "Rename note",
       description:
@@ -696,6 +768,7 @@ export {
   newNoteDialog,
   openModal,
   renameDialog,
+  renameInPlace,
   themeChooser,
   trashDialog,
   undoTrash,

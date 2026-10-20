@@ -54,7 +54,7 @@ import {
   linkDialog,
   newNoteDialog,
   openModal,
-  renameDialog,
+  renameInPlace,
   trashDialog,
   undoTrash,
 } from "./dialogs.js";
@@ -156,7 +156,7 @@ $("sidebar-search").onclick = () => {
 };
 $("fold-folders").onclick = toggleAllFolders;
 $("first-note").onclick = newNoteDialog;
-$("document-title").onclick = renameDialog;
+$("document-title").onclick = renameInPlace;
 $("delete-note").onclick = deleteDialog;
 // The logo goes to the start page without reloading, so the back button
 // can return to the note that was open.
