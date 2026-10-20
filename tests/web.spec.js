@@ -63,6 +63,33 @@ async function diskBody(page, id) {
   );
 }
 
+// failSaves makes note saves fail in every document of the context until
+// allowSaves, with an HTTP error or, without one, a network failure. Network
+// routes can miss the save a document sends while it unloads, which then
+// reaches the server; this fails it inside the page instead.
+async function failSaves(page, failure = {}) {
+  const install = () => {
+    if (window.__failSaves) return;
+    window.__failSaves = true;
+    const fetch = window.fetch;
+    window.fetch = (url, options) => {
+      const failure = localStorage.getItem("test-fail-saves");
+      if (!failure || options?.method !== "PUT" || new URL(url, location.href).pathname !== "/api/note")
+        return fetch(url, options);
+      const { status, error } = JSON.parse(failure);
+      return status
+        ? Promise.resolve(new Response(JSON.stringify({ error }), { status, headers: { "Content-Type": "application/json" } }))
+        : Promise.reject(new TypeError("Failed to fetch"));
+    };
+  };
+  await page.context().addInitScript(install);
+  await page.evaluate(install);
+  await page.evaluate((failure) => localStorage.setItem("test-fail-saves", JSON.stringify(failure)), failure);
+}
+async function allowSaves(page) {
+  await page.evaluate(() => localStorage.removeItem("test-fail-saves"));
+}
+
 // Fail on browser errors rather than accepting an attractive but broken screen.
 test.beforeEach(async ({ page }) => {
   page.on("pageerror", (error) => {
@@ -591,7 +618,7 @@ test("conflicting tabs keep both versions and offer recovery", async ({
 });
 
 test("browser draft recovers after a reload while server writes fail", async ({
-  page, context,
+  page,
 }) => {
   const original = "Before disconnect.";
   const draft = "Keep this unsaved draft.";
@@ -599,14 +626,7 @@ test("browser draft recovers after a reload while server writes fail", async ({
   await mode(page, "Markdown");
   // Keep the simulated server outage in force across document teardown/reload,
   // including saves attempted by the old document's visibilitychange handler.
-  const blockWrites = (route) => route.request().method() === "PUT"
-    ? route.fulfill({
-        status: 503,
-        contentType: "application/json",
-        body: JSON.stringify({ error: "Simulated save outage" }),
-      })
-    : route.continue();
-  await context.route("**/api/note", blockWrites);
+  await failSaves(page, { status: 503, error: "Simulated save outage" });
   await page.locator(".cm-content").fill(draft);
   await expect(page.locator("#error-banner")).toContainText("Simulated save outage");
   const storedDraft = () => page.evaluate((id) => {
@@ -624,7 +644,7 @@ test("browser draft recovers after a reload while server writes fail", async ({
   expect(await diskBody(page, id)).toBe(original);
   await expect.poll(storedDraft).toBe(draft);
   await expect(page.locator("#draft-banner")).toBeVisible();
-  await context.unroute("**/api/note", blockWrites);
+  await allowSaves(page);
   await page.locator("#restore-draft").click();
   await page.keyboard.press("Control+s");
   await expect.poll(() => diskBody(page, id)).toBe(draft);
@@ -691,13 +711,10 @@ test("undoing back to the saved text during a save keeps the undo recoverable", 
 
 test("a window opened from a tab cannot discard that tab's only draft", async ({
   page,
-  context,
 }) => {
   const id = await openSeed(page, "Saved base.");
   await mode(page, "Markdown");
-  await context.route("**/api/note", (route) =>
-    route.request().method() === "PUT" ? route.abort() : route.fallback(),
-  );
+  await failSaves(page);
   await page.locator(".cm-content").fill("Parent unique unsaved text.");
   await expect(page.locator("#error-banner")).toBeVisible();
   const drafts = (target) =>
@@ -721,24 +738,17 @@ test("a window opened from a tab cannot discard that tab's only draft", async ({
   await popup.waitForTimeout(200);
   expect(await drafts(page)).toEqual(["Parent unique unsaved text."]);
 
-  // Once the parent is gone, its leftover draft can be discarded. Routes no
-  // longer intercept a closing page, so its last save fails in the page.
-  await page.evaluate(() => {
-    const fetch = window.fetch;
-    window.fetch = (url, options) =>
-      options?.method === "PUT" ? Promise.reject(new Error("offline")) : fetch(url, options);
-  });
+  // Once the parent is gone, its leftover draft can be discarded.
   await page.close({ runBeforeUnload: false });
   await popup.reload();
   await expect(popup.locator("#draft-banner")).toBeVisible();
   await popup.locator("#discard-draft").click();
   await expect.poll(() => drafts(popup)).toEqual([]);
-  await context.unroute("**/api/note");
+  await allowSaves(popup);
 });
 
 test("drafts of notes renamed or deleted elsewhere can still be recovered", async ({
   page,
-  context,
 }) => {
   const stamp = Date.now();
   const renamed = `Orphan ${stamp}`,
@@ -749,9 +759,7 @@ test("drafts of notes renamed or deleted elsewhere can still be recovered", asyn
   await seed(page, deleted, "Saved doomed base.");
   await openSeed(page, "Saved orphan base.", renamed);
   await mode(page, "Markdown");
-  await context.route("**/api/note", (route) =>
-    route.request().method() === "PUT" ? route.abort() : route.fallback(),
-  );
+  await failSaves(page);
   await page.locator(".cm-content").fill("Only in browser draft.");
   await expect(page.locator("#error-banner")).toBeVisible();
   // Leave the first note with its unsaved draft, then edit the second.
@@ -781,7 +789,7 @@ test("drafts of notes renamed or deleted elsewhere can still be recovered", asyn
       })
     ).ok(),
   ).toBeTruthy();
-  await context.unroute("**/api/note");
+  await allowSaves(page);
   await page.goto("/");
   await expect(page.locator("#orphan-banner")).toBeVisible();
   await expect(page.locator("#orphan-title")).toHaveText(
@@ -869,9 +877,7 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
 }) => {
   const id = await openSeed(page, "Plain saved file.");
   await mode(page, "Markdown");
-  await page.route("**/api/note", (route) =>
-    route.request().method() === "PUT" ? route.abort() : route.continue(),
-  );
+  await failSaves(page);
   const draft = "Draft text with <u>raw HTML Write cannot keep</u>.";
   await page.locator(".cm-content").fill(draft);
   await expect(page.locator("#error-banner")).toBeVisible();
@@ -880,7 +886,7 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
   await expect(page.locator("#draft-banner")).toBeVisible();
   await mode(page, "Write");
   await expect(page.locator("#rich-pane")).toBeVisible();
-  await page.unroute("**/api/note");
+  await allowSaves(page);
   await page.locator("#restore-draft").click();
   await expect(page.locator("#source-pane")).toBeVisible();
   await expect(page.locator("#rich-pane")).toBeHidden();
@@ -1157,9 +1163,7 @@ test("a pending draft is read-only until acknowledged and survives another reloa
 }) => {
   const id = await openSeed(page, "Saved file.");
   await mode(page, "Markdown");
-  await page.route("**/api/note", (route) =>
-    route.request().method() === "PUT" ? route.abort() : route.continue(),
-  );
+  await failSaves(page);
   await page.locator(".cm-content").fill("Recover this draft.");
   await expect(page.locator("#error-banner")).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());
@@ -1175,7 +1179,7 @@ test("a pending draft is read-only until acknowledged and survives another reloa
   await expect(page.locator(".cm-content")).toHaveText("Saved file.");
   await page.reload();
   await expect(page.locator("#draft-banner")).toBeVisible();
-  await page.unroute("**/api/note");
+  await allowSaves(page);
   await page.locator("#restore-draft").click();
   await expect(page.locator(".cm-content")).not.toHaveAttribute(
     "aria-readonly",
@@ -1190,9 +1194,7 @@ test("restoring an old draft cannot overwrite a newer disk revision", async ({
 }) => {
   const id = await openSeed(page, "Original version.");
   await mode(page, "Markdown");
-  await page.route("**/api/note", (route) =>
-    route.request().method() === "PUT" ? route.abort() : route.continue(),
-  );
+  await failSaves(page);
   await page.locator(".cm-content").fill("An older unsaved draft.");
   await expect(page.locator("#error-banner")).toBeVisible();
   const bootstrap = await (await page.request.get("/api/state")).json();
@@ -1207,7 +1209,7 @@ test("restoring an old draft cannot overwrite a newer disk revision", async ({
   page.on("dialog", (dialog) => dialog.accept());
   await page.reload();
   await expect(page.locator("#draft-banner")).toBeVisible();
-  await page.unroute("**/api/note");
+  await allowSaves(page);
   await page.locator("#restore-draft").click();
   await page.keyboard.press("Control+s");
   await expect(page.locator("#error-banner")).toBeVisible();
