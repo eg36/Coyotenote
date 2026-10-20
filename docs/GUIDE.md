@@ -5,8 +5,8 @@ Markdown files in a folder you choose. The app offers a WYSIWYG editor, Markdown
 source, rendered preview, split view, body search, focus mode, 14 themes and
 browser draft recovery.
 
-Labradorite is AI-made software, built with Claude and Codex. Keep important notes
-backed up and try it on a copy of your vault first.
+Labradorite is AI-assisted software. Keep important notes backed up and try it on
+a copy of your vault first.
 
 The first time it starts without a vault argument, Labradorite creates its notebook
 with a short **Welcome to Labradorite** note; delete it whenever you like. Folders
