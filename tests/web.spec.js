@@ -2506,30 +2506,29 @@ test("closing this-note search restores the prior writing mode unless the user s
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
 });
 
-test("the rail marks open panels with a bar: one of notes, recent or search, plus formatting", async ({ page }) => {
+test("the rail marks the notes panel's view with a bar: notes, recent or search", async ({ page }) => {
   await openSeed(page, "One active navigation view.");
   const notes = page.locator("#sidebar-toggle");
   const recent = page.locator("#recent-notes");
   const search = page.locator("#sidebar-search");
-  const format = page.locator("#format-toggle");
   const marked = async () => page.evaluate(() =>
     [...document.querySelectorAll(".activity-rail button")]
       .filter((button) => getComputedStyle(button, "::before").content !== "none")
       .map((button) => button.id));
   await page.mouse.move(800, 500);
-  await expect.poll(marked).toEqual(["sidebar-toggle", "format-toggle"]);
+  await expect.poll(marked).toEqual(["sidebar-toggle"]);
   await recent.click();
   await expect(recent).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(marked).toEqual(["format-toggle", "recent-notes"]);
+  await expect.poll(marked).toEqual(["recent-notes"]);
   await notes.click();
   await expect(recent).toHaveAttribute("aria-pressed", "false");
   await search.click();
   await expect(search).toHaveAttribute("aria-expanded", "true");
-  await expect.poll(marked).toEqual(["format-toggle", "sidebar-search"]);
+  await expect.poll(marked).toEqual(["sidebar-search"]);
   // An open panel never fills its icon, and hovering looks the same on every icon.
   await page.addStyleTag({ content: "* { transition: none !important; }" });
   await page.mouse.move(800, 500);
-  for (const button of [notes, search, format]) await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  for (const button of [notes, search]) await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await notes.hover();
   const hovered = await notes.evaluate((el) => getComputedStyle(el).backgroundColor);
   await recent.hover();
@@ -2664,9 +2663,13 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   const id = await openSeed(page, "A paragraph to style.");
   const pane = page.locator("#format-panel"), toggle = page.locator("#format-toggle");
   await expect(pane).toBeVisible();
-  expect(await page.locator(".activity-rail #format-toggle").count()).toBe(1);
-  const toggleBox = await toggle.boundingBox();
-  expect(toggleBox.width).toBeGreaterThanOrEqual(40);
+  expect(await page.locator(".activity-rail #format-toggle").count()).toBe(0);
+  // It sits in the header, right after the editor view selector.
+  const toggleBox = await toggle.boundingBox(), viewBox = await page.locator("#view-type").boundingBox();
+  expect(toggleBox.x).toBeGreaterThanOrEqual(viewBox.x + viewBox.width);
+  expect(toggleBox.x - viewBox.x - viewBox.width).toBeLessThan(10);
+  expect(Math.abs(toggleBox.y + toggleBox.height / 2 - viewBox.y - viewBox.height / 2)).toBeLessThan(2);
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
   const sidebar = await page.locator("#sidebar").boundingBox(), panel = await pane.boundingBox();
   expect(panel.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width);
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).click();
@@ -2701,10 +2704,10 @@ test("the editor view selector sits at the header's left end and views stay reac
   await expect(page.locator("#view-type")).toBeHidden();
   await openSeed(page, "Switch views freely.");
   const view = page.locator("#view-type"), area = page.locator("#editor-area");
-  expect(await page.locator(".topbar > #view-type").count()).toBe(1);
+  expect(await page.locator(".topbar .view-tools #view-type").count()).toBe(1);
   expect(await page.locator(".sidebar-actions #view-type").count()).toBe(0);
   await expect(view).toHaveAttribute("aria-label", "Editor view: Write");
-  await expect(view).toContainText("Write");
+  await expect(page.locator("#view-type-label")).toHaveText("Write");
   for (const width of [1999, 1440, 900, 700, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     const box = await view.boundingBox(), header = await page.locator(".topbar").boundingBox();
@@ -2714,11 +2717,15 @@ test("the editor view selector sits at the header's left end and views stay reac
     expect(box.y).toBeGreaterThanOrEqual(header.y);
     expect(box.y + box.height).toBeLessThanOrEqual(header.y + header.height);
     // The centered title, menus and note actions never overlap it.
+    const format = await page.locator("#format-toggle").boundingBox();
     for (const selector of ["#document-head", "#menu-bar [data-menu=file]", "#document-actions"]) {
       const other = await page.locator(selector).boundingBox();
-      const apart = other.x >= box.x + box.width || other.y >= box.y + box.height || other.y + other.height <= box.y;
-      expect(apart, `${selector} at ${width}px`).toBeTruthy();
+      for (const [name, own] of [["view", box], ["format", format]]) {
+        const apart = other.x >= own.x + own.width || other.x + other.width <= own.x || other.y >= own.y + own.height || other.y + other.height <= own.y;
+        expect(apart, `${selector} and ${name} at ${width}px`).toBeTruthy();
+      }
     }
+    expect(format.y + format.height).toBeLessThanOrEqual(header.y + header.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -2726,7 +2733,7 @@ test("the editor view selector sits at the header's left end and views stay reac
   await page.getByRole("option", { name: "Split", exact: true }).click();
   await expect(area).toHaveAttribute("data-mode", "split");
   await expect(view).toHaveAttribute("aria-label", "Editor view: Split");
-  await expect(view).toContainText("Split");
+  await expect(page.locator("#view-type-label")).toHaveText("Split");
   // It stays in the header with the notes panel collapsed; Alt+M and the View menu work too.
   await page.locator("#collapse-sidebar").click();
   await expect(view).toBeVisible();

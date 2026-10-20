@@ -19,7 +19,6 @@
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
 
         <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
-            <button id="format-toggle" class="icon-button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
         <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
         <button id="recent-notes" class="icon-button" aria-label="Recently opened notes" title="Recently opened notes" aria-pressed="false"><span data-icon="history"></span></button>
         <button id="new-note" class="icon-button" aria-label="New note" title="New note · Ctrl/⌘ N" ><span data-icon="newNote"></span></button>
@@ -30,7 +29,10 @@
         </div>
       </nav>
       <header class="topbar">
-        <button id="view-type" class="view-type" type="button" title="Editor view: Write · Alt M" aria-label="Editor view: Write" aria-haspopup="listbox" aria-controls="view-menu" aria-expanded="false" hidden><span id="view-type-icon" data-icon="pen"></span><span id="view-type-label">Write</span><span data-icon="chevronDown"></span></button>
+        <div class="view-tools">
+          <button id="view-type" class="view-type" type="button" title="Editor view: Write · Alt M" aria-label="Editor view: Write" aria-haspopup="listbox" aria-controls="view-menu" aria-expanded="false" hidden><span id="view-type-icon" data-icon="pen"></span><span id="view-type-label">Write</span><span data-icon="chevronDown"></span></button>
+          <button id="format-toggle" class="icon-button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span></button>
+        </div>
         <div class="title-block">
           <div class="title-row">
             <span class="app-title" id="app-title"></span>

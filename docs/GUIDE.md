@@ -90,10 +90,11 @@ note actions wrap onto their own row within the menu. At home the menu is
 centered vertically and horizontally in the header.
 
 The **Write / Markdown / Preview / Split** selector sits at the left end of the
-header, beside the logo, and shows the current view (icon only on phones). The
-**View** menu and Alt+M switch views too.
+header, beside the logo, and shows the current view (icon only on narrower
+screens). The **View** menu and Alt+M switch views too.
 
-**Text formatting** in the left rail opens a panel between Notes and the document.
+**Text formatting**, right after the view selector (at the end of the title row
+on phones), opens a panel between Notes and the document.
 It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,
 and undo/redo. It is available in Write, and closes in source or preview modes.
 The close button or Escape hides it; this browser remembers the choice separately

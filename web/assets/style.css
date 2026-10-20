@@ -2729,16 +2729,16 @@ dialog.danger #modal-submit {
 .activity-rail .brand { margin-bottom: 12px; }
 .activity-rail .icon-button { width: 40px; height: 40px; border-radius: 8px; }
 /* Rail icons: a neutral hover everywhere, and an accent bar at the left edge
-   for each open panel: one of Notes, Search or Recent, plus Text formatting. */
+   for whichever of Notes, Search or Recent the notes panel shows. */
 .activity-rail :is(#sidebar-search, #sidebar-toggle, .icon-button) { background: transparent; color: var(--muted); }
 .activity-rail :is(#sidebar-search, #sidebar-toggle, .icon-button):hover { background: var(--hover); color: var(--text); }
 .activity-rail #sidebar-toggle { margin: 0; border: 0; }
-.activity-rail :is(#sidebar-search[aria-expanded="true"], .icon-button[aria-pressed="true"], #format-toggle[aria-expanded="true"]),
+.activity-rail :is(#sidebar-search[aria-expanded="true"], .icon-button[aria-pressed="true"]),
 .app:not(.show-recents):not(.search-open) .activity-rail #sidebar-toggle[aria-expanded="true"] { color: var(--accent-text); }
-.activity-rail :is(#sidebar-search[aria-expanded="true"], .icon-button[aria-pressed="true"], #format-toggle[aria-expanded="true"])::before,
+.activity-rail :is(#sidebar-search[aria-expanded="true"], .icon-button[aria-pressed="true"])::before,
 .app:not(.show-recents):not(.search-open) .activity-rail #sidebar-toggle[aria-expanded="true"]::before { content: ""; position: absolute; left: -8px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: var(--accent); }
 @media (max-width: 799px) {
-  .activity-rail :is(#sidebar-search[aria-expanded="true"], .icon-button[aria-pressed="true"], #format-toggle[aria-expanded="true"])::before,
+  .activity-rail :is(#sidebar-search[aria-expanded="true"], .icon-button[aria-pressed="true"])::before,
   .app:not(.show-recents):not(.search-open) .activity-rail #sidebar-toggle[aria-expanded="true"]::before { left: -4px; }
 }
 .rail-bottom { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 16px; }
@@ -2837,18 +2837,30 @@ dialog.danger #modal-submit {
 .topbar { display: grid; grid-template-columns: minmax(0, 1fr) 27px; grid-template-rows: minmax(28px, auto) auto; padding: 6px 12px; row-gap: 2px; }
 .topbar .title-block { display: flex; grid-column: 1 / -1; grid-row: 1; justify-self: center; width: fit-content; max-width: min(680px, calc(100vw - var(--rail-width) - 76px)); min-width: 0; margin: 0; }
 .topbar .title-row { justify-content: center; padding: 0; }
-/* The editor view selector holds the header's left end, beside the logo; the
-   centered title and menus keep an equal gutter on both sides to clear it. */
-.topbar { --view-gutter: 132px; }
-.topbar > .view-type { grid-column: 1; grid-row: 1 / -1; justify-self: start; align-self: center; width: auto; height: 32px; gap: 6px; padding: 0 6px 0 8px; border: 1px solid var(--line); color: var(--text); z-index: 1; }
-.topbar > .view-type svg { color: var(--muted); }
-.topbar > .view-type svg:first-child { width: 16px; height: 16px; }
+/* The editor view selector and the text formatting toggle hold the header's
+   left end, beside the logo; the centered title and menus keep an equal gutter
+   on both sides to clear them. */
+.topbar { --view-gutter: 172px; }
+.topbar > .view-tools { display: flex; align-items: center; gap: 6px; grid-column: 1; grid-row: 1 / -1; justify-self: start; align-self: center; z-index: 1; }
+.view-tools .view-type { width: auto; height: 32px; gap: 6px; padding: 0 6px 0 8px; border: 1px solid var(--line); color: var(--text); }
+.view-tools .view-type svg { color: var(--muted); }
+.view-tools .view-type svg:first-child { width: 16px; height: 16px; }
+.view-tools #format-toggle { width: 32px; height: 32px; border: 1px solid var(--line); }
+.view-tools #format-toggle[aria-expanded="true"] { background: var(--selected); border-color: transparent; color: var(--accent-text); }
 .app:not(.at-home) .topbar .title-block { max-width: min(680px, calc(100% - 2 * var(--view-gutter))); }
 .app:not(.at-home) .topbar .header-tools { padding: 0 var(--view-gutter); }
+/* Narrower headers show the current view as an icon only. */
+@media (max-width: 999px) {
+  .topbar { --view-gutter: 90px; }
+  .view-tools .view-type { gap: 0; padding: 0 2px 0 6px; }
+  .view-tools #view-type-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+/* Phones: the view selector starts the title row and formatting ends it. */
 @media (max-width: 680px) {
   .topbar { --view-gutter: 44px; }
-  .topbar > .view-type { grid-row: 1; gap: 0; padding: 0 2px 0 6px; }
-  .topbar > .view-type #view-type-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .topbar > .view-tools { display: contents; }
+  .view-tools .view-type { grid-column: 1; grid-row: 1; justify-self: start; align-self: center; }
+  .view-tools #format-toggle { grid-column: 1 / -1; grid-row: 1; justify-self: end; align-self: center; }
   .app:not(.at-home) .topbar .header-tools { padding: 0; }
 }
 .topbar .note-heading { flex: 0 1 auto; gap: 2px; }
