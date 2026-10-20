@@ -998,7 +998,13 @@ test("search opens at the top of the notes list, in the drawer on small screens"
       const header = await page.locator(".topbar").boundingBox();
       const drawer = await page.locator("#sidebar").boundingBox();
       expect(drawer.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
-      await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
+      // Wait for the drawer to finish sliding in. At 320px it fills the
+      // width beside the rail, leaving no backdrop to tap, so the rail's
+      // Notes button closes it instead.
+      await expect(page.locator("#sidebar")).toBeInViewport({ ratio: 1 });
+      const open = await page.locator("#sidebar").boundingBox();
+      if (open.x + open.width <= width - 24) await page.locator("#sidebar-scrim").click({ position: { x: width - 12, y: 300 } });
+      else await page.locator("#sidebar-toggle").click();
       await expect(page.locator("#sidebar")).not.toBeInViewport();
     }
   }
