@@ -219,7 +219,7 @@ export function supportsRich(body: string) {
         "Showing Markdown: Write would drop this note's reference-style link definitions.";
     if (token.type === "text" && !token.tokens && /!\[\[[^\]\n]+\]\]/.test(token.raw))
       reason = "Showing Markdown: Write would change this note's ![[…]] file embeds.";
-    if (token.type === "text" && /\[\^[^\]]+\]/.test(token.raw))
+    if (token.type === "text" && /\[\^[^\]]+\]|\^\[[^\]]+\]/.test(token.raw))
       reason = "Showing Markdown: Write would change this note's footnotes.";
     // Write keeps &amp;, &lt;, &gt; and &quot; but would show other named
     // references such as &copy; as literal text and save them escaped.

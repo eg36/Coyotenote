@@ -810,3 +810,20 @@ func TestCommentsAreHiddenInPreview(t *testing.T) {
 		t.Errorf("preview lost visible text: %s", html)
 	}
 }
+
+func TestFootnotesRenderInPreview(t *testing.T) {
+	a := testApp(t)
+	html := request(t, a, "POST", "/api/render", mutation{Body: "Text[^1] and a named[^note] one, plus ^[an *inline* note].\n\n[^1]: The first.\n[^note]: The named one\n  over two lines.\n\nCode keeps `^[this]` and ^[] stays.", ID: "Note"}, 200)["html"].(string)
+	for _, want := range []string{
+		`<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>`,
+		`href="#fn:3"`, `<div class="footnotes" role="doc-endnotes">`,
+		"The first.", "over two lines", "an <em>inline</em> note", "<code>^[this]</code>", "^[] stays",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q in %s", want, html)
+		}
+	}
+	if strings.Contains(html, inlineFootnoteLabel) || strings.Contains(html, "[^") {
+		t.Errorf("footnote labels leaked into the preview: %s", html)
+	}
+}

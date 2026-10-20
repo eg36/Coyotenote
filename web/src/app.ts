@@ -429,6 +429,15 @@ $("preview").addEventListener("click", (event) => {
 $("preview").onclick = (event) => {
   const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
   if (!anchor) return;
+  // Links within the note, such as footnotes, scroll the preview without
+  // changing the page address.
+  const hash = anchor.getAttribute("href") || "";
+  if (hash.startsWith("#")) {
+    event.preventDefault();
+    const target = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (target && $("preview").contains(target)) target.scrollIntoView({ block: "center" });
+    return;
+  }
   const u = new URL(anchor.href, location.href);
   if (u.origin === location.origin) {
     if (u.searchParams.has("note")) {

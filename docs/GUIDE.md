@@ -209,6 +209,10 @@ Beyond GitHub Flavored Markdown, Preview understands:
 - **Comments:** `%%a private note%%` hides text from Preview, inline or as a
   block from a line starting `%%` to the next `%%`. Code keeps its `%%`, and a
   `%%` with no closing pair stays visible. Write shows comments as typed.
+- **Footnotes:** `[^1]` or a named `[^source]` marks a reference, and
+  `[^1]: text` defines it anywhere in the note (indent further lines by two
+  spaces); `^[text]` writes one inline. Preview numbers them and lists them at
+  the end; click a number or ↩ to jump between them.
 
 ### WYSIWYG round trips
 

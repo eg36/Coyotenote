@@ -2911,3 +2911,28 @@ test("%% comments are hidden in Preview and kept exactly by Write", async ({ pag
   await expect(page.locator("#preview")).not.toContainText("whole hidden block");
   await expect(page.locator("#preview")).not.toContainText("%%");
 });
+
+test("footnotes render in Preview and jump between reference and note", async ({ page }) => {
+  const text = "Claim one[^1] and an aside^[said in passing].\n\n" + "Filler paragraph.\n\n".repeat(40) + "[^1]: The source of claim one.";
+  await openSeed(page, text);
+  await mode(page, "Preview");
+  const refs = page.locator("#preview .footnote-ref");
+  await expect(refs).toHaveCount(2);
+  await expect(page.locator("#preview .footnotes li")).toHaveCount(2);
+  await expect(page.locator("#preview .footnotes")).toContainText("said in passing");
+  const before = page.url();
+  await refs.first().click();
+  await expect(page.locator("#preview .footnotes li").first()).toBeInViewport();
+  await page.locator("#preview .footnote-backref").first().click();
+  await expect(refs.first()).toBeInViewport();
+  expect(page.url()).toBe(before);
+});
+
+test("inline footnotes keep the note in Markdown until Write edits footnotes", async ({ page }) => {
+  const text = "A thought^[with a side note] here.\n\nNext line.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await expect(page.locator("#toast-text")).toContainText("footnotes");
+  expect(await diskBody(page, id)).toBe(text);
+});

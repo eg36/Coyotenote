@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -221,4 +222,86 @@ func codeSpanEnd(body string, i int) int {
 		j += m
 	}
 	return i + n
+}
+
+// inlineFootnoteLabel prefixes the labels given to inline ^[footnotes], which
+// the preview turns into ordinary numbered footnotes.
+const inlineFootnoteLabel = "labradorite-inline-"
+
+// inlineFootnotes rewrites each ^[text] outside code as a reference to a
+// footnote definition appended to the note, so it is numbered and listed
+// with the note's other footnotes.
+func inlineFootnotes(body string) string {
+	if !strings.Contains(body, "^[") {
+		return body
+	}
+	var out, notes strings.Builder
+	fence, count := "", 0
+	for i := 0; i < len(body); {
+		if i == 0 || body[i-1] == '\n' {
+			line := body[i:]
+			if end := strings.IndexByte(line, '\n'); end >= 0 {
+				line = line[:end+1]
+			}
+			if fence != "" || openingFence(line) != "" {
+				if fence == "" {
+					fence = openingFence(line)
+				} else if closesFence(line, fence) {
+					fence = ""
+				}
+				out.WriteString(line)
+				i += len(line)
+				continue
+			}
+		}
+		switch c := body[i]; {
+		case c == '\\' && i+1 < len(body):
+			out.WriteString(body[i : i+2])
+			i += 2
+		case c == '`':
+			end := codeSpanEnd(body, i)
+			out.WriteString(body[i:end])
+			i = end
+		case strings.HasPrefix(body[i:], "^["):
+			end := closingBracket(body, i+1)
+			if end < 0 || strings.TrimSpace(body[i+2:end]) == "" {
+				out.WriteString("^[")
+				i += 2
+				continue
+			}
+			count++
+			label := inlineFootnoteLabel + strconv.Itoa(count)
+			out.WriteString("[^" + label + "]")
+			notes.WriteString("\n\n[^" + label + "]: " + strings.Join(strings.Fields(body[i+2:end]), " "))
+			i = end + 1
+		default:
+			out.WriteByte(c)
+			i++
+		}
+	}
+	return out.String() + notes.String()
+}
+
+// closingBracket is the index of the "]" matching the "[" at open, counting
+// nested brackets and skipping escaped ones, or -1 when the paragraph ends
+// first.
+func closingBracket(body string, open int) int {
+	depth := 0
+	for j := open; j < len(body); j++ {
+		switch body[j] {
+		case '\\':
+			j++
+		case '[':
+			depth++
+		case ']':
+			if depth--; depth == 0 {
+				return j
+			}
+		case '\n':
+			if strings.HasPrefix(body[j+1:], "\n") {
+				return -1
+			}
+		}
+	}
+	return -1
 }

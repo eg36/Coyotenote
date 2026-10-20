@@ -115,7 +115,7 @@ func newWebApp(s *vault.Store) (*webApp, error) {
 	if _, err := rand.Read(token[:]); err != nil {
 		return nil, err
 	}
-	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, highlights{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
+	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
 }
 
 func revision(body string) string {
@@ -811,7 +811,7 @@ func (a *webApp) localImages(document ast.Node, from string) {
 func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	// Front matter is properties, not text: show it apart, as written.
 	front, body := vault.SplitFrontMatter(body)
-	body = stripComments(body)
+	body = inlineFootnotes(stripComments(body))
 	properties := ""
 	if front != "" {
 		lines := strings.Split(strings.TrimRight(strings.TrimPrefix(front, "\uFEFF"), "\r\n"), "\n")

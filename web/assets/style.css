@@ -2927,3 +2927,11 @@ dialog.danger #modal-submit {
 #format-panel .hl-swatch { width: 28px; font-size: 12px; font-weight: 500; background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); }
 #format-panel .hl-swatch:hover { background: color-mix(in srgb, var(--hl) 45%, transparent); }
 #format-panel .hl-swatch[aria-pressed="true"] { background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); box-shadow: inset 0 0 0 2px var(--accent); }
+/* Footnotes in the preview: small raised numbers, and a quieter list at the end. */
+#preview .footnote-ref { font-size: 0.75em; text-decoration: none; padding: 0 1px; }
+#preview sup { line-height: 0; }
+#preview .footnotes { margin-top: 2.5em; font-size: 0.9em; color: var(--muted); }
+#preview .footnotes hr { margin: 0 0 1em; }
+#preview .footnotes li { margin-bottom: 0.4em; }
+#preview .footnotes li p { margin: 0; }
+#preview .footnote-backref { text-decoration: none; margin-left: 4px; }
