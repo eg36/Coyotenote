@@ -30,18 +30,61 @@ this document does not authorize a release tag.
   their order in the browser. Keep the logo and bottom utility group anchored.
 - Put the larger note title above the centered menu row; leave the title area
   blank at home. Keep the full-title tooltip for truncated paths.
-- The rail provides Commands (the existing searchable command palette).
-  File / Edit / View / Insert and the writing-mode selector stay centered at
-  the top, with note actions part of the same centered menu group. Formatting controls live in a
-  collapsible panel LEFT of the document, after Notes, opened from the rail.
-  Keep the mode selector directly after Insert; do not recreate a toolbar row.
-  Center the home menu both ways, leave its title blank, and remove the old
-  vertical divider from the header.
+- The rail provides Commands (the existing searchable command palette). The
+  header's left end, beside the logo, holds the Write / Markdown / Preview /
+  Split selector and a labelled Format toggle for the formatting panel LEFT of
+  the document. File / Edit / View / Insert stay centered with outline,
+  history, download and trash; pin sits right after the note title. Center the
+  home menu both ways, leave its title blank, and keep the header divider-free.
+- Open rail panels show an accent bar at the rail's edge instead of a filled
+  icon; every rail icon shares one neutral hover.
 - Search scope switching should preserve the query; existing full-text result
   previews remain available. This note retains case, whole-word, regex and
   replacement controls, and restores the prior writing mode when closed.
 - Browser preferences stay scoped to the vault where appropriate. Renaming,
   moving and trashing notes must not leave broken pins or recent-note entries.
+
+## Milestones toward 1.5.0
+
+Internal milestones only: no tag or release until the user approves 1.5.0.
+Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
+
+### 1.2.0 — Extended Markdown syntax in Preview
+- `==highlight==`, including `==🔴text==` colour variants; Write keeps `==`.
+- `%%comments%%` (inline and block) hidden in Preview.
+- Footnotes in Preview: `[^1]`, named `[^note]`, inline `^[text]`.
+- Callouts: `> [!type] Title`, all common types and aliases, `+`/`-`
+  folding, nesting, title-only; unknown types fall back to note.
+- Same-note `[[#Heading]]` links, and `^block-id` targets for `[[Note#^id]]`.
+- Custom task marks such as `[?]`, `[-]`, `[>]` rendered distinctly.
+- Image sizes: `![[image.png|100]]`, `|100x145`, `![alt|100](url)`.
+
+### 1.3.0 — Editing power and richer rendering
+- Markdown editor: fold headings and lists, multiple cursors (Alt+click),
+  rectangular selection, select next match.
+- Note, heading and block embeds `![[Note]]`, `![[Note#Heading]]`,
+  `![[Note#^id]]` in Preview, with depth and cycle limits.
+- A sanitised HTML allowlist in Preview (`u s sub sup kbd mark details summary
+  br` and similar); scripts, styles, iframes and event handlers stay blocked.
+- A typed Properties editor in Write that still saves plain YAML.
+- Math (`$…$`, `$$…$$`) and Mermaid diagrams, bundled and loaded only by notes
+  that use them; no network requests.
+
+### 1.4.0 — Footnotes in Write
+- Write edits footnotes and keeps their Markdown exact, so footnoted notes no
+  longer fall back to Markdown view.
+
+### 1.5.0 — Smooth everything, then release
+- User-led polish and fixes across all of the above, full regression runs,
+  guide and release notes; release only on the user's word.
+
+## 2.0.0 and later
+
+- Write support for embeds, callouts and HTML, so fewer notes fall back to
+  Markdown view.
+- PDF, audio and video attachments and embeds.
+- Web page, YouTube and similar embeds, opt-in because they contact the
+  network.
 
 ## Further ideas, not yet committed to this release
 
