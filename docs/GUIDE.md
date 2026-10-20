@@ -295,11 +295,27 @@ front matter with a `tags` field. Preview shows front matter as a properties
 block above the text, and note excerpts and word counts leave it out.
 
 Write deliberately falls back to Markdown for unclosed front matter,
-footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named
+inline footnotes, reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
 round-trip intact, including when a browser draft is restored; a short message says
 which syntax kept the note in Markdown. Use source mode for
 exact whitespace or Markdown dialects beyond GFM. Collaborative editing is not supported.
+
+### Footnotes in Write
+
+Numbered and named references such as `[^1]` and `[^source]` appear as
+superscript buttons. Click one, or focus it and press Enter, to edit its
+corresponding definition. Definitions stay in their original position as
+labelled multiline fields. Their text uses Markdown; continuation lines are
+indented automatically when saved. Unedited labels, colon spacing, tabs,
+blank lines and trailing spaces keep their exact form, including after edits
+to the rest of the note. Definition edits support undo and autosave.
+
+To add or rename a definition, use Markdown with `[^source]: Definition`.
+Typing `[^source]` in Write creates a reference. A reference without a definition
+stays intact and explains how to add one. Inline `^[asides]`, duplicate or
+unsupported definitions, escaped references and formatting spanning a reference
+keep the Markdown fallback, with a message explaining why.
 
 ### Typed properties in Write
 Simple YAML front matter appears as named fields: text, numbers, checkboxes,

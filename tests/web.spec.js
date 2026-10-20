@@ -744,7 +744,7 @@ test("unsupported Markdown is kept in source, without normalization", async ({
   page,
 }) => {
   const body =
-    "---\ntitle: untouched\n---\n\nText with a footnote.[^1]\n\n[^1]: Keep this definition.\n";
+    "---\ntitle: untouched\n---\n\nText with an inline footnote.^[Keep this aside.]\n";
   const id = await openSeed(page, body);
   await mode(page, "Write");
   await expect(page.locator("#source-pane")).toBeVisible();
@@ -3286,4 +3286,71 @@ test("plain inline equations stay exact as text in Write", async ({ page }) => {
   await expect(page.locator("#rich-pane")).toBeVisible();
   await page.locator(".tiptap p").last().click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
   await expect.poll(() => diskBody(page, id)).toBe(body + " More.");
+});
+
+test("Write keeps numbered and named footnote definitions exact through body edits", async ({ page }) => {
+  const cases = [
+    "Text[^1] and again[^1].\n\n[^1]: Keep this definition.\n",
+    "Text[^source].\n\n[^source]:  First **bold** line.  \n    Continued with [a link](https://example.com).\n\n    A second paragraph.\n\nAfter.",
+    "Text[^a] and text[^b].\n\n\n[^a]: One.\n[^b]: Two.\n\n\n",
+    "[^named]: Before the text.\n\nText[^named].",
+    "Text[^tab].\n\n[^tab]: First.\n\tTabbed continuation.\n",
+    '```text\n[^code]: literal\n```\n\nText[^real].\n\n[^real]: Actual note.',
+  ];
+  for (const text of cases) {
+    const id = await openSeed(page, text);
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    expect(await diskBody(page, id)).toBe(text);
+    const paragraph = page.locator(".tiptap > p").filter({ hasText: "Text" }).first();
+    await paragraph.click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id)).toBe(text.replace("Text", "Edited Text"));
+    await mode(page, "Markdown"); await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    expect(await diskBody(page, id)).toBe(text.replace("Text", "Edited Text"));
+  }
+});
+
+test("Write edits multiline footnotes, follows references and undoes definition edits", async ({ page }) => {
+  const text = '---\ntags: [research]\n---\n\nA claim[^source] and another[^2].\n\n[^source]:  First line.  \n\tNext line.\n\n[^2]: Untouched.\n';
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  const field = page.getByRole("textbox", { name: "Footnote source", exact: true });
+  await expect(field).toHaveValue("First line.  \nNext line.");
+  await page.getByRole("button", { name: "Edit footnote source", exact: true }).click();
+  await expect(field).toBeFocused();
+  await field.fill("Revised line.  \nNext line.\nA new continuation.");
+  const edited = text.replace("First line.  \n\tNext line.", "Revised line.  \n\tNext line.\n    A new continuation.");
+  await expect.poll(() => diskBody(page, id)).toBe(edited);
+  await page.locator(".tiptap > p").first().click({ position: { x: 2, y: 8 } });
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toBe(text);
+  await expect(field).toHaveValue("First line.  \nNext line.");
+  await field.fill("Changed.");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("First line.  \n\tNext line.", "Changed."));
+  await page.reload(); await mode(page, "Write");
+  await expect(page.getByRole("textbox", { name: "Footnote source", exact: true })).toHaveValue("Changed.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .footnotes")).toContainText("Changed.");
+  await expect(page.locator("#preview .footnotes")).toContainText("Untouched.");
+});
+
+test("unsupported footnote layouts fall back and unresolved references stay exact", async ({ page }) => {
+  for (const text of [
+    "Text[^a].\n\n[^a]: One.\n\n[^a]: Duplicate.",
+    "Text[^my label].\n\n[^my label]: A spaced label.",
+    "Text^[inline aside].",
+    "Escaped \\[^a].",
+    "**Bold[^a] text.**\n\n[^a]: Note.",
+  ]) {
+    const id = await openSeed(page, text); await mode(page, "Write");
+    await expect(page.locator("#source-pane")).toBeVisible();
+    expect(await diskBody(page, id)).toBe(text);
+  }
+  const id = await openSeed(page, "Unresolved[^missing].\n\nBody."); await mode(page, "Write");
+  await page.getByRole("button", { name: "Edit footnote missing", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#toast-text")).toContainText("has no definition yet");
+  expect(await diskBody(page, id)).toBe("Unresolved[^missing].\n\nBody.");
 });
