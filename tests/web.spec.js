@@ -2815,6 +2815,7 @@ test("the formatting panel applies, recolours and removes highlights, and typing
   // Select "this" and highlight it in the default colour.
   await editor.locator("p").first().click();
   await page.keyboard.press("Home");
+  await expect.poll(() => page.evaluate(() => getSelection()?.anchorOffset)).toBe(0);
   for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
   for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+ArrowRight");
   await panel.getByRole("button", { name: "Highlight", exact: true }).click();
@@ -2846,3 +2847,4 @@ test("spaces typed after bold or highlighted words save as ordinary spaces", asy
   await page.keyboard.press("Control+s");
   await expect.poll(() => diskBody(page, id)).toBe("Start. Then **bold** and ==marked== end");
 });
+

@@ -2908,13 +2908,13 @@ dialog.danger #modal-submit {
 }
 /* ==Highlights== in Preview and Write: a 30% tint, with text kept at AA
    contrast by the theme's computed --mark-text. */
-:is(#preview, #rich-editor, .hl-swatch) mark { --hl: var(--warn); background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); border-radius: 3px; padding: 0 2px; }
-:is(#preview, #rich-editor, .hl-swatch) mark.hl-red { --hl: var(--danger); }
-:is(#preview, #rich-editor, .hl-swatch) mark.hl-orange { --hl: color-mix(in srgb, var(--danger) 50%, var(--warn)); }
-:is(#preview, #rich-editor, .hl-swatch) mark.hl-green { --hl: var(--good); }
-:is(#preview, #rich-editor, .hl-swatch) mark.hl-blue { --hl: var(--blue); }
-:is(#preview, #rich-editor, .hl-swatch) mark.hl-purple { --hl: var(--pink); }
-/* Highlight swatches in the formatting panel: "ab" on each colour's tint. */
-#format-panel .hl-swatch { width: 28px; font-size: 12px; font-weight: 500; }
-#format-panel .hl-swatch mark { padding: 1px 3px; pointer-events: none; }
-#format-panel .hl-swatch[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); background: var(--hover); }
+:is(#preview, #rich-editor) mark { --hl: var(--warn); background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); border-radius: 3px; padding: 0 2px; }
+:is(#preview, #rich-editor) mark.hl-red, .hl-swatch.hl-red { --hl: var(--danger); }
+:is(#preview, #rich-editor) mark.hl-orange, .hl-swatch.hl-orange { --hl: color-mix(in srgb, var(--danger) 50%, var(--warn)); }
+:is(#preview, #rich-editor) mark.hl-green, .hl-swatch.hl-green { --hl: var(--good); }
+:is(#preview, #rich-editor) mark.hl-blue, .hl-swatch.hl-blue { --hl: var(--blue); }
+:is(#preview, #rich-editor) mark.hl-purple, .hl-swatch.hl-purple { --hl: var(--pink); }
+/* Highlight swatches in the formatting panel: each button is its colour's tint. */
+#format-panel .hl-swatch { --hl: var(--warn); width: 28px; font-size: 12px; font-weight: 500; background: color-mix(in srgb, var(--hl) 30%, transparent); color: var(--mark-text, var(--text)); }
+#format-panel .hl-swatch:hover { background: color-mix(in srgb, var(--hl) 45%, transparent); }
+#format-panel .hl-swatch[aria-pressed="true"] { background: color-mix(in srgb, var(--hl) 30%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
