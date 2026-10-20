@@ -2138,6 +2138,35 @@ test("drafts kept under the vault's former ID are found after its folder moves",
   expect(keys).toEqual([`coyote-draft:${vaultId}:oldtab:${id}`]);
 });
 
+test("moving former drafts never loses one when storage is full or keys collide", async ({ page }) => {
+  const id = await openSeed(page, "Saved before the move.");
+  const vaultId = (await (await page.request.get("/api/state")).json()).vaultId;
+  const draft = (body) => JSON.stringify({ id, body, base: "x", time: Date.now() });
+  await page.route("**/api/state*", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...(await response.json()), formerVaultIds: ["formerid12345678"] } });
+  });
+  // A full browser storage refuses the copy: the old draft stays, with a warning.
+  await page.evaluate(({ id, body }) => localStorage.setItem(`coyote-draft:formerid12345678:oldtab:${id}`, body), { id, body: draft("Only copy.") });
+  await page.addInitScript((vaultId) => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith(`coyote-draft:${vaultId}:`) && !globalThis.storageFreed) throw new DOMException("full", "QuotaExceededError");
+      return setItem.call(this, key, value);
+    };
+  }, vaultId);
+  await page.reload();
+  await expect(page.locator("#toast-text")).toContainText("could not be moved");
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("coyote-draft:")))).toEqual([`coyote-draft:formerid12345678:oldtab:${id}`]);
+  // A different draft already at the new key: both are kept.
+  await page.evaluate(({ key, body }) => { globalThis.storageFreed = true; localStorage.setItem(key, body); }, { key: `coyote-draft:${vaultId}:oldtab:${id}`, body: draft("Newer copy.") });
+  await page.addInitScript(() => { globalThis.storageFreed = true; });
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  const bodies = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("coyote-draft:")).map((k) => [k.split(":")[1], JSON.parse(localStorage.getItem(k)).body]).sort());
+  expect(bodies).toEqual([[vaultId, "Newer copy."], [vaultId, "Only copy."]].sort());
+});
+
 test("the app starts on a page with a New note button, and a reload keeps the open note", async ({ page }) => {
   const id = await openSeed(page, "Already here.");
   await page.goto("/");

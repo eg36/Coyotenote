@@ -58,8 +58,12 @@ async function liveTabs() {
 // from before the rename stay where the app looks for them.
 const draftPrefix = () => `coyote-draft:${state.vaultId}:`;
 // adoptFormerVault refiles drafts and settings kept under IDs the vault had
-// at an earlier path, before its folder moved, under its current ID.
+// at an earlier path, before its folder moved, under its current ID. An old
+// entry is removed only once its copy is stored and reads back the same; a
+// draft whose new key already holds another draft is kept beside it, and a
+// setting already chosen here wins while the old one stays where it was.
 function adoptFormerVault(formerIds: string[] = []) {
+  let kept = 0;
   for (const former of formerIds) {
     if (former === state.vaultId) continue;
     const keys = [];
@@ -69,12 +73,20 @@ function adoptFormerVault(formerIds: string[] = []) {
     for (const key of keys) {
       const match = /^(coyote-[a-z]+):([^:]+)(:.*)?$/.exec(key || "");
       if (!key || !match || match[2] !== former) continue;
-      const renamed = `${match[1]}:${state.vaultId}${match[3] || ""}`;
       const value = storage.get(key);
-      if (storage.get(renamed) === null && value !== null) storage.set(renamed, value);
-      storage.remove(key);
+      if (value === null) continue;
+      let renamed = `${match[1]}:${state.vaultId}${match[3] || ""}`;
+      const existing = storage.get(renamed);
+      if (existing !== null && existing !== value) {
+        if (match[1] !== "coyote-draft") continue;
+        renamed = `${match[1]}:${state.vaultId}:former-${crypto.randomUUID()}${match[3] || ""}`;
+      }
+      if ((existing === value || storage.set(renamed, value)) && storage.get(renamed) === value) storage.remove(key);
+      else kept++;
     }
   }
+  if (kept)
+    showToast(`${kept} browser recovery ${kept === 1 ? "copy" : "copies"} from this notebook's earlier folder could not be moved, probably because browser storage is full. They are kept as they were; free some space and reload.`, { persistent: true });
 }
 const draftKey = () => `${draftPrefix()}${tabId}:${state.current?.id}`;
 // releaseDraft forgets a stored draft unless another open tab wrote it:
