@@ -106,3 +106,17 @@ func TestParseLinksSkipsCodeAsCommonMarkReadsIt(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
+
+func TestEscapedAliasPipeInTables(t *testing.T) {
+	body := "| Where | Link |\n| --- | --- |\n| Here | [[Travel/Lost Coast\\|the coast]] |\n| Heading | [[Plan#Goals\\|goals]] |"
+	links := ParseLinks(body)
+	if len(links) != 2 {
+		t.Fatalf("links = %+v", links)
+	}
+	if l := links[0]; l.Target != "Travel/Lost Coast" || l.Alias != "the coast" || body[l.TargetStart:l.TargetEnd] != "Travel/Lost Coast" {
+		t.Errorf("first link = %+v", l)
+	}
+	if l := links[1]; l.Target != "Plan" || l.Heading != "Goals" || l.Alias != "goals" {
+		t.Errorf("second link = %+v", l)
+	}
+}

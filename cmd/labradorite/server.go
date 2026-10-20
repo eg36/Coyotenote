@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -115,7 +116,7 @@ func newWebApp(s *vault.Store) (*webApp, error) {
 	if _, err := rand.Read(token[:]); err != nil {
 		return nil, err
 	}
-	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}, callouts{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
+	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}, callouts{}, blocks{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
 }
 
 func revision(body string) string {
@@ -819,9 +820,20 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 		properties = `<pre class="front-matter" aria-label="Properties">` + html.EscapeString(inner) + "</pre>\n"
 	}
 	resolver := vault.NewResolver(notes)
-	links := vault.ParseLinks(body)
+	links := append(vault.ParseLinks(body), vault.SameNoteLinks(body)...)
+	sort.Slice(links, func(i, j int) bool { return links[i].Start < links[j].Start })
 	for i := len(links) - 1; i >= 0; i-- {
 		l := links[i]
+		// [[#Heading]] and [[#^block]] point into this note.
+		if l.Target == "" {
+			label := l.Alias
+			if label == "" {
+				label = strings.TrimPrefix(l.Heading, "^")
+			}
+			label = strings.NewReplacer("\\", "\\\\", "[", "\\[", "]", "\\]", "*", "\\*", "_", "\\_", "`", "\\`").Replace(label)
+			body = body[:l.Start] + "[" + label + "](#" + anchorFor(l.Heading) + ")" + body[l.End:]
+			continue
+		}
 		if image := embedImage(body, l); image != "" {
 			body = body[:l.Start-1] + image + body[l.End:]
 			continue

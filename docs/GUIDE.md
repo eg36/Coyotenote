@@ -220,6 +220,11 @@ Beyond GitHub Flavored Markdown, Preview understands:
   (cite); others look like a note. `[!type]-` starts folded and `[!type]+`
   open; nest callouts with `> >`. Leave out the body for a title-only callout.
   Write shows notes with callouts in Markdown, so their syntax stays exact.
+- **Links within a note:** `[[#Heading]]` jumps to a heading of the same note,
+  and `[[#Heading|label]]` shows a label. End a paragraph or list item with
+  ` ^an-id` to name that block, then link to it with `[[Note#^an-id]]` or
+  `[[#^an-id]]`; Preview hides the marker. Inside a table cell, write an alias
+  with an escaped pipe: `[[Note\|label]]`.
 
 ### WYSIWYG round trips
 

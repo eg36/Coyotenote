@@ -20,7 +20,13 @@ type Link struct {
 // ParseLinks finds wiki links in a note's text. Like the preview, it reads
 // the note as CommonMark: links in code (fenced or indented blocks, in quotes
 // and lists too, and code spans) are text, as is [[ after a backslash.
-func ParseLinks(body string) []Link {
+func ParseLinks(body string) []Link { return scanLinks(body, false) }
+
+// SameNoteLinks finds wiki links to a heading or block of the note itself,
+// such as [[#Heading]] or [[#^block|label]]; their Target is empty.
+func SameNoteLinks(body string) []Link { return scanLinks(body, true) }
+
+func scanLinks(body string, sameNote bool) []Link {
 	if !strings.Contains(body, "[[") {
 		return nil
 	}
@@ -41,10 +47,15 @@ func ParseLinks(body string) []Link {
 			i = start + 2
 			continue
 		}
-		raw, alias, _ := strings.Cut(inner, "|")
+		raw, alias, aliased := strings.Cut(inner, "|")
+		// In a table cell the alias pipe is written escaped, as [[Note\|label]].
+		if aliased && strings.HasSuffix(raw, "\\") {
+			raw = raw[:len(raw)-1]
+		}
 		rawTarget, heading, _ := strings.Cut(raw, "#")
-		if target := strings.TrimSpace(rawTarget); target != "" {
-			links = append(links, Link{start, start + end + 4, start + 2, start + 2 + len(rawTarget), target, strings.TrimSpace(heading), strings.TrimSpace(alias)})
+		target, heading := strings.TrimSpace(rawTarget), strings.TrimSpace(heading)
+		if (target != "") != sameNote && (target != "" || heading != "") {
+			links = append(links, Link{start, start + end + 4, start + 2, start + 2 + len(rawTarget), target, heading, strings.TrimSpace(alias)})
 		}
 		i = start + end + 4
 	}

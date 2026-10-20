@@ -38,9 +38,11 @@ type headingIDs map[string]bool
 
 func newHeadingIDs() parser.IDs { return headingIDs{} }
 
-func (ids headingIDs) Generate(value []byte, _ ast.NodeKind) []byte {
+// headingID is the preview's id for a heading with this text, before any
+// suffix that tells repeated headings apart.
+func headingID(value string) string {
 	var slug strings.Builder
-	for _, r := range strings.ToLower(string(value)) {
+	for _, r := range strings.ToLower(value) {
 		switch {
 		case unicode.IsLetter(r) || unicode.IsDigit(r):
 			slug.WriteRune(r)
@@ -48,10 +50,14 @@ func (ids headingIDs) Generate(value []byte, _ ast.NodeKind) []byte {
 			slug.WriteByte('-')
 		}
 	}
-	base := "h-" + strings.Trim(slug.String(), "-")
-	if base == "h-" {
-		base = "h-heading"
+	if id := strings.Trim(slug.String(), "-"); id != "" {
+		return "h-" + id
 	}
+	return "h-heading"
+}
+
+func (ids headingIDs) Generate(value []byte, _ ast.NodeKind) []byte {
+	base := headingID(string(value))
 	id := base
 	for i := 1; ids[id]; i++ {
 		id = base + "-" + strconv.Itoa(i)

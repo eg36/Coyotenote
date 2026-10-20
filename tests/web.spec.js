@@ -2978,3 +2978,32 @@ test("folder breadcrumbs match the note title's size", async ({ page }) => {
   const crumbs = await page.locator("#note-folder").boundingBox(), name = await page.locator("#document-title").boundingBox();
   expect(Math.abs(crumbs.y + crumbs.height / 2 - name.y - name.height / 2)).toBeLessThan(2);
 });
+
+test("same-note links, block ids and table aliases work in Preview and Write", async ({ page }) => {
+  const filler = "Filler paragraph.\n\n".repeat(40);
+  const target = await openSeed(page, "# Top\n\nJump to [[#Far heading|the far heading]].\n\n" + filler + "## Far heading\n\nThe key line. ^key\n\n" + filler);
+  await mode(page, "Preview");
+  await expect(page.locator("#preview")).not.toContainText("^key");
+  await page.locator("#preview a", { hasText: "the far heading" }).click();
+  await expect(page.locator("#preview h2")).toBeInViewport();
+  // Write: clicking the same-note link scrolls instead of offering a new note.
+  await mode(page, "Write");
+  await page.locator(".wiki-link", { hasText: "the far heading" }).click();
+  await expect(page.locator("#rich-editor h2")).toBeInViewport();
+  await expect(page.locator("#modal")).not.toHaveAttribute("open", "");
+  // Another note links to the block; following it scrolls to the block.
+  const table = "| What | Link |\n| --- | --- |\n| Block | [[" + target + "#^key\\|key line]] |";
+  const id = await openSeed(page, table);
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+  await expect(page.locator(".wiki-link")).toHaveText("key line");
+  await page.locator("td").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type("s");
+  await page.keyboard.press("Control+s");
+  // Write may re-pad table columns, but keeps the link and its escaped pipe.
+  await expect.poll(() => diskBody(page, id)).toContain("| Blocks | [[" + target + "#^key\\|key line]] |");
+  await mode(page, "Preview");
+  await page.locator("#preview a", { hasText: "key line" }).click();
+  await expect(page.locator("#document-title")).toHaveText(target);
+  await expect(page.locator('#preview [id="b-key"]')).toBeInViewport();
+});

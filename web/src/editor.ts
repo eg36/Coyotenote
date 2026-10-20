@@ -537,6 +537,16 @@ function chooseView(value: string) {
 }
 function scrollToHeading(heading: string) {
   const root = state.mode === "write" ? $("rich-editor") : $("preview");
+  // A block id: the preview gives the block that id; Write and Markdown show
+  // the " ^id" marker at the block's end.
+  if (heading.startsWith("^")) {
+    const id = heading.slice(1);
+    const block =
+      root.querySelector(`[id="b-${CSS.escape(id)}"]`) ||
+      [...root.querySelectorAll("p,li")].find((el) => (el.textContent || "").trimEnd().endsWith("^" + id));
+    block?.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
   const target = [...root.querySelectorAll("h1,h2,h3,h4,h5,h6")].find(
     (el) =>
       (el.textContent || "").toLowerCase() === heading.toLowerCase() ||
@@ -568,4 +578,5 @@ export {
   save,
   schedulePreview,
   setMode,
+  scrollToHeading,
 };

@@ -857,3 +857,25 @@ func TestCalloutsRenderInPreview(t *testing.T) {
 		t.Errorf("a title-only callout has a body: %s", got)
 	}
 }
+
+func TestSameNoteLinksAndBlockIDs(t *testing.T) {
+	a := testApp(t)
+	request(t, a, "POST", "/api/note", mutation{ID: "Plan"}, 201)
+	body := "# Goals\n\nSee [[#Goals]], [[#Goals|the goals]] and [[#^key-point]].\n\nThis matters most. ^key-point\n\n- An item ^item-1\n- Other\n\n| Where | Link |\n| --- | --- |\n| Table | [[Plan\\|the plan]] |\n\n`[[#Goals]]` stays code."
+	html := request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Note"}, 200)["html"].(string)
+	for _, want := range []string{
+		`<a href="#h-goals">Goals</a>`, `<a href="#h-goals">the goals</a>`, `<a href="#b-key-point">key-point</a>`,
+		`<p id="b-key-point">This matters most.</p>`, `<li id="b-item-1">An item</li>`,
+		`<a href="/?note=Plan">the plan</a>`, "<code>[[#Goals]]</code>",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q in %s", want, html)
+		}
+	}
+	if strings.Contains(html, "^key-point") || strings.Contains(html, "^item-1") {
+		t.Errorf("block ids are visible: %s", html)
+	}
+	if links := vault.ParseLinks(body); len(links) != 1 || links[0].Target != "Plan" {
+		t.Errorf("same-note links leaked into note links: %+v", links)
+	}
+}

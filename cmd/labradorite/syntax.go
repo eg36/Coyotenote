@@ -484,3 +484,51 @@ func (callouts) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(parser.WithASTTransformers(util.Prioritized(calloutTransformer{}, 600)))
 	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(calloutRenderer{}, 500)))
 }
+
+// anchorFor is the preview id a link to heading points at: a block's id for
+// "^block", otherwise the heading's.
+func anchorFor(heading string) string {
+	if id, ok := strings.CutPrefix(heading, "^"); ok {
+		return "b-" + id
+	}
+	return headingID(heading)
+}
+
+// blockMark is a block id such as " ^quote-1" at the end of a paragraph or
+// list item, which [[Note#^quote-1]] links to.
+var blockMark = regexp.MustCompile(`(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$`)
+
+// blockIDs hides block ids from the text and gives their block that id, so
+// links to it can scroll there.
+type blockIDs struct{}
+
+func (blockIDs) Transform(doc *gast.Document, reader text.Reader, _ parser.Context) {
+	source := reader.Source()
+	_ = gast.Walk(doc, func(n gast.Node, entering bool) (gast.WalkStatus, error) {
+		if !entering || (n.Kind() != gast.KindParagraph && n.Kind() != gast.KindTextBlock) {
+			return gast.WalkContinue, nil
+		}
+		last, ok := n.LastChild().(*gast.Text)
+		if !ok {
+			return gast.WalkContinue, nil
+		}
+		match := blockMark.FindSubmatchIndex(last.Segment.Value(source))
+		if match == nil {
+			return gast.WalkContinue, nil
+		}
+		id := "b-" + string(last.Segment.Value(source)[match[2]:match[3]])
+		last.Segment = last.Segment.WithStop(last.Segment.Start + match[0])
+		target := n
+		if n.Kind() == gast.KindTextBlock && n.Parent() != nil {
+			target = n.Parent()
+		}
+		target.SetAttributeString("id", []byte(id))
+		return gast.WalkSkipChildren, nil
+	})
+}
+
+type blocks struct{}
+
+func (blocks) Extend(m goldmark.Markdown) {
+	m.Parser().AddOptions(parser.WithASTTransformers(util.Prioritized(blockIDs{}, 700)))
+}

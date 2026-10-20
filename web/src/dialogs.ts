@@ -21,6 +21,7 @@ import {
   openNote,
   refresh,
   save,
+  scrollToHeading,
 } from "./editor.js";
 import { shortcuts } from "./shortcuts.js";
 
@@ -544,6 +545,11 @@ function linkDialog(wiki = false) {
   );
 }
 async function followWiki(raw: string) {
+  // [[#Heading]] and [[#^block]] point into the open note.
+  if (raw.startsWith("#")) {
+    scrollToHeading(raw.slice(1).split("|")[0].trim());
+    return;
+  }
   await save();
   const result = await api<ResolveResponse>("/api/resolve", "POST", {
     id: state.current?.id || "",
