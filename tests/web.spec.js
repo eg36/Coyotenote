@@ -3071,3 +3071,38 @@ test("checklist boxes in Write sit on the middle of their text", async ({ page }
     expect(Math.abs(offset), `at ${size}`).toBeLessThan(1.5);
   }
 });
+
+test("the Markdown editor folds headings and lists and edits with several cursors", async ({ page }) => {
+  await seed(page, `Neighbour ${Date.now()}`, "Another note to move to.");
+  const id = await openSeed(page, "# One\n\nalpha line\n\n- item\n  - nested\n\n# Two\n\nbeta line\n\nword word word");
+  await mode(page, "Markdown");
+  // Real markers only: CodeMirror keeps a hidden spacer in the gutter.
+  const markers = page.locator(".cm-foldGutter .cm-gutterElement:not([style*='visibility: hidden']) span[title]");
+  await expect(markers).toHaveCount(3);
+  await markers.first().click();
+  await expect(page.locator(".cm-content")).not.toContainText("alpha line");
+  await expect(page.locator(".cm-foldPlaceholder")).toHaveCount(1);
+  await page.locator(".cm-foldPlaceholder").click();
+  await expect(page.locator(".cm-content")).toContainText("alpha line");
+  // Alt+click adds a second cursor; typing writes at both.
+  const lines = page.locator(".cm-line");
+  await lines.nth(2).click();
+  await page.keyboard.press("End");
+  await lines.nth(9).click({ modifiers: ["Alt"] });
+  await page.keyboard.press("End");
+  await page.keyboard.type("!");
+  // Ctrl+D selects the next match of the word at the cursor.
+  await lines.last().click();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Control+d");
+  await page.keyboard.press("Control+d");
+  await page.keyboard.type("Z");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe("# One\n\nalpha line!\n\n- item\n  - nested\n\n# Two\n\nbeta line!\n\nZ Z word");
+  // Alt+↓ still moves to the next note rather than moving the line.
+  await page.keyboard.press("Escape");
+  const title = await page.locator("#document-title").textContent();
+  await page.keyboard.press("Alt+ArrowDown");
+  await expect(page.locator("#document-title")).not.toHaveText(title || "");
+  expect(await diskBody(page, id)).toBe("# One\n\nalpha line!\n\n- item\n  - nested\n\n# Two\n\nbeta line!\n\nZ Z word");
+});

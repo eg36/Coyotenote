@@ -2980,3 +2980,8 @@ dialog.danger #modal-submit {
 /* An image given both a width and a height, as in ![alt|120x40](…), takes
    exactly that size; with only a width it keeps its proportions. */
 .prose img[width][height] { height: revert-layer; object-fit: fill; }
+/* Markdown editor folding: arrows appear while pointing at the gutter, and a
+   folded section always shows its arrow and a quiet "…" marker. */
+#source-pane .cm-foldGutter span { color: var(--muted); opacity: 0; transition: opacity 0.15s ease; cursor: pointer; }
+#source-pane .cm-gutters:hover .cm-foldGutter span, #source-pane .cm-foldGutter span[title="Unfold line"] { opacity: 1; }
+#source-pane .cm-foldPlaceholder { margin: 0 4px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--hover); color: var(--muted); }

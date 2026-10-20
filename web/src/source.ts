@@ -19,6 +19,7 @@ import {
   drawSelection,
   highlightSpecialChars,
   placeholder,
+  rectangularSelection,
 } from "@codemirror/view";
 import {
   history,
@@ -32,6 +33,8 @@ import {
   HighlightStyle,
   indentOnInput,
   bracketMatching,
+  foldGutter,
+  foldKeymap,
 } from "@codemirror/language";
 import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
 import { search, findNext, findPrevious, replaceNext, replaceAll, getSearchQuery, closeSearchPanel, searchKeymap, highlightSelectionMatches, openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
@@ -70,8 +73,14 @@ export function createSource(
   };
   const extensions = [
     lineNumbers(),
+    // Headings fold their section and lists their nested items.
+    foldGutter({ openText: "⌄", closedText: "›" }),
     highlightActiveLineGutter(),
     drawSelection(),
+    // Alt+click adds a cursor and Shift+Alt+drag selects a rectangle.
+    EditorState.allowMultipleSelections.of(true),
+    EditorView.clickAddsSelectionRange.of((event) => event.altKey && !event.shiftKey),
+    rectangularSelection({ eventFilter: (event) => event.altKey && event.shiftKey }),
     highlightSpecialChars(),
     history(),
     indentOnInput(),
@@ -104,6 +113,7 @@ export function createSource(
     autocompletion({ override: [completion] }),
     keymap.of([
       ...completionKeymap,
+      ...foldKeymap,
       ...defaultKeymap,
       ...historyKeymap,
       { key: "Mod-f", run: () => { onFind(); return true; } },

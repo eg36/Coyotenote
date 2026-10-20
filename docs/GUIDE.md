@@ -234,6 +234,15 @@ Beyond GitHub Flavored Markdown, Preview understands:
   `![Sunrise|200](attachments/photo.png)`. With only a width the picture keeps
   its proportions. Write and Preview both show the size.
 
+### Markdown editor
+
+- **Folding:** point at the line numbers to see a ⌄ beside each heading and
+  list; click it to fold that section, and click › or the … marker to unfold.
+  Ctrl+Shift+[ and ] (⌘⌥[ and ] on a Mac) fold and unfold at the cursor.
+- **Several cursors:** Alt+click adds a cursor, Shift+Alt+drag selects a
+  rectangle, and Ctrl/⌘ D selects the next match of the word at the cursor.
+  Escape returns to one cursor.
+
 ### WYSIWYG round trips
 
 Merely opening Write or switching views **does not save or normalize a note**.
