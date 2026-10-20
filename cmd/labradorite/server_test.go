@@ -894,3 +894,23 @@ func TestCustomTaskMarksRender(t *testing.T) {
 		}
 	}
 }
+
+func TestImageSizesRender(t *testing.T) {
+	a := testApp(t)
+	png := "\x89PNG\r\n\x1a\n" + strings.Repeat("\x00", 32)
+	if err := os.MkdirAll(filepath.Join(a.store.Dir, "attachments"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(a.store.Dir, "attachments", "photo.png"), []byte(png), 0600); err != nil {
+		t.Fatal(err)
+	}
+	html := request(t, a, "POST", "/api/render", mutation{Body: "![[photo.png|120]]\n\n![[photo.png|A trail|200x150]]\n\n![Sunrise|80](attachments/photo.png)\n\n![Plain](attachments/photo.png)", ID: "Note"}, 200)["html"].(string)
+	for _, want := range []string{`alt="photo.png" width="120"`, `alt="A trail" width="200" height="150"`, `alt="Sunrise" width="80"`, `alt="Plain"`} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q in %s", want, html)
+		}
+	}
+	if strings.Contains(html, "|") {
+		t.Errorf("a size stayed in the description: %s", html)
+	}
+}

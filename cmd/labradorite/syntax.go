@@ -595,3 +595,26 @@ func (taskMarks) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(parser.WithInlineParsers(util.Prioritized(taskMarkParser{}, 1)))
 	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(taskMarkRenderer{}, 500)))
 }
+
+// imageSize is a size at the end of an image's description, as in
+// ![photo|200](photo.png) or ![[photo.png|200x150]].
+var imageSize = regexp.MustCompile(`\|(\d{1,5})(?:x(\d{1,5}))?$`)
+
+// sizeImage moves a trailing |width or |widthxheight from an image's
+// description to its width and height.
+func sizeImage(image *gast.Image, source []byte) {
+	last, ok := image.LastChild().(*gast.Text)
+	if !ok {
+		return
+	}
+	value := last.Segment.Value(source)
+	m := imageSize.FindSubmatchIndex(value)
+	if m == nil {
+		return
+	}
+	image.SetAttributeString("width", value[m[2]:m[3]])
+	if m[4] >= 0 {
+		image.SetAttributeString("height", value[m[4]:m[5]])
+	}
+	last.Segment = last.Segment.WithStop(last.Segment.Start + m[0])
+}

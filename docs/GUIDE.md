@@ -229,6 +229,10 @@ Beyond GitHub Flavored Markdown, Preview understands:
   `[?]` question, `[!]` important, `[>]` deferred, `[/]` in progress and `[-]`
   cancelled (struck through) get their own colour in Preview. Write shows such
   notes in Markdown, so the marks stay exact.
+- **Image sizes:** end an image's description with a width, or a width and
+  height: `![[photo.png|200]]`, `![[photo.png|A trail|200x150]]` or
+  `![Sunrise|200](attachments/photo.png)`. With only a width the picture keeps
+  its proportions. Write and Preview both show the size.
 
 ### WYSIWYG round trips
 

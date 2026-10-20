@@ -3025,3 +3025,26 @@ test("custom task marks render in Preview and keep the note in Markdown for Writ
   await mode(page, "Write");
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
 });
+
+test("image sizes after a | apply in Write and Preview and stay in the Markdown", async ({ page }) => {
+  const bootstrap = await (await page.request.get("/api/state")).json();
+  const upload = await page.request.post("/api/attachment?name=sized.png", {
+    headers: { "X-Labradorite-Token": bootstrap.token, "Content-Type": "image/png" },
+    data: pixel,
+  });
+  const { path } = await upload.json();
+  const text = `Intro.\n\n![Sunrise|80](${path})\n\n![Wide|120x40](${path})`;
+  const id = await openSeed(page, text);
+  const pictures = page.locator(".tiptap img[data-image-src]");
+  await expect(pictures.first()).toHaveAttribute("alt", "Sunrise");
+  await expect.poll(async () => (await pictures.first().boundingBox())?.width).toBe(80);
+  await expect.poll(async () => (await pictures.nth(1).boundingBox())?.height).toBe(40);
+  await page.getByRole("textbox", { name: "WYSIWYG editor" }).locator("p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" More.");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Intro.", "Intro. More."));
+  await mode(page, "Preview");
+  await expect(page.locator('#preview img[alt="Sunrise"]')).toHaveAttribute("width", "80");
+  await expect(page.locator('#preview img[alt="Wide"]')).toHaveAttribute("height", "40");
+});

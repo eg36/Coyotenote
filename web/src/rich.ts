@@ -171,9 +171,13 @@ function imageNode(fileUrl: FileUrl) {
       const { src, alt, title } = node.attrs;
       const url = fileUrl(src);
       const data = { "data-image-src": src, "data-image-alt": alt, title };
+      // A trailing |width or |widthxheight in the description sizes the
+      // picture, as in the preview; the description keeps it when saved.
+      const size = /\|(\d{1,5})(?:x(\d{1,5}))?$/.exec(alt || "");
+      const text = size ? alt.slice(0, size.index) : alt;
       if (!url)
-        return ["span", { ...data, class: "image-placeholder" }, `[image: ${alt || src}]`];
-      return ["img", { ...data, src: url, alt, loading: "lazy" }];
+        return ["span", { ...data, class: "image-placeholder" }, `[image: ${text || src}]`];
+      return ["img", { ...data, src: url, alt: text, width: size?.[1] ?? null, height: size?.[2] ?? null, loading: "lazy" }];
     },
     renderText({ node }) {
       return node.attrs.alt;

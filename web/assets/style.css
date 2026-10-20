@@ -2965,3 +2965,6 @@ dialog.danger #modal-submit {
 #preview li[data-task="/"] > .task-mark { --task: var(--good); }
 #preview li[data-task="-"] > .task-mark { --task: var(--muted); }
 #preview li[data-task="-"] { color: var(--muted); text-decoration: line-through; }
+/* An image given both a width and a height, as in ![alt|120x40](…), takes
+   exactly that size; with only a width it keeps its proportions. */
+.prose img[width][height] { height: revert-layer; object-fit: fill; }

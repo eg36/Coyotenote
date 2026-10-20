@@ -769,6 +769,9 @@ func embedImage(body string, l vault.Link) string {
 	alt := l.Alias
 	if alt == "" {
 		alt = path.Base(l.Target)
+	} else if m := imageSize.FindStringIndex("|" + alt); m != nil && m[0] == 0 {
+		// ![[photo.png|200]] sizes the picture and keeps its name as text.
+		alt = path.Base(l.Target) + "|" + alt
 	}
 	alt = strings.NewReplacer("\\", "\\\\", "[", "\\[", "]", "\\]").Replace(alt)
 	return "![" + alt + "](<" + l.Target + embedMark + ">)"
@@ -781,7 +784,7 @@ const embedMark = "#embed"
 // localImages points images in document at the vault files they name, so
 // the preview can show them. Remote images keep their address and are
 // removed by suppressImages.
-func (a *webApp) localImages(document ast.Node, from string) {
+func (a *webApp) localImages(document ast.Node, source []byte, from string) {
 	_ = ast.Walk(document, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		image, ok := n.(*ast.Image)
 		if !ok || !entering {
@@ -800,6 +803,7 @@ func (a *webApp) localImages(document ast.Node, from string) {
 		if !found && embed {
 			rel, found = a.store.FindFile(dest)
 		}
+		sizeImage(image, source)
 		if found && vault.ImageType(rel) != "" {
 			image.Destination = []byte(fileURL("", rel))
 		} else {
@@ -858,7 +862,7 @@ func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	var output bytes.Buffer
 	context := parser.NewContext(parser.WithIDs(newHeadingIDs()))
 	document := a.renderer.Parser().Parse(text.NewReader([]byte(body)), parser.WithContext(context))
-	a.localImages(document, from)
+	a.localImages(document, []byte(body), from)
 	if err := a.renderer.Renderer().Render(&output, []byte(body), document); err != nil {
 		return "", err
 	}
