@@ -15,11 +15,13 @@
 - Work is tracked as GitHub issues in eg36/Labradorite. Before starting a
   feature or fix, find its issue or create one with `gh issue create`: a
   plain title, what and why, and how to tell it is done. A bug found along the
-  way gets its own issue before it is fixed. Commits reference their issue,
-  and the commit that completes it says `Fixes #N` in its message. When it is
-  done, tick its `Done when:` checkboxes and comment on the issue with what
-  changed and how it was verified. Keep committing to main until the user
-  switches to branches and pull requests.
+  way gets its own issue before it is fixed. Commits use `Refs #N`; do not
+  use closing keywords (`Fixes`, `Closes`, `Resolves`) in commit messages,
+  because pushing to main would close issues before CI finishes. Keep issues
+  open while required verification remains. Tick only verified `Done when:`
+  items, post what changed and how it was verified, then close the issue
+  manually once all acceptance checks pass. Keep committing to main until
+  the user switches to branches and pull requests.
 - Issues are written impersonally (what happens now, what to build, then
   `Done when:` as `- [ ]` checkboxes). Linear (team Labradorite, LBT) mirrors
   them: assign each issue to the user, put it in the matching project
