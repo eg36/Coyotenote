@@ -274,8 +274,18 @@ async function ensureRich() {
 // switch made meanwhile, such as clicking Markdown while a note opens,
 // wins, and the older one gives up instead of switching back.
 let modeGeneration = 0;
-async function setMode(mode: AppState["mode"], { focus = true, persist = true } = {}) {
+async function setMode(mode: AppState["mode"], options: { focus?: boolean; persist?: boolean } = {}) {
   const generation = ++modeGeneration;
+  // Busy until the newest switch has finished, so nothing acts on a view
+  // that is still being built and focused.
+  $("editor-area").setAttribute("aria-busy", "true");
+  try {
+    await switchMode(mode, generation, options);
+  } finally {
+    if (generation === modeGeneration) $("editor-area").removeAttribute("aria-busy");
+  }
+}
+async function switchMode(mode: AppState["mode"], generation: number, { focus = true, persist = true } = {}) {
   if (!state.current) {
     state.mode = mode;
     if (persist) storage.set("coyote-view", mode);

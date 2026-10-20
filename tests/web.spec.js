@@ -49,6 +49,8 @@ async function mode(page, name) {
     await page.getByRole("menuitem", { name, exact: true }).click();
     await expect(page.locator("#menu-popup")).toBeHidden();
   }
+  // The menu closes before the new view is loaded and focused.
+  await expect(page.locator("#editor-area")).not.toHaveAttribute("aria-busy", "true");
 }
 async function menu(page, section) {
   await page.locator(`[data-menu="${section}"]`).click();
