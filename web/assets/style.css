@@ -3041,3 +3041,9 @@ dialog.danger #modal-submit {
 .write-footnote-actions button { min-height: 44px; padding: 8px 16px; }
 .write-footnote-error { display: block; color: var(--text); font-size: var(--font-small); white-space: normal; }
 .write-footnote-error:not(:empty) { margin-top: 8px; }
+
+.write-task-status { width: 44px; height: 28px; margin: 0 4px 0 0; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--chrome); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.write-task-status:hover { background: var(--hover); }
+.prose li[data-marker="-"] > div { color: var(--muted); text-decoration: line-through; }
+
+.prose ul[data-type="taskList"] > li > label:has(.write-task-status) { min-width: 70px; justify-content: flex-end; }

@@ -290,18 +290,20 @@ export function footnoteExtensions(source: () => string) {
         if (all[next]?.type === "footnoteDefinition") return false;
         let previous = index - 1;
         while (all[previous]?.type === "paragraph" && !all[previous].content?.length) previous--;
-        return next < all.length || all[previous]?.type !== "footnoteDefinition";
+        return next < all.length || !["footnoteDefinition", "taskList"].includes(all[previous]?.type || "");
       });
       let result = "";
       nodes.forEach((child, i) => {
         const previous = nodes[i - 1];
         if (previous?.type === "footnoteDefinition") result += previous.attrs?.after || "\n\n";
+        else if (previous?.type === "taskList") result += previous.attrs?.after || "\n\n";
         else if (child.type === "footnoteDefinition") result += child.attrs?.before || (i ? "\n\n" : "");
         else if (i) result += "\n\n";
         result += helpers.renderChild!(child, i);
       });
       const last = nodes.at(-1);
       if (last?.type === "footnoteDefinition") result += last.attrs?.after || "";
+      else if (last?.type === "taskList") result += last.attrs?.after || "";
       // A final paragraph has no visible newline node. Retain the source's
       // terminator when editing text or an inline footnote in that paragraph.
       else if (!result.endsWith("\n")) result += /(?:\n[ \t]*)+$/.exec(source())?.[0] || "";

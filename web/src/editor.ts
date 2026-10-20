@@ -345,6 +345,7 @@ function applyEditability() {
   $("properties-text").readOnly = !editable;
   for (const input of $("properties").querySelectorAll("input")) input.disabled = !editable;
   for (const input of $("rich-editor").querySelectorAll("textarea")) input.readOnly = !editable;
+  for (const select of $("rich-editor").querySelectorAll("select")) select.disabled = !editable;
   state.source?.readOnly(!editable);
   state.rich?.editor?.setEditable(editable, false);
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format], #block-type"))

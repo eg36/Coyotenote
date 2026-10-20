@@ -3113,12 +3113,12 @@ test("same-note links, block ids and table aliases work in Preview and Write", a
   await expect(page.locator('#preview [id="b-key"]')).toBeInViewport();
 });
 
-test("custom task marks render in Preview and keep the note in Markdown for Write", async ({ page }) => {
+test("custom task marks work in Write and render in Preview", async ({ page }) => {
   const text = "- [ ] Open\n- [?] Ask Priya\n- [-] Dropped idea\n- [!] Urgent";
   const id = await openSeed(page, text);
   await mode(page, "Write");
-  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
-  await expect(page.locator("#toast-text")).toContainText("custom task marks");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+  await expect(page.locator(".write-task-status")).toHaveCount(4);
   expect(await diskBody(page, id)).toBe(text);
   await mode(page, "Preview");
   await expect(page.locator("#preview .task-mark")).toHaveCount(3);
@@ -3475,4 +3475,54 @@ test("breadcrumb folder glyph follows the text baseline across font sizes and zo
       expect(Math.abs(fit.bottom), `baseline at ${fontSize}px, ${zoom} zoom`).toBeLessThan(1);
     }
   }
+});
+
+
+test("Write task statuses preserve markers, spacing, nesting and final newlines", async ({ page }) => {
+  for (const list of [
+    "- [ ] Open\n- [X] Done\n- [?] Question\n- [/] Working\n- [-] Cancelled\n- [>] Later\n- [!] Important\n- [z] Custom",
+    "+  [?]\tQuestion\n+  [/]  Working\n+  [X] Done\n",
+    "- [?] Parent\n  - [/] Child\n    - [!] Deep child\n- [>] Later",
+  ]) {
+    const text = list + "\n\nBody.";
+    const id = await openSeed(page, text); await mode(page, "Write");
+    await expect(page.locator("#rich-pane")).toBeVisible();
+    await page.locator(".tiptap > p").last().click(); await page.keyboard.press("End"); await page.keyboard.type(" Edited.");
+    await expect.poll(() => diskBody(page, id)).toBe(text + " Edited.");
+    await page.reload(); await mode(page, "Write");
+    await page.getByRole("combobox", { name: list.includes("Parent") ? "Task status for Parent" : "Task status for Question", exact: true }).selectOption("!");
+    await expect.poll(() => diskBody(page, id)).toBe((text + " Edited.").replace("[?]", "[!]"));
+  }
+});
+
+test("Write changes task status, uses checkboxes and undoes status edits on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const text = "- [?] Review\n- [X] Keep uppercase\n\nBody.\n";
+  const id = await openSeed(page, text); await mode(page, "Write");
+  const select = page.getByRole("combobox", { name: "Task status for Review", exact: true });
+  await select.selectOption("/"); await expect.poll(() => diskBody(page, id)).toBe(text.replace("[?]", "[/]"));
+  await page.locator(".tiptap > p").last().click(); await page.keyboard.press("Control+z");
+  await expect.poll(() => diskBody(page, id)).toBe(text);
+  await select.selectOption("x"); await expect.poll(() => diskBody(page, id)).toBe(text.replace("[?]", "[x]"));
+  await page.getByRole("checkbox", { name: "Task item checkbox for Review", exact: true }).uncheck();
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("[?]", "[ ]"));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("custom task layouts that cannot stay exact keep the source fallback", async ({ page }) => {
+  for (const text of ["- [?] Question\n- Plain bullet", "- [?] First\n\n- [/] Loose", "1. [?] Ordered", "- [?] First\n  A continuation."]) {
+    const id = await openSeed(page, text); await mode(page, "Write");
+    await expect(page.locator("#source-pane")).toBeVisible(); expect(await diskBody(page, id)).toBe(text);
+  }
+});
+
+test("typing a custom task status creates an editable task", async ({ page }) => {
+  const id = await openSeed(page, ""); await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await page.locator(".tiptap p").click();
+  await page.keyboard.type("- [?] New task");
+  await expect(page.getByRole("combobox", { name: "Task status for New task", exact: true })).toBeVisible();
+  await expect.poll(() => diskBody(page, id)).toBe("- [?] New task");
+  await page.keyboard.press("Enter"); await page.keyboard.press("Enter"); await page.keyboard.type("After.");
+  await expect.poll(() => diskBody(page, id)).toBe("- [?] New task\n\nAfter.");
 });

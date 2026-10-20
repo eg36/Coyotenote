@@ -17,8 +17,7 @@ import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
+import { StatusTaskList, StatusTaskItem } from "./task-status.js";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes } from "./footnotes.js";
@@ -265,8 +264,10 @@ export function supportsRich(body: string) {
     if (token.type === "link" && /\^\[/.test(token.raw)) reason = split;
     if (token.type === "table" && /\^\[/.test(token.raw))
       reason = "Showing Markdown: Write would change inline footnotes in this table.";
-    if (token.type === "list_item" && /^\s*(?:[-*+]|\d+[.)])[ \t]+\[[^\sxX[\]\\]\][ \t]/.test(token.raw))
-      reason = "Showing Markdown: Write would change this note's custom task marks, such as [?].";
+    if (token.type === "list" && /(?:^|\n)[ \t]*(?:[-+*]|\d+[.)])[ \t]+\[[^\sxX[\]\\]+\]/.test(token.raw)) {
+      if (token.loose || token.ordered || token.raw.split("\n").some(line => line.trim() && !/^ *[-+*][ \t]+\[[^\n[\]\\]\][ \t]+/.test(line)))
+        reason = "Showing Markdown: Write would change this custom task list's layout.";
+    }
     if (token.type === "text" || token.type === "paragraph")
       for (const match of token.raw.matchAll(highlightPattern))
         if (/\[\[|!\[|\[\^|\^\[/.test(match[2])) reason = split;
@@ -281,12 +282,14 @@ export function createRich(
   let editor: Editor | null = null,
     loading = false,
     last = "",
+    parsedSource = "",
     currentId = "";
   function make(body: string) {
     editor?.destroy();
     element.replaceChildren();
     loading = true;
     last = body;
+    parsedSource = body;
     editor = new Editor({
       element,
       injectCSS: false,
@@ -296,6 +299,9 @@ export function createRich(
         StarterKit.configure({
           paragraph: false,
           document: false,
+          // Lists can exit naturally with Enter; an automatic paragraph
+          // would leave a second, invisible blank block after that exit.
+          trailingNode: { notAfter: ["taskList", "bulletList", "orderedList"] },
           link: {
             openOnClick: false,
             autolink: false,
@@ -306,13 +312,15 @@ export function createRich(
           markedOptions: { gfm: true },
           indentation: { style: "space", size: 2 },
         }),
-        TaskList,
-        TaskItem.configure({ nested: true }),
+        StatusTaskList,
+        StatusTaskItem.configure({ nested: true }),
         TableKit.configure({ table: { resizable: false } }),
         Placeholder.configure({
           placeholder: "A thought, a list, the beginning of something…",
         }),
-        ...footnoteExtensions(() => last),
+        // Formatting metadata comes from the parsed source, rather than
+        // transient empty paragraphs produced while typing a new list.
+        ...footnoteExtensions(() => parsedSource),
         ImageParagraph,
         WikiLink,
         Highlight,
@@ -376,6 +384,7 @@ export function createRich(
           body.split("\n").length > 10000
         ) {
           loading = true;
+          parsedSource = last;
           editor.commands.setContent(last, {
             contentType: "markdown",
             emitUpdate: false,
@@ -427,7 +436,7 @@ export function createRich(
       const node = editor.state.doc.nodeAt(pos);
       if (node?.type.name !== "taskItem") return;
       editor.view.dispatch(
-        editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: box.checked }),
+        editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: box.checked, marker: box.checked ? "x" : " " }),
       );
     },
     true,
@@ -440,6 +449,7 @@ export function createRich(
       } else if (last !== body) {
         loading = true;
         last = body;
+        parsedSource = body;
         editor.commands.setContent(body, {
           contentType: "markdown",
           emitUpdate: false,

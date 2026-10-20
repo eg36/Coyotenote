@@ -78,6 +78,8 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 - Align the breadcrumb folder icon with the folder name in every browser.
 
 ### 1.5.0 — Smooth everything, then release
+- Custom task statuses in Write: editable status pickers with exact markers,
+  spacing and nested tasks; unsupported list layouts keep the source fallback.
 - Inline `^[…]` footnotes in Write: edit their Markdown in place, preserve
   nested brackets and escapes, and validate changes before applying.
 - Rename a note in place: clicking the title turns it into a text field

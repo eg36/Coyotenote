@@ -227,8 +227,13 @@ Beyond GitHub Flavored Markdown, Preview understands:
   with an escaped pipe: `[[Note\|label]]`.
 - **Task marks:** besides `- [ ]` and `- [x]`, any single character marks a task:
   `[?]` question, `[!]` important, `[>]` deferred, `[/]` in progress and `[-]`
-  cancelled (struck through) get their own colour in Preview. Write shows such
-  notes in Markdown, so the marks stay exact.
+  cancelled (struck through) get their own colour in Preview. In Write, use the
+  status picker beside a task to switch between these states, Open and Done.
+  Ordinary tasks also keep their checkbox. Untouched markers (including `[X]`),
+  bullet spacing and nested task indentation stay exact; changes support undo.
+  Type `- [?] ` to start a question task. Tight bullet task lists are supported;
+  mixed plain/task lists, ordered tasks, loose lists and continuation paragraphs
+  keep the Markdown fallback so their layout remains intact.
 - **Image sizes:** end an image's description with a width, or a width and
   height: `![[photo.png|200]]`, `![[photo.png|A trail|200x150]]` or
   `![Sunrise|200](attachments/photo.png)`. With only a width the picture keeps
