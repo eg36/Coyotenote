@@ -33,6 +33,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	gmhtml "github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 )
 
@@ -116,7 +117,7 @@ func newWebApp(s *vault.Store) (*webApp, error) {
 	if _, err := rand.Read(token[:]); err != nil {
 		return nil, err
 	}
-	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}, callouts{}, blocks{}, taskMarks{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()))}, nil
+	return &webApp{store: s, token: hex.EncodeToString(token[:]), written: map[string]string{}, renderer: goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote, highlights{}, callouts{}, blocks{}, taskMarks{}), goldmark.WithParserOptions(parser.WithAutoHeadingID()), goldmark.WithRendererOptions(gmhtml.WithUnsafe()))}, nil
 }
 
 func revision(body string) string {
@@ -882,7 +883,7 @@ func (a *webApp) renderEmbedding(body, from string, notes []vault.Note, embeddin
 	}
 	// No remote images in a local notebook: replace other image tags with
 	// their alt text so opening a note cannot make a tracking request.
-	rendered := suppressImages(output.String())
+	rendered := previewPolicy.Sanitize(suppressImages(output.String()))
 	for token, l := range embeds {
 		embedded := a.embedNote(l, from, notes, resolver, embedding)
 		rendered = strings.ReplaceAll(rendered, "<p>"+token+"</p>", embedded)

@@ -840,7 +840,7 @@ func TestCalloutsRenderInPreview(t *testing.T) {
 		},
 		"> [!info]\n> Only a body.":                   {`<span class="callout-title-text">Info</span>`, "<p>Only a body.</p>"},
 		"> [!FAQ]- Folded\n> Hidden body":             {`<details class="callout callout-question" data-callout="faq">`, `<summary class="callout-title">`, "Folded"},
-		"> [!tip]+ Open\n> Shown":                     {`<details class="callout callout-tip" data-callout="tip" open>`},
+		"> [!tip]+ Open\n> Shown":                     {`<details class="callout callout-tip" data-callout="tip" open="">`},
 		"> [!tip] Title only":                         {`<span class="callout-title-text">Title only</span></div>`},
 		"> [!custom-thing] Mine\n> x":                 {`class="callout callout-note" data-callout="custom-thing"`, `data-icon="pen"`},
 		"> [!note] Outer\n> > [!bug] Inner\n> > Deep": {`callout-note`, `callout-bug`, "<p>Deep</p>"},
@@ -951,5 +951,40 @@ func TestNoteEmbedsRenderInPreview(t *testing.T) {
 	}
 	if escaped := render("Not an embed: \\![[Recipe]]"); strings.Contains(escaped, `class="embed"`) {
 		t.Errorf("an escaped embed was embedded:\n%s", escaped)
+	}
+}
+
+func TestPreviewHTMLIsSanitised(t *testing.T) {
+	a := testApp(t)
+	body := strings.Join([]string{
+		"Text with <u>underline</u>, H<sub>2</sub>O, x<sup>2</sup>, <kbd>Ctrl</kbd>, <mark>marked</mark> and <abbr title=\"HyperText\">HTML</abbr>.",
+		"<details><summary>More</summary>\nHidden text.\n</details>",
+		"<script>alert(1)</script>",
+		"<img src=x onerror=alert(2)>",
+		"<a href=\"javascript:alert(3)\">bad link</a> <a href=\"data:text/html,hi\">data link</a> <a href=\"https://example.com\" onclick=\"alert(4)\">good link</a>",
+		"<iframe src=\"https://example.com\"></iframe>",
+		"<style>body{display:none}</style>",
+		"<svg onload=alert(5)><circle r=\"5\"/></svg>",
+		"<form action=\"/api/note\"><input name=x><button>Go</button></form>",
+		"<div id=\"modal\" style=\"position:fixed\" onmouseover=\"alert(6)\">fake</div>",
+		"<span class=\"ok-class\" data-x=\"1\">kept</span>",
+	}, "\n\n")
+	html := request(t, a, "POST", "/api/render", mutation{Body: body, ID: "Note"}, 200)["html"].(string)
+	for _, want := range []string{
+		"<u>underline</u>", "<sub>2</sub>", "<sup>2</sup>", "<kbd>Ctrl</kbd>", "<mark>marked</mark>", `<abbr title="HyperText">HTML</abbr>`,
+		"<details><summary>More</summary>", "Hidden text.", `<a href="https://example.com">good link</a>`, "fake",
+		`<span class="ok-class" data-x="1">kept</span>`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q in %s", want, html)
+		}
+	}
+	if remote := request(t, a, "POST", "/api/render", mutation{Body: "<img src=\"//tracker.example/p.gif\" alt=\"t\"> <img src=\"https://tracker.example/q.gif\">", ID: "Note"}, 200)["html"].(string); strings.Contains(remote, "tracker.example") {
+		t.Errorf("a remote picture can still load: %s", remote)
+	}
+	for _, bad := range []string{"<script", "alert(", "onerror", "onclick", "onload", "onmouseover", "javascript:", "data:text", "<iframe", "<style", "<svg", "<form", "<input name", "<button", `id="modal"`, "position:fixed", `src="x"`} {
+		if strings.Contains(html, bad) {
+			t.Errorf("unsafe %q survived: %s", bad, html)
+		}
 	}
 }

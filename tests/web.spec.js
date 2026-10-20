@@ -3155,3 +3155,19 @@ test("the rail's first icon lines up with the notes toolbar at home and in a not
     expect(new Set(sizes)).toEqual(new Set([19]));
   }
 });
+
+test("safe HTML formatting shows in Preview while scripts and handlers never run", async ({ page }) => {
+  let dialogs = 0;
+  page.on("dialog", (dialog) => { dialogs++; dialog.dismiss(); });
+  await openSeed(page, 'Press <kbd>Ctrl</kbd> for <u>this</u>, H<sub>2</sub>O.\n\n<details><summary>Open me</summary>\nHidden.\n</details>\n\n<img src=x onerror="alert(1)"><script>alert(2)</script>');
+  await mode(page, "Preview");
+  await expect(page.locator("#preview kbd")).toHaveText("Ctrl");
+  await expect(page.locator("#preview u")).toHaveText("this");
+  await expect(page.locator("#preview details")).toHaveJSProperty("open", false);
+  await page.locator("#preview summary").click();
+  await expect(page.locator("#preview details")).toHaveJSProperty("open", true);
+  await expect(page.locator("#preview details")).toContainText("Hidden.");
+  await expect(page.locator("#preview script, #preview [onerror]")).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(dialogs).toBe(0);
+});

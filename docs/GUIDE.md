@@ -126,7 +126,7 @@ not change the Markdown files or follow the vault to another browser.
   including tabs; saving preserves the file's LF or CRLF convention.
 - **Preview** is read-only Markdown rendered by Go/Goldmark. External links open
   separately with no referrer. Images from the vault are shown; remote images are
-  replaced by their description and never fetched. Raw HTML is not executed.
+  replaced by their description and never fetched. Raw HTML is cleaned, never executed.
 - **Images:** paste or drop an image into Write or Markdown, or use the formatting panel's
   image button, and it is saved in the vault's `attachments/` folder and linked
   with ordinary Markdown, such as `![photo](attachments/photo.png)`. PNG, JPEG,
@@ -237,6 +237,11 @@ Beyond GitHub Flavored Markdown, Preview understands:
   `![[Note#Heading]]` just that section and `![[Note#^id]]` just that block,
   with the note's name as a link above. Embeds nest two notes deep; a note
   that would show itself again appears as a link instead.
+- **HTML:** formatting tags such as `<u>`, `<sub>`, `<sup>`, `<kbd>`, `<mark>`,
+  `<abbr title="…">` and `<details><summary>…</summary>…</details>` show in
+  Preview. Scripts, styles, frames, forms, event handlers, `javascript:` links
+  and pictures from other computers are removed. As elsewhere, Markdown inside
+  an HTML block is shown as written, and Write shows such notes in Markdown.
 
 ### Markdown editor
 
