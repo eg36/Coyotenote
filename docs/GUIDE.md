@@ -627,7 +627,10 @@ Linux and Windows, covering browser drafts as well as editing. ARM browser/GUI
 checks and real default-browser associations require manual review; the Windows
 arm64 race detector is unavailable. Windows does not provide the directory fsync
 used on Linux: file contents are flushed before replacement, but equivalent
-power-loss durability is not claimed. See `VALIDATION.txt` and
+power-loss durability is not claimed. Windows also lacks the file change stamp
+Linux uses to spot outside edits: an edit by another program that keeps a note's
+size and restores an older modification time can go unnoticed until the note
+changes again. See `VALIDATION.txt` and
 [#16](https://github.com/eg36/Labradorite/issues/16) for recorded results.
 
 To request another build, use **Run workflow** on main and enter a version such

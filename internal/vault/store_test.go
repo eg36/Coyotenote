@@ -93,10 +93,6 @@ func TestLoadSeesOutsideWritesThatKeepSizeAndTime(t *testing.T) {
 	s := testStore(t)
 	writeNote(t, s, "Cached", "AAAA")
 	p := s.Path("Cached")
-	old := time.Now().Add(-time.Hour)
-	if err := os.Chtimes(p, old, old); err != nil {
-		t.Fatal(err)
-	}
 	load := func() string {
 		t.Helper()
 		notes, _, err := s.Load()
@@ -118,21 +114,33 @@ func TestLoadSeesOutsideWritesThatKeepSizeAndTime(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// A file changed just before it was read is read again, whatever the platform.
+	// A file modified just before it was read is read again, whatever the platform.
 	load()
 	rewrite("BBBB")
 	if got := load(); got != "BBBB" {
 		t.Fatalf("recent outside write missed: %q", got)
 	}
 	if inode, changed := changeStamp(mustStat(t, p)); inode == 0 && changed.IsZero() {
+		// Size and modification time are all this platform offers, so a
+		// same-size write that restores an older time goes unnoticed.
 		t.Skip("no change stamp on this platform")
+	}
+	// An older modification time does not hide a recent status change.
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(p, old, old); err != nil {
+		t.Fatal(err)
+	}
+	load()
+	rewrite("CCCC")
+	if got := load(); got != "CCCC" {
+		t.Fatalf("recently changed outside write missed: %q", got)
 	}
 	// Older files are trusted by their stamp, which a restored time does not fool.
 	defer func(w time.Duration) { racyWindow = w }(racyWindow)
 	racyWindow = 0
 	load()
-	rewrite("CCCC")
-	if got := load(); got != "CCCC" {
+	rewrite("DDDD")
+	if got := load(); got != "DDDD" {
 		t.Fatalf("outside write with restored time missed: %q", got)
 	}
 }
