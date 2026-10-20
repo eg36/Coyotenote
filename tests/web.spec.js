@@ -1816,12 +1816,6 @@ test("search results show the matching passage with the match marked", async ({
 test("typing in search after closing a dialog never lands in the note", async ({
   page,
 }) => {
-  // Emulate a slow machine whose animation frames run late.
-  await page.addInitScript(() => {
-    const frame = window.requestAnimationFrame.bind(window);
-    window.requestAnimationFrame = (callback) =>
-      setTimeout(() => frame(callback), 300);
-  });
   const stamp = Date.now();
   const kept = `Kept ${stamp}`;
   await seed(page, kept, "Kept body.");
@@ -1829,16 +1823,36 @@ test("typing in search after closing a dialog never lands in the note", async ({
   await page
     .getByRole("button", { name: "Move note to trash", exact: true })
     .click();
+  // Hold frames only during the dialog-close/note-open transition. Install
+  // inside the click so Playwright's confirmation action remains actionable.
+  await page.evaluate(() => {
+    const frame = window.requestAnimationFrame.bind(window);
+    const pending = [];
+    window.__restoreAnimationFrame = () => { window.requestAnimationFrame = frame; };
+    window.__releaseAnimationFrames = () => new Promise(resolve => {
+      for (const callback of pending.splice(0)) frame(callback);
+      frame(() => frame(resolve));
+    });
+    document.getElementById("modal-submit").addEventListener("click", () => {
+      window.requestAnimationFrame = callback => {
+        pending.push(callback);
+        return -pending.length;
+      };
+    }, { once: true, capture: true });
+  });
   await page.getByRole("button", { name: "Move to trash", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("Note moved to trash.");
+  // New search actions use normal frames. App callbacks queued during the
+  // transition remain held until typing has moved to the search input.
+  await page.evaluate(() => window.__restoreAnimationFrame());
   const opened = await page
     .locator("#note-list .note-row.selected")
     .getAttribute("data-note");
   await (await searchBox(page)).click();
   await page.keyboard.type(`k${stamp}`, { delay: 40 });
   await expect(page.locator("#search")).toHaveValue(`k${stamp}`);
+  await page.evaluate(() => window.__releaseAnimationFrames());
   await expect(page.locator("#search")).toBeFocused();
-  await page.waitForTimeout(600);
   expect(await diskBody(page, opened)).not.toContain(String(stamp));
 });
 
