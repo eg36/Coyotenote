@@ -244,9 +244,10 @@ Beyond GitHub Flavored Markdown, Preview understands:
   status picker beside a task to switch between these states, Open and Done.
   Ordinary tasks also keep their checkbox. Untouched markers (including `[X]`),
   bullet spacing and nested task indentation stay exact; changes support undo.
-  Type `- [?] ` to start a question task. Tight bullet task lists are supported;
-  mixed plain/task lists, ordered tasks, loose lists and continuation paragraphs
-  keep the Markdown fallback so their layout remains intact.
+  Type `- [?] ` to start a question task. Tight bullet task lists are supported.
+  Custom-status tasks mixed with plain bullets, ordered custom tasks, loose
+  custom task lists and continuation paragraphs keep the Markdown fallback so
+  their layout remains intact.
 - **Image sizes:** end an image's description with a width, or a width and
   height: `![[photo.png|200]]`, `![[photo.png|A trail|200x150]]` or
   `![Sunrise|200](attachments/photo.png)`. With only a width the picture keeps
@@ -309,8 +310,6 @@ code loads only when a note needs it, with no CDN or other network service.
 ### WYSIWYG round trips
 
 Merely opening Write or switching views **does not save or normalize a note**.
-After an actual WYSIWYG edit, Markdown is serialized by Tiptap. List marker styles,
-blank lines, emphasis markers and table spacing can be normalized; this is expected.
 
 Wiki links such as `[[Note]]`, `[[Folder/Note#Heading|label]]` are preserved by a
 custom Markdown node. Click a rendered wiki link to follow it; use the formatting panel to
@@ -331,13 +330,16 @@ character references such as `&amp;`, its emphasis delimiters (`_` or `*`,
 `~` or `~~`), code spans, autolinks and line breaks. Characters you type are
 escaped only where they would otherwise turn into formatting: `snake_case`
 stays as typed, while a typed `[a](b)` is saved as `\[a](b)` to stay text.
+An edited table row can have its padding compacted; unchanged rows and the
+delimiter row keep their original spacing. Use Markdown for whitespace-sensitive
+edits or Markdown dialects beyond GFM.
 
 Write deliberately falls back to Markdown for unclosed front matter,
 reference-style link definitions, raw HTML, `![[…]]` embeds and named
 HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
 round-trip intact, including when a browser draft is restored; a short message says
-which syntax kept the note in Markdown. Use source mode for
-exact whitespace or Markdown dialects beyond GFM. Collaborative editing is not supported.
+which syntax kept the note in Markdown. Some complex combinations of otherwise
+supported syntax also keep this fallback. Collaborative editing is not supported.
 
 ### Footnotes in Write
 

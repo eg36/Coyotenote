@@ -1,7 +1,12 @@
-# Toward 1.5.0
+# 1.5.0 release candidate and the road to 2.0
 
 Working ideas from the 2026-10-20 conversation. Build and refine with the user;
 this document does not authorize a release tag.
+
+The 1.5 feature set is implemented. Release preparation is tracked in
+[#13](https://github.com/eg36/Labradorite/issues/13); `v1.5.0` will be tagged
+only after explicit approval. Review builds remain `1.5.0+dev` until release.
+GitHub issues are the source of truth and Linear team Labradorite mirrors them.
 
 ## Agreed direction
 
@@ -84,6 +89,9 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   nested brackets and escapes, and validate changes before applying.
 - Math in Write: inline and display formulas render with the bundled KaTeX,
   open their TeX for editing in place, and keep delimiters and spacing exact.
+- Mermaid in Write: diagrams use the same lazy offline renderer as Preview;
+  click or Enter opens the source with live rendering, Apply, Cancel and undo,
+  preserving fences, language lines, source indentation and nested spacing.
 - Callouts in Write (moved up from 1.6): shown as in Preview, with the type,
   title and folding edited in the header and the first line kept exactly.
 - Exact saving from Write: blocks you do not edit, and the gaps between them,
@@ -92,9 +100,9 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 - Rename a note in place: clicking the title turns it into a text field
   (Enter renames, Escape cancels, a folder path moves the note), instead of
   opening the rename dialog.
-- Theme picker: an All / Light / Dark switch above the list, and the list
-  grouped under Light and Dark headings; search and keyboard preview keep
-  working across groups.
+- Theme picker: a Light / Dark switch above the list shows only themes of the
+  chosen kind; search and keyboard preview work within that list. The chosen
+  filter is remembered, and the confirmation names only the selected theme.
 - User-led polish and fixes across all of the above, full regression runs,
   guide and release notes; release only on the user's word.
 
@@ -102,12 +110,20 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 
 Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged; 2.0.0 is
 the next public release after 1.5.0.
+After the 1.5.0 release, development builds will be stamped `2.0.0+dev`.
+
+- [#8](https://github.com/eg36/Labradorite/issues/8): rethink the interface,
+  beginning with a user-led brainstorm before implementation.
+- [#11](https://github.com/eg36/Labradorite/issues/11): make custom task
+  statuses look consistent in Write and Preview.
+- [#12](https://github.com/eg36/Labradorite/issues/12): edit only the note
+  name inline while preserving its folder; keep moving in Rename or move….
 
 ## 1.6.0 — Maintainable code, full documentation
 
-- Work moves to issue-based development: issues planned together in the
-  tracker (synced to GitHub), each change on its own branch with a pull
-  request, review and merge.
+- Keep issue-based development, with GitHub as the source of truth and Linear
+  mirrors assigned, labelled and placed in the right project. Continue focused
+  commits on main until a switch to branches and pull requests is approved.
 - Reread the whole codebase and make it easy for people to maintain and
   read: clear structure, names and comments, no dead code.
 - Full technical documentation: architecture, data flow, vault format and
