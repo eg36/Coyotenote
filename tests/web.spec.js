@@ -2893,3 +2893,21 @@ test("the start page's create button says what it does", async ({ page }) => {
   await button.click();
   await expect(page.getByLabel("Name your note")).toBeVisible();
 });
+
+test("%% comments are hidden in Preview and kept exactly by Write", async ({ page }) => {
+  const text = "Shown %%a private aside%% text.\n\n%%\nA whole hidden block.\n%%\n\nLast line.";
+  const id = await openSeed(page, text);
+  const editor = page.getByRole("textbox", { name: "WYSIWYG editor" });
+  await expect(editor).toContainText("%%a private aside%%");
+  await editor.locator("p").last().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Edited.");
+  await page.keyboard.press("Control+s");
+  await expect.poll(() => diskBody(page, id)).toBe(text + " Edited.");
+  await mode(page, "Preview");
+  await expect(page.locator("#preview")).toContainText("Shown text.");
+  await expect(page.locator("#preview")).toContainText("Last line. Edited.");
+  await expect(page.locator("#preview")).not.toContainText("private aside");
+  await expect(page.locator("#preview")).not.toContainText("whole hidden block");
+  await expect(page.locator("#preview")).not.toContainText("%%");
+});

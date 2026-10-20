@@ -780,3 +780,33 @@ func TestHighlightsRender(t *testing.T) {
 		}
 	}
 }
+
+func TestCommentsAreHiddenInPreview(t *testing.T) {
+	for body, want := range map[string]string{
+		"visible %%hidden%% visible":                     "visible  visible",
+		"para one\n\n%%\nblock\ncomment\n%%\n\npara two": "para one\n\n\n\npara two",
+		"before %%spans\ntwo lines%% after":              "before  after",
+		"`%%code%%` and %%gone%%":                        "`%%code%%` and ",
+		"``a %%b%% c`` %%x%%":                            "``a %%b%% c`` ",
+		"```\n%%kept%%\n```\n%%gone%%":                   "```\n%%kept%%\n```\n",
+		"~~~md\n%%kept%%\n~~~":                           "~~~md\n%%kept%%\n~~~",
+		"100%% sure, no closing marker":                  "100%% sure, no closing marker",
+		"\\%\\% escaped %%gone%%":                        "\\%\\% escaped ",
+		"no comments at all":                             "no comments at all",
+		"%%[[Secret]] #hidden%%Shown":                    "Shown",
+	} {
+		if got := stripComments(body); got != want {
+			t.Errorf("stripComments(%q) = %q, want %q", body, got, want)
+		}
+	}
+	a := testApp(t)
+	html := request(t, a, "POST", "/api/render", mutation{Body: "Keep %%secret [[Plan]] #tag%% this.\n\n%%\nWhole block.\n%%\n\nEnd.", ID: "Note"}, 200)["html"].(string)
+	for _, gone := range []string{"secret", "Plan", "tag", "Whole block", "%%"} {
+		if strings.Contains(html, gone) {
+			t.Errorf("preview shows %q: %s", gone, html)
+		}
+	}
+	if !strings.Contains(html, "<p>Keep  this.</p>") || !strings.Contains(html, "<p>End.</p>") {
+		t.Errorf("preview lost visible text: %s", html)
+	}
+}

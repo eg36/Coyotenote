@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/yuin/goldmark"
 	gast "github.com/yuin/goldmark/ast"
@@ -109,4 +110,115 @@ func (highlights) Extend(m goldmark.Markdown) {
 		parser.WithASTTransformers(util.Prioritized(highlightColour{}, 500)),
 	)
 	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(highlightRenderer{}, 500)))
+}
+
+// stripComments removes %%comments%% from Markdown before rendering: inline
+// ones and blocks that span lines. Fenced code blocks and code spans keep
+// their text, a backslash escapes the next character, and a %% with no
+// closing %% after it stays as written.
+func stripComments(body string) string {
+	if !strings.Contains(body, "%%") {
+		return body
+	}
+	var out strings.Builder
+	fence := ""
+	for i := 0; i < len(body); {
+		if i == 0 || body[i-1] == '\n' {
+			line := body[i:]
+			if end := strings.IndexByte(line, '\n'); end >= 0 {
+				line = line[:end+1]
+			}
+			if fence != "" || openingFence(line) != "" {
+				if fence == "" {
+					fence = openingFence(line)
+				} else if closesFence(line, fence) {
+					fence = ""
+				}
+				out.WriteString(line)
+				i += len(line)
+				continue
+			}
+		}
+		switch c := body[i]; {
+		case c == '\\' && i+1 < len(body):
+			out.WriteString(body[i : i+2])
+			i += 2
+		case c == '`':
+			end := codeSpanEnd(body, i)
+			out.WriteString(body[i:end])
+			i = end
+		case strings.HasPrefix(body[i:], "%%"):
+			end := strings.Index(body[i+2:], "%%")
+			if end < 0 {
+				out.WriteString(body[i:])
+				i = len(body)
+			} else {
+				i += 2 + end + 2
+			}
+		default:
+			out.WriteByte(c)
+			i++
+		}
+	}
+	return out.String()
+}
+
+// openingFence is the backtick or tilde run that opens a fenced code block
+// on line, or "" when the line opens none.
+func openingFence(line string) string {
+	trimmed := strings.TrimLeft(line, " ")
+	if len(line)-len(trimmed) > 3 || len(trimmed) < 3 || (trimmed[0] != '`' && trimmed[0] != '~') {
+		return ""
+	}
+	n := 0
+	for n < len(trimmed) && trimmed[n] == trimmed[0] {
+		n++
+	}
+	if n < 3 || trimmed[0] == '`' && strings.ContainsRune(trimmed[n:], '`') {
+		return ""
+	}
+	return trimmed[:n]
+}
+
+// closesFence reports whether line closes a block opened by fence: the same
+// character, at least as many times, and nothing else.
+func closesFence(line, fence string) bool {
+	trimmed := strings.TrimLeft(line, " ")
+	if len(line)-len(trimmed) > 3 {
+		return false
+	}
+	n := 0
+	for n < len(trimmed) && trimmed[n] == fence[0] {
+		n++
+	}
+	return n >= len(fence) && strings.TrimSpace(trimmed[n:]) == ""
+}
+
+// codeSpanEnd is the index just past the code span starting at the backtick
+// run at i, or past the run itself when no equal run closes it before a
+// blank line.
+func codeSpanEnd(body string, i int) int {
+	n := 0
+	for i+n < len(body) && body[i+n] == '`' {
+		n++
+	}
+	limit := len(body)
+	if blank := strings.Index(body[i:], "\n\n"); blank >= 0 {
+		limit = i + blank
+	}
+	for j := i + n; j < limit; {
+		if body[j] != '`' {
+			j++
+			continue
+		}
+		m := 0
+		for j+m < limit && body[j+m] == '`' {
+			m++
+		}
+		if m == n {
+			return j + m
+		}
+		j += m
+	}
+	return i + n
 }

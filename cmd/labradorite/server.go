@@ -811,6 +811,7 @@ func (a *webApp) localImages(document ast.Node, from string) {
 func (a *webApp) render(body, from string, notes []vault.Note) (string, error) {
 	// Front matter is properties, not text: show it apart, as written.
 	front, body := vault.SplitFrontMatter(body)
+	body = stripComments(body)
 	properties := ""
 	if front != "" {
 		lines := strings.Split(strings.TrimRight(strings.TrimPrefix(front, "\uFEFF"), "\r\n"), "\n")

@@ -206,6 +206,9 @@ Beyond GitHub Flavored Markdown, Preview understands:
 - **Highlights:** `==marked text==`. Start with a colour emoji for a coloured
   highlight: `==🔴red==`, 🟠 orange, 🟡 yellow, 🟢 green, 🔵 blue, 🟣 purple.
   Write shows them too and saves the `==` markers exactly as typed.
+- **Comments:** `%%a private note%%` hides text from Preview, inline or as a
+  block from a line starting `%%` to the next `%%`. Code keeps its `%%`, and a
+  `%%` with no closing pair stays visible. Write shows comments as typed.
 
 ### WYSIWYG round trips
 
