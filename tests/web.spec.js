@@ -34,17 +34,18 @@ async function openThemes(page) {
   if (await page.locator("#theme-panel").isHidden()) await page.getByRole("button", { name: /^Theme:/ }).click();
   await expect(page.getByRole("combobox", { name: "Find a theme" })).toBeFocused();
 }
-// mode picks a view from the editing panel's selector, opening the panel first
-// when it is closed and closing it again afterwards.
+// mode picks a view from the notes panel's selector, or from the View menu
+// when the notes panel is closed.
 async function mode(page, name) {
-  // The toggle and the panel change together, so once it shows the panel is settled.
-  await expect(page.locator("#format-toggle")).toBeVisible();
-  const opened = await page.locator("#view-type").isHidden();
-  if (opened) await page.locator("#format-toggle").click();
-  await page.locator("#view-type").click();
-  await page.getByRole("option", { name, exact: true }).click();
-  await expect(page.locator("#view-menu")).toBeHidden();
-  if (opened) await page.locator("#close-formatting").click();
+  if (await page.locator("#view-type").isVisible()) {
+    await page.locator("#view-type").click();
+    await page.getByRole("option", { name, exact: true }).click();
+    await expect(page.locator("#view-menu")).toBeHidden();
+  } else {
+    await menu(page, "view");
+    await page.getByRole("menuitem", { name, exact: true }).click();
+    await expect(page.locator("#menu-popup")).toBeHidden();
+  }
 }
 async function menu(page, section) {
   await page.locator(`[data-menu="${section}"]`).click();
@@ -926,8 +927,6 @@ test("sidebar remembers open and closed choices across reloads at home and in a 
 test("collapsed sidebar and focus mode keep the workspace full width", async ({ page }) => {
   await openSeed(page, "# Room to write\n\nThe editor should use the available space.");
   await mode(page, "Markdown");
-  // The editing panel stays open in Markdown; close it to measure the notes panel alone.
-  await page.locator("#close-formatting").click();
   const workspace = page.locator(".workspace");
   const frame = page.locator("#editor-frame");
   for (const width of [1440, 900, 1920]) {
@@ -2661,15 +2660,13 @@ test("rail icons can be dragged, reordered by keyboard and remembered after relo
 });
 
 
-test("left editing panel edits, remembers visibility and folds away on phones", async ({ page }) => {
+test("left text formatting panel edits, remembers visibility and folds away on phones", async ({ page }) => {
   const id = await openSeed(page, "A paragraph to style.");
   const pane = page.locator("#format-panel"), toggle = page.locator("#format-toggle");
   await expect(pane).toBeVisible();
   expect(await page.locator(".activity-rail #format-toggle").count()).toBe(1);
   const toggleBox = await toggle.boundingBox();
   expect(toggleBox.width).toBeGreaterThanOrEqual(40);
-  expect(await page.locator("#menu-bar #view-switch").count()).toBe(0);
-  await expect(pane.locator("#view-type")).toBeVisible();
   const sidebar = await page.locator("#sidebar").boundingBox(), panel = await pane.boundingBox();
   expect(panel.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width);
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).click();
@@ -2686,12 +2683,9 @@ test("left editing panel edits, remembers visibility and folds away on phones", 
   await toggle.click();
   await expect(pane).toBeVisible();
   await mode(page, "Preview");
-  await expect(pane).toBeVisible();
-  await expect(page.locator("#editor-toolbar")).toBeHidden();
-  await expect(page.locator("#format-hint")).toBeVisible();
+  await expect(pane).toBeHidden();
   await mode(page, "Write");
-  await expect(page.locator("#editor-toolbar")).toBeVisible();
-  await expect(page.locator("#format-hint")).toBeHidden();
+  await expect(pane).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(pane).toBeHidden();
   await toggle.click();
@@ -2702,42 +2696,45 @@ test("left editing panel edits, remembers visibility and folds away on phones", 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
-test("the editor view selector lives in the editing panel and modes stay reachable when it is closed", async ({ page }) => {
+test("the editor view selector sits in the notes toolbar and views stay reachable when it is closed", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#format-toggle")).toBeHidden();
   await expect(page.locator("#view-type")).toBeHidden();
   await openSeed(page, "Switch views freely.");
-  const pane = page.locator("#format-panel"), area = page.locator("#editor-area");
-  await expect(pane.locator("#view-type")).toHaveText("Write");
-  const panel = await pane.boundingBox(), view = await page.locator("#view-type").boundingBox();
-  expect(view.x).toBeGreaterThanOrEqual(panel.x);
-  expect(view.x + view.width).toBeLessThanOrEqual(panel.x + panel.width);
-  await mode(page, "Split");
+  const view = page.locator("#view-type"), area = page.locator("#editor-area");
+  expect(await page.locator(".sidebar-actions #view-type").count()).toBe(1);
+  await expect(view).toHaveAttribute("aria-label", "Editor view: Write");
+  // It follows Previous/Next and stays on the toolbar's single row.
+  const forward = await page.locator("#history-forward").boundingBox(), box = await view.boundingBox();
+  const collapse = await page.locator("#collapse-sidebar").boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(forward.x + forward.width);
+  expect(box.x + box.width).toBeLessThanOrEqual(collapse.x);
+  expect(Math.abs(box.y + box.height / 2 - forward.y - forward.height / 2)).toBeLessThan(2);
+  await view.click();
+  await page.getByRole("option", { name: "Split", exact: true }).click();
   await expect(area).toHaveAttribute("data-mode", "split");
-  await expect(pane.locator("#view-type")).toHaveText("Split");
-  // Closed panel: the View menu and Alt+M still switch modes.
-  await page.locator("#close-formatting").click();
-  await expect(pane).toBeHidden();
-  await expect(page.locator("#format-toggle")).toBeVisible();
+  await expect(view).toHaveAttribute("aria-label", "Editor view: Split");
+  await expect(view.locator("svg").first()).toBeVisible();
+  // With the notes panel closed, the View menu and Alt+M still switch views.
+  await page.locator("#collapse-sidebar").click();
+  await expect(view).toBeHidden();
   await menu(page, "view");
   await page.getByRole("menuitem", { name: "Preview", exact: true }).click();
   await expect(area).toHaveAttribute("data-mode", "preview");
   await page.locator("#preview").click();
   await page.keyboard.press("Alt+m");
   await expect(area).toHaveAttribute("data-mode", "split");
-  // Reopening in a mode without formatting shows the selector and a hint.
-  await page.locator("#format-toggle").click();
-  await expect(pane.locator("#view-type")).toHaveText("Split");
-  await expect(page.locator("#format-hint")).toBeVisible();
-  await expect(page.locator("#editor-toolbar")).toBeHidden();
-  await page.locator("#view-type").click();
-  await page.getByRole("option", { name: "Write", exact: true }).click();
+  await page.locator("#sidebar-toggle").click();
+  await expect(view).toHaveAttribute("aria-label", "Editor view: Split");
+  await view.press("ArrowDown");
+  await expect(page.locator("#view-menu")).toBeFocused();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Enter");
   await expect(area).toHaveAttribute("data-mode", "write");
-  await expect(page.locator("#editor-toolbar")).toBeVisible();
-  // Focus mode hides the panel; its toggle brings it back with the selector.
-  await page.keyboard.press("Control+Shift+F");
-  await expect(pane).toBeHidden();
-  await page.locator("#format-toggle").click();
-  await expect(page.locator("#app")).not.toHaveClass(/focus-mode/);
-  await expect(pane.locator("#view-type")).toBeVisible();
+  await expect(page.locator("#format-panel")).toBeVisible();
+  for (const width of [900, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
+    await expect(view).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  }
 });

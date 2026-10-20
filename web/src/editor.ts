@@ -184,9 +184,8 @@ async function openNote(
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
   $("note-stats").hidden = false;
+  $("view-type").hidden = false;
   $("app-title").hidden = true;
-  // Show the editing panel now, so its view selector works while Write loads.
-  document.dispatchEvent(new Event("note-shown"));
   if (state.pendingDraft) setSaveState("dirty", "Unsaved draft found");
   else setSaveState("saved", "All changes saved");
   updateCounts();
@@ -215,6 +214,7 @@ function emptyNotebook() {
     : "Capture a thought. Connect an idea. Make something worth keeping.";
   $("first-note-label").textContent = hasNotes ? "New note" : "Create your first note";
   $("note-stats").hidden = true;
+  $("view-type").hidden = true;
   $("app-title").hidden = false;
   state.current = null;
   renderNavigation();
@@ -306,8 +306,9 @@ async function setMode(mode: AppState["mode"], { focus = true, persist = true } 
   $("editor-toolbar").hidden = mode !== "write";
   closeBlockMenu();
   const view = views.find(([value]) => value === mode);
-  $("view-type-label").textContent = view?.[1] || "Write";
+  $("view-type-icon").innerHTML = icon(view?.[2] || "pen");
   $("view-type").setAttribute("aria-label", `Editor view: ${view?.[1] || "Write"}`);
+  $("view-type").title = `Editor view: ${view?.[1] || "Write"} · Alt M`;
   for (const option of $("view-menu").querySelectorAll<HTMLElement>("[data-view]"))
     option.setAttribute("aria-selected", String(option.dataset.view === mode));
   applyEditability();

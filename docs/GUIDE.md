@@ -88,12 +88,13 @@ hidden on the start page. On phones,
 note actions wrap onto their own row within the menu. At home the menu is
 centered vertically and horizontally in the header.
 
-The **editing panel** button in the left rail opens a panel between Notes and the
-document. Its **Write / Markdown / Preview / Split** selector sits at the top
-whenever a note is open. In Write, the panel also groups paragraph styles,
-bold/italic/strike/code, lists and quotes, inserts, and undo/redo; Markdown,
-Preview and Split show only the selector. With the panel closed, switch views
-from the **View** menu or with Alt+M.
+The **Write / Markdown / Preview / Split** selector sits in the Notes panel's
+toolbar, after Previous/Next note, and shows the current view's icon. With the
+Notes panel closed, switch views from the **View** menu or with Alt+M.
+
+**Text formatting** in the left rail opens a panel between Notes and the document.
+It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,
+and undo/redo. It is available in Write, and closes in source or preview modes.
 The close button or Escape hides it; this browser remembers the choice separately
 for desktop and smaller screens. On smaller screens it opens over the content;
 click outside to close. Focus mode temporarily hides it too.

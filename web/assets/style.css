@@ -891,7 +891,7 @@ input[type="search"]::-webkit-search-cancel-button {
   color: var(--muted);
   transition: transform 0.15s ease;
 }
-.view-type[aria-expanded="true"] svg {
+.view-type[aria-expanded="true"] svg:last-child {
   transform: rotate(180deg);
 }
 .view-menu {
@@ -2751,9 +2751,21 @@ dialog.danger #modal-submit {
 .sidebar-actions :is(#history-back, #history-forward) { width: 26px; height: 28px; }
 .sidebar-actions :is(#history-back, #history-forward) svg { width: 16px; height: 16px; }
 .sidebar-actions #collapse-sidebar { width: 26px; height: 28px; margin-left: auto; }
+.sidebar-actions .view-type { width: auto; height: 28px; padding: 0 2px 0 5px; gap: 0; color: var(--muted); }
+.sidebar-actions .view-type:hover, .sidebar-actions .view-type[aria-expanded="true"] { color: var(--text); }
+.sidebar-actions .view-type svg { width: 16px; height: 16px; }
+.sidebar-actions .view-type svg:last-child { width: 12px; height: 12px; }
 .sidebar-actions #collapse-sidebar svg { width: 16px; height: 16px; }
 @media (min-width: 1550px) { .app { --notes-width: 280px; } }
-@media (max-width: 980px) { .app { --notes-width: 225px; } }
+@media (max-width: 980px) {
+  .app { --notes-width: 225px; }
+  /* The narrower notes panel keeps its whole toolbar on one row. */
+  @media (min-width: 800px) {
+    .sidebar-actions { gap: 1px; }
+    .sidebar-actions :is(#today-note, #tags-button, #fold-folders) { width: 28px; }
+    .sidebar-actions .view-type { padding: 0 1px 0 3px; }
+  }
+}
 @media (max-width: 799px) {
   .app, .app.sidebar-hidden, .app.focus-mode {
     --rail-width: 48px;
@@ -2858,9 +2870,6 @@ dialog.danger #modal-submit {
 #format-panel .editor-toolbar { display: flex; flex-wrap: wrap; flex: none; align-items: center; gap: 4px; min-width: 0; margin: 0; padding: 0; border: 0; overflow: visible; }
 #format-panel .format-label { flex: 0 0 100%; font-size: 12px; font-weight: 500; color: var(--muted); margin: 18px 0 6px; }
 #format-panel #block-type { display: flex; flex: 0 0 100%; width: 100%; max-width: none; height: 36px; padding: 0 10px; border: 1px solid var(--line); background: var(--surface); justify-content: space-between; font-size: 13px; }
-#format-panel .view-type { flex: 0 0 100%; width: 100%; height: 36px; padding: 0 10px; border: 1px solid var(--line); background: var(--surface); }
-#format-panel .view-type:hover, #format-panel .view-type[aria-expanded="true"] { background: var(--hover); }
-#format-panel .format-hint { margin: 10px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 #format-panel [data-format] { display: flex; width: 40px; height: 36px; flex-shrink: 0; background: var(--hover); }
 #format-panel [data-format][aria-pressed="true"] { background: var(--selected); color: var(--accent-text); }
 .formatting-scrim { position: fixed; inset: var(--topbar-height, 58px) 0 0 var(--rail-width); background: #0005; z-index: 23; }

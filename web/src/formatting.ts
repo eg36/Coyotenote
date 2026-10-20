@@ -1,5 +1,4 @@
-// A left-hand editing panel holds the editor view selector and, in Write, the
-// formatting tools, keeping both out of the document header.
+// A left-hand inspector keeps formatting out of the document header.
 import { $, state, storage } from "./core.js";
 
 function setupFormatting() {
@@ -7,10 +6,9 @@ function setupFormatting() {
   const key = () => desktop.matches ? "labradorite-formatting-desktop" : "labradorite-formatting-mobile";
   let open = storage.get(key()) !== "false" && (desktop.matches || storage.get(key()) === "true");
   function update() {
-    const available = Boolean(state.current);
+    const available = Boolean(state.current) && state.mode === "write";
     const visible = available && open && !$("app").classList.contains("focus-mode");
     $("format-toggle").hidden = !available;
-    $("format-hint").hidden = state.mode === "write";
     $("format-panel").hidden = !visible;
     $("formatting-scrim").hidden = !visible || desktop.matches;
     $("format-toggle").setAttribute("aria-expanded", String(visible));
@@ -31,7 +29,6 @@ function setupFormatting() {
   });
   document.addEventListener("editor-mode-change", update);
   document.addEventListener("note-selection-change", update);
-  document.addEventListener("note-shown", update);
   document.addEventListener("workspace-focus-change", update);
   desktop.addEventListener("change", () => {
     open = storage.get(key()) !== "false" && (desktop.matches || storage.get(key()) === "true");
