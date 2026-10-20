@@ -1,11 +1,12 @@
-# 1.5.0 release candidate and the road to 2.0
+# After 1.5.0: the road to 2.0
 
 Working ideas from the 2026-10-20 conversation. Build and refine with the user;
 this document does not authorize a release tag.
 
-The 1.5 feature set is implemented. Release preparation is tracked in
-[#13](https://github.com/eg36/Labradorite/issues/13); `v1.5.0` will be tagged
-only after explicit approval. Review builds remain `1.5.0+dev` until release.
+Release [v1.5.0](https://github.com/eg36/Labradorite/releases/tag/v1.5.0) was
+published on 2026-10-20 after explicit approval; preparation is recorded in
+[#13](https://github.com/eg36/Labradorite/issues/13). Review builds now use
+`2.0.0+dev`. No additional public release is authorized by this document.
 GitHub issues are the source of truth and Linear team Labradorite mirrors them.
 
 ## Agreed direction
@@ -23,7 +24,7 @@ GitHub issues are the source of truth and Linear team Labradorite mirrors them.
 - Truncated note titles must reveal their complete title in a themed tooltip,
   including keyboard focus. Keep rename discoverable.
 - Rebuild and restart the review server after each visible batch and tell the
-  user to reload http://127.0.0.1:4280. Preview upcoming work as 1.5.0+dev.
+  user to reload http://127.0.0.1:4280. Preview upcoming work as 2.0.0+dev.
 
 ## Implemented choices
 
@@ -111,6 +112,19 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged; 2.0.0 is
 the next public release after 1.5.0.
 After the 1.5.0 release, development builds will be stamped `2.0.0+dev`.
+
+Start platform coverage early in 1.6, before completing the 1.6–1.9 feature list.
+[#16](https://github.com/eg36/Labradorite/issues/16) tracks Linux amd64/arm64
+and Windows amd64/arm64 packages, native platform checks and a Windows download
+review. Test packages will be Actions artifacts, retained for 90 days, with
+checksums and commit/version information. They will not create public Releases
+or tags. A test label such as `1.6.0-beta.1` can be stamped without a Git tag.
+The four-target artifact workflow is planned, not implemented yet.
+
+Public publishing accepts only stable `vMAJOR.MINOR.PATCH` tags, guarded again
+before packaging; prerelease tags never publish through that workflow. Every
+tag or release still needs explicit approval. See
+[#15](https://github.com/eg36/Labradorite/issues/15).
 
 - [#8](https://github.com/eg36/Labradorite/issues/8): rethink the interface,
   beginning with a user-led brainstorm before implementation.

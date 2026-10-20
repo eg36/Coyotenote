@@ -1,6 +1,6 @@
 name: CI
 
-# The Release workflow calls this workflow for each tag before packaging.
+# The Release workflow calls this workflow for stable tags before packaging.
 # Changes touching only docs, the logos or the license skip CI.
 on:
   push:
@@ -58,6 +58,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Check stable release tag policy
+        run: node --test scripts/release-policy.test.mjs
       - run: npm run typecheck
       - run: npm run build
       - name: Verify committed browser assets are current

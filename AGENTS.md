@@ -4,8 +4,10 @@
   browser frontend in `web/`. It reads and writes vaults through
   `internal/vault`; keep vault rules (paths, locking, writes, trash, links) there.
 - Releases ship the app in one archive, built by the release workflow from a
-  `v*` tag with notes in `.github/release-notes/<tag>.md`; a release is titled
-  with the bare tag, such as `v0.4.0`. Create tags or releases only when asked.
+  stable `vMAJOR.MINOR.PATCH` tag with notes in `.github/release-notes/<tag>.md`;
+  a release is titled with the bare tag, such as `v1.5.0`. Prerelease tags never
+  publish a Release. Test downloads belong in Actions artifacts; a test version
+  can be stamped without a Git tag. Create tags or releases only when asked.
 - The `web` package embeds `web/index.html`, `web/logo.png` and the committed `web/assets/` bundle. Frontend edits
   require `npm run build`, followed by a Go rebuild.
 - Preserve plain Markdown vaults, the original theme IDs and named upstream palettes, atomic writes,

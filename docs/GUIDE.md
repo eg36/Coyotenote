@@ -532,6 +532,7 @@ Only frontend development needs **Node 24+** and npm:
 
 ```sh
 npm ci
+node --test scripts/release-policy.test.mjs # stable tags and publication guards
 npm run typecheck                   # strict checks for migrated TypeScript
 npm run build                       # refresh committed, embedded assets
 
@@ -568,6 +569,26 @@ themes, conflicts and restart recovery) and a packaging dry run. A browser job
 rebuilds the assets, verifies the committed output and runs Playwright. A release
 archive holds the binary stamped with the release version; there is no hosted
 deployment.
+
+### Stable releases and test downloads
+
+Only exact stable tags such as `v2.0.0` trigger public publishing. The gate also
+rejects prerelease or malformed versions, requires a commit on main and a matching
+release-notes file, and runs CI before publishing. Existing published releases
+are never replaced. Tags and publication require explicit approval.
+
+Milestones 1.6–1.9 are internal work toward the next planned stable release,
+2.0.0. Ordinary development builds use `2.0.0+dev`. A test version such as
+`1.6.0-beta.1` can be stamped into a binary without creating a Git tag or Release.
+Prerelease tags do not publish through the Release workflow.
+
+Four-target test downloads are planned in
+[#16](https://github.com/eg36/Labradorite/issues/16): Linux and Windows, each on
+amd64 and arm64. Their workflow will upload packages and checksums as Actions
+artifacts, with 90-day retention and download instructions in the run summary.
+Downloading artifacts requires signing in with repository read access. These
+test builds will leave the public Releases section and its Latest release intact.
+Currently, the published package still supports Linux amd64 only.
 
 ## Manual test checklist
 
