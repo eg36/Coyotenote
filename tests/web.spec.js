@@ -2530,6 +2530,7 @@ test("editor toolbar stays anchored when note titles change", async ({ page }) =
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/?note=" + encodeURIComponent(short));
     await expect(page.locator("#document-title")).toHaveText(short);
+    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", /true|false/);
     if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
     const initial = await page.locator(".header-tools").boundingBox();
     await page.locator(`#note-list [data-note="${long}"]`).click();
@@ -2538,6 +2539,11 @@ test("editor toolbar stays anchored when note titles change", async ({ page }) =
     expect(Math.abs(changed.x - initial.x)).toBeLessThan(1);
     const title = await page.locator("#document-title").boundingBox();
     expect(title.x + title.width).toBeLessThanOrEqual(changed.x);
+    const titleBlock = await page.locator(".title-block").boundingBox();
+    const status = await page.locator("#save-state").boundingBox();
+    const leftGap = changed.x - titleBlock.x - titleBlock.width;
+    const rightGap = status.x - changed.x - changed.width;
+    expect(Math.abs(leftGap - rightGap)).toBeLessThan(2);
     await page.locator("#collapse-sidebar").click();
     const collapsed = await page.locator(".header-tools").boundingBox();
     expect(Math.abs(collapsed.x - initial.x)).toBeLessThan(1);
@@ -2570,4 +2576,25 @@ test("this-note search supports case, whole words, regex captures and invalid pa
   expect(await diskBody(page, id)).toBe("cat Cat catalog dog-1 dog-2");
 });
 
+
+test("note actions stay in the writing toolbar and every save state uses an edge dot", async ({ page }) => {
+  await openSeed(page, "Stable status.");
+  for (const width of [1999, 1440, 1280, 900, 390, 320]) {
+    await page.setViewportSize({width, height: 900});
+    expect(await page.locator(".editor-bar #document-actions").count()).toBe(1);
+    const status = await page.locator("#save-state").boundingBox();
+    expect(width - status.x - status.width).toBeLessThanOrEqual(14);
+    if (width >= 1280) {
+      const divider = await page.locator(".header-divider").boundingBox();
+      const sidebar = await page.locator("#sidebar").boundingBox();
+      expect(Math.abs(divider.x - sidebar.x - sidebar.width + 1)).toBeLessThan(1);
+      const colors = await page.evaluate(() => [getComputedStyle(document.querySelector(".header-divider")).backgroundColor, getComputedStyle(document.querySelector("#sidebar")).borderRightColor]);
+      expect(colors[0]).toBe(colors[1]);
+    }
+    const label = await page.locator("#save-label").boundingBox();
+    expect(label.width).toBeLessThanOrEqual(1);
+    expect(await page.locator(".topbar").evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe("0px");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  }
+});
 
