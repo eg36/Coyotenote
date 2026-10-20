@@ -23,7 +23,10 @@ own computer only. No account, cloud service or network access.
 
 Download the Linux amd64 archive from
 [Releases](https://github.com/eg36/Labradorite/releases) and check it against
-`SHA256SUMS`, or build it with Go 1.26+:
+`SHA256SUMS`. Internal Linux and Windows test packages for amd64 and arm64
+are available from [Test builds](https://github.com/eg36/Labradorite/actions/workflows/test-build.yml),
+without appearing in Releases. See the [download guide](docs/GUIDE.md#test-build-downloads-and-windows).
+Or build it with Go 1.26+:
 
 ```sh
 git clone git@github.com:eg36/Labradorite.git
@@ -56,7 +59,8 @@ go vet ./... && go test -race ./...
 npm ci && npm run typecheck && npm run build && npm test     # Node 24+
 ```
 
-Linux amd64 is the only supported platform. See the
+The stable v1.5.0 package supports Linux amd64. Four-target Actions packages
+are test builds; each download records native checks and remaining manual checks. See the
 [guide](docs/GUIDE.md#development-and-ci) for the full checks.
 
 ## License

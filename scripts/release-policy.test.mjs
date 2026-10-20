@@ -88,7 +88,9 @@ test("stable tags still require main ancestry and matching release notes", () =>
 test("publishing depends on the gate and CI, with write access only for publishing", () => {
   assert.equal(workflow.jobs.checks.needs, "gate");
   assert.equal(workflow.jobs.checks.uses, "./.github/workflows/ci.yml");
-  assert.equal(workflow.jobs.release.needs, "checks");
+  assert.equal(workflow.jobs.packages.needs, "checks");
+  assert.equal(workflow.jobs.packages.uses, "./.github/workflows/packages.yml");
+  assert.equal(workflow.jobs.release.needs, "packages");
   assert.equal(workflow.permissions.contents, "read");
   assert.equal(workflow.jobs.release.permissions.contents, "write");
 });
@@ -106,3 +108,35 @@ test("a published release is still never overwritten", () => {
   assert.match(result.stdout, /already published/);
   assert.doesNotMatch(result.calls, /release create/);
 });
+
+
+test("manual test builds only download artifacts after CI", () => {
+  const manual = load(readFileSync(new URL("../.github/workflows/test-build.yml", import.meta.url), "utf8"));
+  assert.deepEqual(Object.keys(manual.on), ["workflow_dispatch"]);
+  assert.deepEqual(manual.permissions, { contents: "read" });
+  assert.equal(manual.jobs.checks.uses, "./.github/workflows/ci.yml");
+  assert.equal(manual.jobs.packages.needs, "checks");
+  assert.equal(manual.jobs.packages.uses, "./.github/workflows/packages.yml");
+});
+
+test("native packages cover four targets and retain downloads for 90 days", () => {
+  const packages = load(readFileSync(new URL("../.github/workflows/packages.yml", import.meta.url), "utf8"));
+  assert.deepEqual(packages.permissions, { contents: "read" });
+  assert.deepEqual(packages.jobs.package.strategy.matrix.include.map(row => [row.target, row.runner]), [
+    ["linux/amd64", "ubuntu-24.04"], ["linux/arm64", "ubuntu-24.04-arm"],
+    ["windows/amd64", "windows-2025"], ["windows/arm64", "windows-11-arm"],
+  ]);
+  const steps = packages.jobs.package.steps;
+  const upload = steps.find(step => step.id === "upload");
+  assert.equal(upload.with["retention-days"], 90);
+  assert.equal(upload.if, undefined); // Upload only after all native checks pass.
+  assert.ok(steps.find(step => step.name === "Packaged HTTP, persistence and shutdown smoke"));
+  assert.ok(steps.find(step => step.name === "Browser regression against the packaged binary"));
+  assert.equal(packages.jobs.package.env.BUILD_VERSION, "${{ inputs.version }}");
+  const all = JSON.stringify([manualWorkflow(), packages]);
+  assert.doesNotMatch(all, /contents\":\"write|gh release|git tag|refs\/tags/);
+});
+
+function manualWorkflow() {
+  return load(readFileSync(new URL("../.github/workflows/test-build.yml", import.meta.url), "utf8"));
+}

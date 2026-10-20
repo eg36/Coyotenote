@@ -55,7 +55,7 @@ The default vault is:
 
 - Linux: `$XDG_DATA_HOME/labradorite`, or `~/.local/share/labradorite`.
 - macOS: `~/Library/Application Support/labradorite` (not verified on a Mac).
-- Windows: `%AppData%\labradorite` (not tested).
+- Windows: `%AppData%\labradorite` (native CI coverage in test builds).
 
 Labradorite was called coyotenote until v0.6.1. On its first start without
 `-data-dir`, it moves the former default folder (`coyotenote-web` beside the new
@@ -582,13 +582,59 @@ Milestones 1.6–1.9 are internal work toward the next planned stable release,
 `1.6.0-beta.1` can be stamped into a binary without creating a Git tag or Release.
 Prerelease tags do not publish through the Release workflow.
 
-Four-target test downloads are planned in
-[#16](https://github.com/eg36/Labradorite/issues/16): Linux and Windows, each on
-amd64 and arm64. Their workflow will upload packages and checksums as Actions
-artifacts, with 90-day retention and download instructions in the run summary.
-Downloading artifacts requires signing in with repository read access. These
-test builds will leave the public Releases section and its Latest release intact.
-Currently, the published package still supports Linux amd64 only.
+### Test-build downloads and Windows
+
+[Test builds](https://github.com/eg36/Labradorite/actions/workflows/test-build.yml)
+provides manually requested Linux amd64/arm64 (`.tar.gz`) and Windows amd64/arm64
+(`.zip`) packages. Open a successful run, then choose your target under **Artifacts**
+or its download link in the run summary. Sign in to GitHub with repository read
+access. Artifacts expire after **90 days**; they do not create tags or Releases,
+and stable v1.5.0 remains Linux amd64 only.
+
+Unzip the Actions download first. It contains the actual platform archive,
+`SHA256SUMS`, `BUILDINFO.json` and `VALIDATION.txt`. The metadata gives the exact
+commit, version and target; validation lists native checks and remaining gaps.
+Choose amd64 for an Intel/AMD Windows PC, or arm64 for an ARM Windows PC (see
+Settings → System → About → System type). These are portable console programs,
+with no installer or code signing.
+
+Before extracting the inner archive, compare its SHA256 digest with `SHA256SUMS`.
+On Linux, run `sha256sum --check SHA256SUMS`. In Windows PowerShell:
+
+```powershell
+Get-Content .\SHA256SUMS
+Get-FileHash .\labradorite_1.6.0-beta.1_windows_amd64.zip -Algorithm SHA256
+Expand-Archive .\labradorite_1.6.0-beta.1_windows_amd64.zip -DestinationPath .\labradorite
+cd .\labradorite
+.\labradorite.exe -version
+.\labradorite.exe -data-dir "$env:TEMP\labradorite-beta-check"
+```
+
+The digest must match (letter case does not matter). For arm64, replace amd64
+in the file name. Keep PowerShell open while using the app. The executable opens
+the default browser at the printed localhost address; if it does not, open that
+address yourself. Press **Ctrl+C in PowerShell** to stop the server. Closing a
+browser tab does not stop it. To use a separate vault, run
+`.\labradorite.exe "C:\Users\your-name\Notes"`; flags go before that path.
+With no arguments, notes and settings are in `%AppData%\labradorite`. With a
+positional vault, settings stay there; `-data-dir` keeps both in the named folder.
+No Go, Node, npm or Python installation is needed to run a downloaded package.
+
+All four packages in a run use the same commit and version. Native Go tests and
+packaged HTTP/persistence checks run on Linux and Windows, including both ARM
+runners. The full Chromium suite runs against the packaged amd64 binaries on
+Linux and Windows, covering browser drafts as well as editing. ARM browser/GUI
+checks and real default-browser associations require manual review; the Windows
+arm64 race detector is unavailable. Windows does not provide the directory fsync
+used on Linux: file contents are flushed before replacement, but equivalent
+power-loss durability is not claimed. See `VALIDATION.txt` and
+[#16](https://github.com/eg36/Labradorite/issues/16) for recorded results.
+
+To request another build, use **Run workflow** on main and enter a version such
+as `1.6.0-beta.2`. The workflow has read-only repository permissions and cannot
+publish a Release. Future approved stable releases consume the same four native
+packages after their checks pass; the publisher verifies their checksums before
+uploading them. Publishing still requires explicit approval and a stable tag.
 
 ## Manual test checklist
 

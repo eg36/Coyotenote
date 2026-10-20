@@ -24,7 +24,7 @@ permissions:
 
 # A newer push to the same branch cancels the run it supersedes.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,6 +43,8 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - run: go build -o bin/labradorite ./cmd/labradorite
       - run: python3 scripts/smoke_web.py
+      - name: Packaging input checks
+        run: python3 -m unittest discover -s scripts -p "*_test.py"
       - name: Package a release archive (dry run)
         run: scripts/package.sh v0.0.0-ci
 

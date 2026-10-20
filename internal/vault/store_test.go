@@ -177,3 +177,20 @@ func TestOversizedNotesAreSkippedWithoutReadingThem(t *testing.T) {
 		t.Fatal("oversized note left the trash")
 	}
 }
+
+func TestCaseOnlyRenamePreservesContent(t *testing.T) {
+	s := testStore(t)
+	before, err := s.Create("Work/Mixed Case", "case-sensitive contents")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Rename(before, "Work/mixed case")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFileBody(t, s.Path("Work/mixed case"), before.Body)
+	notes, _, err := s.Load()
+	if err != nil || len(notes) != 1 || notes[0].ID != "Work/mixed case" {
+		t.Fatalf("case rename: %v %v", notes, err)
+	}
+}

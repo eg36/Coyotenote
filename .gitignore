@@ -7,3 +7,5 @@
 /CODEX_HANDOFF.local.md
 /package/
 /dist/
+
+__pycache__/

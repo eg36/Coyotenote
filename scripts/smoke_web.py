@@ -9,10 +9,18 @@ import tempfile
 import urllib.error
 import urllib.request
 
-BINARY = str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / 'labradorite')
+# Actions may start Python without a console. Give the Windows child a shared
+# console so CTRL_BREAK can exercise Go's graceful interrupt handler.
+if os.name == 'nt':
+    import ctypes
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    if not kernel.GetConsoleWindow() and not kernel.AllocConsole():
+        raise ctypes.WinError(ctypes.get_last_error())
+
+BINARY = os.environ.get('LABRADORITE_BINARY', str(pathlib.Path(__file__).resolve().parents[1] / 'bin' / ('labradorite.exe' if os.name == 'nt' else 'labradorite')))
 
 def start(vault):
-    process = subprocess.Popen([BINARY, '-no-browser', '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen([BINARY, '-no-browser', '-listen', '127.0.0.1:0', '-data-dir', vault], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0)
     first = process.stdout.readline()
     address = process.stdout.readline()
     assert first.startswith('labradorite '), first
@@ -31,7 +39,10 @@ def call(base, route, method='GET', body=None, token=None):
         return json.load(response)
 
 def stop(process):
-    process.terminate()
+    if os.name == 'nt':
+        process.send_signal(signal.CTRL_BREAK_EVENT)
+    else:
+        process.terminate()
     out, error = process.communicate(timeout=10)
     assert process.returncode == 0, (process.returncode, out, error)
 
@@ -39,6 +50,8 @@ version=subprocess.run([BINARY,'-version'],capture_output=True,text=True,check=T
 assert version.startswith('labradorite '), version
 
 with tempfile.TemporaryDirectory(prefix='labradorite-http-smoke-') as directory:
+    directory = str(pathlib.Path(directory) / 'Vault with spaces — 笔记')
+    pathlib.Path(directory).mkdir()
     process, base = start(directory)
     try:
         state = call(base, '/api/state')

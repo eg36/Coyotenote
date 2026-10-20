@@ -1,7 +1,8 @@
 import { defineConfig } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+const binary = resolve(process.env.LABRADORITE_BINARY || join("bin", process.platform === "win32" ? "labradorite.exe" : "labradorite"));
 const vault = mkdtempSync(join(tmpdir(), "labradorite-test-"));
 export default defineConfig({
   testDir: "./tests",
@@ -24,7 +25,7 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: `./bin/labradorite -no-browser -listen 127.0.0.1:4289 -data-dir "${vault}"`,
+    command: `"${binary}" -no-browser -listen 127.0.0.1:4289 -data-dir "${vault}"`,
     url: "http://127.0.0.1:4289/healthz",
     reuseExistingServer: false,
     timeout: 15000,

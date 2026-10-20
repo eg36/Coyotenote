@@ -119,7 +119,10 @@ and Windows amd64/arm64 packages, native platform checks and a Windows download
 review. Test packages will be Actions artifacts, retained for 90 days, with
 checksums and commit/version information. They will not create public Releases
 or tags. A test label such as `1.6.0-beta.1` can be stamped without a Git tag.
-The four-target artifact workflow is planned, not implemented yet.
+The manual Test builds workflow now uses shared native four-target packaging.
+Its run summary and VALIDATION.txt record checks and remaining desktop/ARM review;
+the Windows amd64 user download check is tracked in #16. The same packages feed
+future approved stable publishing.
 
 Public publishing accepts only stable `vMAJOR.MINOR.PATCH` tags, guarded again
 before packaging; prerelease tags never publish through that workflow. Every

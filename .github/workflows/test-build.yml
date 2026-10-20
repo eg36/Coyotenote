@@ -1,0 +1,27 @@
+name: Test builds
+
+# Downloads only. This workflow cannot create a tag or public Release.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Internal build version (no Git tag or Release)
+        required: true
+        default: 1.6.0-beta.1
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-build-${{ github.ref }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+  packages:
+    needs: checks
+    uses: ./.github/workflows/packages.yml
+    with:
+      version: ${{ inputs.version }}
