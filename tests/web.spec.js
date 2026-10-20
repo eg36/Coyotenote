@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 let counter = 0;
 async function seed(page, name, body = "") {
@@ -3570,11 +3570,11 @@ test("typed properties edit one YAML value while preserving every untouched byte
   }
 });
 
-test("math and Mermaid load locally only when needed and preserve source", async ({ page }) => {
+test("math and Mermaid load locally only when needed and preserve source", async ({ page, baseURL }) => {
   const remote = [], assets = [];
   page.on("request", request => {
     const url = new URL(request.url());
-    if (url.origin !== "http://127.0.0.1:4289") remote.push(request.url());
+    if (url.origin !== baseURL) remote.push(request.url());
     if (url.pathname.startsWith("/assets/")) assets.push(url.pathname);
   });
   await openSeed(page, "A plain note.");
@@ -3607,10 +3607,10 @@ test("math and Mermaid load locally only when needed and preserve source", async
   expect(diagramWidth).toBeGreaterThan(300);
 });
 
-test("invalid math and diagrams remain readable and cannot load images or configuration", async ({ page }) => {
+test("invalid math and diagrams remain readable and cannot load images or configuration", async ({ page, baseURL }) => {
   const remote = [], files = [];
   page.on("request", request => {
-    if (!request.url().startsWith("http://127.0.0.1:4289/")) remote.push(request.url());
+    if (!request.url().startsWith(baseURL + "/")) remote.push(request.url());
     if (request.url().includes("must-not-load")) files.push(request.url());
   });
   const body = '$\\notACommand{x}$\n\n$\\includegraphics{https://example.com/must-not-load.png}$\n\n```mermaid\nnot a diagram\n```\n\n```mermaid\nflowchart LR\n A@{ img: "./must-not-load.png" }\n```\n\n```mermaid\n%%{init: {"securityLevel": "loose"}}%%\nflowchart LR\n A --> B\n```\n\n```mermaid\nsequenceDiagram\n Alice->>Bob: Hello\n```';
@@ -3639,11 +3639,11 @@ test("Mermaid code in Write keeps its exact fenced source on body edits", async 
   await expect.poll(() => diskBody(page, id)).toBe(diagram + "\n\nBody. More.");
 });
 
-test("Write renders Mermaid lazily and edits source with cancel, validation and undo", async ({ page }) => {
+test("Write renders Mermaid lazily and edits source with cancel, validation and undo", async ({ page, baseURL }) => {
   const remote = [], assets = [];
   page.on("request", request => {
     const url = new URL(request.url());
-    if (url.origin !== "http://127.0.0.1:4289") remote.push(request.url());
+    if (url.origin !== baseURL) remote.push(request.url());
     if (url.pathname.startsWith("/assets/")) assets.push(url.pathname);
   });
   await openSeed(page, "Plain."); await mode(page, "Write");
@@ -3682,9 +3682,9 @@ test("Write renders Mermaid lazily and edits source with cancel, validation and 
   expect(remote).toEqual([]);
 });
 
-test("Write keeps invalid and blocked Mermaid readable offline on phones", async ({ page }) => {
+test("Write keeps invalid and blocked Mermaid readable offline on phones", async ({ page, baseURL }) => {
   const requests = [];
-  page.on("request", request => { if (request.url().includes("must-not-load") || !request.url().startsWith("http://127.0.0.1:4289/")) requests.push(request.url()); });
+  page.on("request", request => { if (request.url().includes("must-not-load") || !request.url().startsWith(baseURL + "/")) requests.push(request.url()); });
   const sources = ["not a diagram", 'flowchart LR\n A@{ img: "./must-not-load.png" }', '%%{init: {"securityLevel":"loose"}}%%\nflowchart LR\n A --> B', "flowchart LR\n classDef danger fill:red\n A --> B"];
   const body = sources.map(source => "```mermaid\n" + source + "\n```").join("\n\n") + "\n\nBody.";
   const id = await openSeed(page, body); await mode(page, "Write");
