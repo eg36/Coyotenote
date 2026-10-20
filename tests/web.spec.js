@@ -2954,3 +2954,15 @@ test("callouts render in Preview with icons and folding, and keep the note in Ma
   await expect(folded.getByText("Hidden until opened.")).toBeVisible();
   expect(await diskBody(page, id)).toBe(text);
 });
+
+test("folder breadcrumbs match the note title's size", async ({ page }) => {
+  await openSeed(page, "Deep note.", `Lab/Nested ${Date.now()}`);
+  const size = (selector) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).fontSize);
+  const title = await size("#document-title");
+  expect(await size(".breadcrumb:not(:has(svg))")).toBe(title);
+  expect(await size(".breadcrumb-separator")).toBe(title);
+  const icon = await page.locator(".breadcrumb svg").first().boundingBox();
+  expect(icon.height).toBe(parseFloat(title));
+  const crumbs = await page.locator("#note-folder").boundingBox(), name = await page.locator("#document-title").boundingBox();
+  expect(Math.abs(crumbs.y + crumbs.height / 2 - name.y - name.height / 2)).toBeLessThan(2);
+});
