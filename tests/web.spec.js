@@ -804,7 +804,7 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
   await page.route("**/api/note", (route) =>
     route.request().method() === "PUT" ? route.abort() : route.continue(),
   );
-  const draft = "Draft text.[^1]\n\n[^1]: A footnote Write cannot keep.";
+  const draft = "Draft text.^[An inline aside Write cannot keep.]";
   await page.locator(".cm-content").fill(draft);
   await expect(page.locator("#error-banner")).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());
