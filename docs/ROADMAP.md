@@ -75,6 +75,8 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
   longer fall back to Markdown view.
 
 ### 1.5.0 — Smooth everything, then release
+- Callouts in Write: edit callouts visually, with their type, title and
+  folding kept exactly, so notes with callouts no longer open in Markdown.
 - Rename a note in place: clicking the title turns it into a text field
   (Enter renames, Escape cancels, a folder path moves the note), instead of
   opening the rename dialog.
@@ -86,8 +88,8 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 
 ## 2.0.0 and later
 
-- Write support for embeds, callouts and HTML, so fewer notes fall back to
-  Markdown view.
+- Write support for embeds and HTML, so fewer notes fall back to Markdown
+  view.
 - PDF, audio and video attachments and embeds.
 - Web page, YouTube and similar embeds, opt-in because they contact the
   network.
