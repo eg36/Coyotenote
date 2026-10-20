@@ -5,16 +5,18 @@ const mobile = matchMedia("(max-width: 799px)");
 function preferenceKey() {
   return mobile.matches ? "labradorite-sidebar-mobile" : "labradorite-sidebar-desktop";
 }
-function setSidebar(open: boolean, persist = true) {
+function setSidebar(open: boolean, persist = true, dismissSearch = true) {
   $("app").classList.toggle("sidebar-open", mobile.matches && open);
   $("app").classList.toggle("sidebar-hidden", !mobile.matches && !open);
   if (open) $("app").classList.remove("focus-mode");
   $("sidebar-toggle").setAttribute("aria-expanded", String(open));
+  if (!open && dismissSearch && $("app").classList.contains("search-in-note"))
+    document.dispatchEvent(new Event("search-closed"));
   if (persist) storage.set(preferenceKey(), String(open));
 }
 function restoreSidebar() {
   const stored = storage.get(preferenceKey());
-  setSidebar(stored === "true" || (stored !== "false" && !mobile.matches), false);
+  setSidebar(stored === "true" || (stored !== "false" && !mobile.matches), false, false);
 }
 function toggleSidebar() {
   const open = mobile.matches

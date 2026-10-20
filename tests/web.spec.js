@@ -2214,6 +2214,8 @@ test("find and replace opens from Write, autosaves replacements and supports und
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(page.locator("#note-search-options")).toBeHidden();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
+  await mode(page, "Markdown");
   await page.locator(".cm-content").focus();
   await page.keyboard.press("Control+z");
   await expect.poll(() => diskBody(page, id)).toContain("alpha alpha beta with edits");
@@ -2448,4 +2450,30 @@ test("collapse and expand all includes pinned notes and restores both after relo
   await page.locator("#pinned-notes summary").click();
   await expect(pinned).toBeHidden();
   await expect(fold).toHaveAttribute("aria-label", "Collapse all folders");
+});
+
+test("closing this-note search restores the prior writing mode unless the user selects another", async ({ page }) => {
+  await openSeed(page, "A needle in a note.");
+  for (const [label, value] of [["Write", "write"], ["Preview", "preview"], ["Markdown", "source"], ["Split", "split"]]) {
+    await mode(page, label);
+    await page.keyboard.press("Control+Shift+e");
+    await page.locator("#search").fill("needle");
+    await page.locator("#find-replace").click();
+    await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", value === "split" ? "split" : "source");
+    await page.locator("#sidebar-search").click();
+    await expect(page.locator("#search")).toBeHidden();
+    await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", value);
+  }
+  await mode(page, "Write");
+  await page.keyboard.press("Control+Shift+e");
+  await page.locator("#find-replace").click();
+  await mode(page, "Split");
+  await page.locator("#sidebar-search").click();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
+  await mode(page, "Write");
+  await page.keyboard.press("Control+Shift+e");
+  await page.locator("#find-replace").click();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  await page.reload();
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
 });

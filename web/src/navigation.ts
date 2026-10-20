@@ -1,6 +1,7 @@
 // Personal navigation lives in this browser, scoped to the vault, never in notes.
 import { $, showError, showToast, state, storage } from "./core.js";
 import { openNote } from "./editor.js";
+import { closeUnifiedSearch } from "./search.js";
 import { icon } from "./icons.js";
 import { browseFolder, shortDate, updateFoldButton } from "./list.js";
 import { setSidebar } from "./sidebar.js";
@@ -118,6 +119,7 @@ function renderNavigation() {
   updateFoldButton();
 }
 function showRecent() {
+  closeUnifiedSearch().catch(showError);
   $("app").classList.add("show-recents");
   $("recent-panel").hidden = false;
   $("recent-notes").setAttribute("aria-pressed", "true");

@@ -5,6 +5,7 @@ import { showNotes } from "./shortcuts.js";
 
 type Scope = "all" | "note";
 let scope: Scope = "all";
+let previousMode: typeof state.mode | null = null;
 let generation = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 function updateMatches() {
@@ -22,6 +23,9 @@ async function openSearch(next: Scope, query?: string) {
   if (next === "note" && (!state.current || state.pendingDraft || state.busy)) return;
   const request = ++generation;
   clearTimeout(timer);
+  const restoreMode = next === "all" && scope === "note" ? previousMode : null;
+  if (next === "note" && scope !== "note") previousMode = state.mode;
+  if (next === "all") previousMode = null;
   scope = next;
   if (query !== undefined) $("search").value = query;
   state.folder = null;
@@ -38,11 +42,30 @@ async function openSearch(next: Scope, query?: string) {
   $("search").setAttribute("aria-label", next === "all" ? "Search notes" : "Find in this note");
   refresh().catch(showError);
   if (next === "note") {
-    if (!["source", "split"].includes(state.mode)) await setMode("source", { focus: false });
+    if (!["source", "split"].includes(state.mode)) await setMode("source", { focus: false, persist: false });
     if (request !== generation) return;
     searchNote();
-  } else state.source?.search("", "");
-  $("search").focus();
+  } else {
+    state.source?.search("", "");
+    if (restoreMode && restoreMode !== state.mode)
+      await setMode(restoreMode, { focus: false });
+  }
+  if (request === generation) $("search").focus();
+}
+async function closeUnifiedSearch() {
+  const restoreMode = scope === "note" ? previousMode : null;
+  ++generation;
+  clearTimeout(timer);
+  scope = "all";
+  previousMode = null;
+  $("app").classList.remove("search-open", "search-in-note");
+  $("sidebar-search").setAttribute("aria-expanded", "false");
+  $("search-all").setAttribute("aria-pressed", "true");
+  $("find-replace").setAttribute("aria-pressed", "false");
+  $("note-search-options").hidden = true;
+  state.source?.search("", "");
+  if (restoreMode && restoreMode !== state.mode)
+    await setMode(restoreMode, { focus: false });
 }
 function setupSearch() {
   $("search-all").onclick = () => openSearch("all").catch(showError);
@@ -83,9 +106,11 @@ function setupSearch() {
     if (!state.current) openSearch("all").catch(showError);
     else searchNote();
   });
-  document.addEventListener("editor-mode-change", () => {
-    if (scope === "note" && !["source", "split"].includes(state.mode))
-      openSearch("all").catch(showError);
+  document.addEventListener("search-closed", () => closeUnifiedSearch().catch(showError));
+  document.addEventListener("editor-mode-change", (event) => {
+    if (scope !== "note") return;
+    if (event instanceof CustomEvent && event.detail?.userInitiated) previousMode = null;
+    if (!["source", "split"].includes(state.mode)) openSearch("all").catch(showError);
   });
 }
-export { openSearch, setupSearch };
+export { closeUnifiedSearch, openSearch, setupSearch };

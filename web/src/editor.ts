@@ -194,7 +194,7 @@ async function openNote(
   url.searchParams.set("note", note.id);
   url.searchParams.delete("new");
   history.replaceState(null, "", url);
-  await setMode(state.mode, { focus: false });
+  await setMode(state.mode, { focus: false, persist: !$("app").classList.contains("search-in-note") });
   schedulePreview(true);
   renderOutline(true);
   document.dispatchEvent(new Event("note-selection-change"));
@@ -270,10 +270,11 @@ async function ensureRich() {
 // switch made meanwhile, such as clicking Markdown while a note opens,
 // wins, and the older one gives up instead of switching back.
 let modeGeneration = 0;
-async function setMode(mode: AppState["mode"], { focus = true } = {}) {
+async function setMode(mode: AppState["mode"], { focus = true, persist = true } = {}) {
   const generation = ++modeGeneration;
   if (!state.current) {
     state.mode = mode;
+    if (persist) storage.set("coyote-view", mode);
     return;
   }
   if (mode === "write") {
@@ -294,7 +295,7 @@ async function setMode(mode: AppState["mode"], { focus = true } = {}) {
     }
   }
   state.mode = mode;
-  storage.set("coyote-view", mode);
+  if (persist) storage.set("coyote-view", mode);
   $("editor-area").dataset.mode = mode;
   $("source-pane").hidden = !["source", "split"].includes(mode);
   $("rich-pane").hidden = mode !== "write";
@@ -309,7 +310,7 @@ async function setMode(mode: AppState["mode"], { focus = true } = {}) {
   applyEditability();
   state.source?.refresh();
   if (mode === "preview" || mode === "split") schedulePreview(true);
-  document.dispatchEvent(new Event("editor-mode-change"));
+  document.dispatchEvent(new CustomEvent("editor-mode-change", { detail: { userInitiated: focus } }));
   if (focus) focusEditor();
   updateToolbar();
   renderOutline(true);

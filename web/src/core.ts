@@ -178,6 +178,7 @@ function closeSearch() {
   if ($("search").value || document.activeElement === $("search")) return;
   $("app").classList.remove("search-open");
   $("sidebar-search").setAttribute("aria-expanded", "false");
+  document.dispatchEvent(new Event("search-closed"));
 }
 export {
   $,
