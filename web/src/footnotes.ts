@@ -1,7 +1,7 @@
 import { Node, InputRule } from "@tiptap/core";
 import { Plugin } from "@tiptap/pm/state";
 import { attachedBelow } from "./write-math.js";
-import { pristine } from "./source-blocks.js";
+import { pristine, sourceGap } from "./source-blocks.js";
 
 interface Definition {
   label: string;
@@ -292,6 +292,8 @@ export function footnoteExtensions(source: () => string) {
         if (all[next]?.type === "footnoteDefinition") return false;
         let previous = index - 1;
         while (all[previous]?.type === "paragraph" && !all[previous].content?.length) previous--;
+        // Blank lines read as empty paragraphs are part of the original gap.
+        if (sourceGap(all[previous], all[next]) !== undefined) return false;
         // Write adds an empty paragraph after a final quote, list, table or
         // other block so there is somewhere to type; it is not part of the note.
         return next < all.length || (all[previous]?.type ?? "paragraph") === "paragraph";
@@ -299,7 +301,9 @@ export function footnoteExtensions(source: () => string) {
       let result = "";
       nodes.forEach((child, i) => {
         const previous = nodes[i - 1];
-        if (previous?.type === "footnoteDefinition") result += previous.attrs?.after || "\n\n";
+        const gap = sourceGap(previous, child);
+        if (gap !== undefined) result += gap;
+        else if (previous?.type === "footnoteDefinition") result += previous.attrs?.after || "\n\n";
         else if (previous?.type === "taskList" || previous?.type === "mathBlock") result += previous.attrs?.after || "\n\n";
         else if (child.type === "footnoteDefinition") result += child.attrs?.before || (i ? "\n\n" : "");
         // A display formula may sit directly below a line of text.
@@ -309,7 +313,8 @@ export function footnoteExtensions(source: () => string) {
       });
       const last = nodes.at(-1);
       if (last?.type === "footnoteDefinition") result += last.attrs?.after || "";
-      else if (last?.type === "taskList" || last?.type === "mathBlock") result += last.attrs?.after || "";
+      // A task list split from a list of plain bullets knows no gap of its own.
+      else if (last?.type === "taskList" || last?.type === "mathBlock") result += last.attrs?.after || /(?:\n[ \t]*)+$/.exec(source())?.[0] || "";
       // A final paragraph has no visible newline node. Retain the source's
       // terminator when editing text or an inline footnote in that paragraph.
       else if (!result.endsWith("\n")) result += /(?:\n[ \t]*)+$/.exec(source())?.[0] || "";

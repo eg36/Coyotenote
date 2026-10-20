@@ -41,7 +41,7 @@ export const WrittenStyle = Extension.create({
     const kept = { default: null, rendered: false };
     return [
       { types: ["bold", "italic", "strike", "code", "link"], attributes: { written: kept } },
-      { types: ["hardBreak", "bulletList", "orderedList", "listItem", "codeBlock", "heading", "horizontalRule"], attributes: { written: kept } },
+      { types: ["hardBreak", "bulletList", "orderedList", "listItem", "codeBlock", "heading", "horizontalRule", "table"], attributes: { written: kept } },
     ];
   },
 });
@@ -108,6 +108,7 @@ function blockWritten(token: Block) {
       return /[ \t]+#+[ \t]*$/.exec(first)?.[0] ?? null;
     }
     case "hr": return first.trim();
+    case "table": return raw.replace(/(?:\n[ \t]*)+$/, "");
   }
   return null;
 }
@@ -115,7 +116,7 @@ type BlockHandler = { parseMarkdown?: (token: Block, helpers: unknown) => unknow
 const blockHandlersFor = (proto as unknown as { getHandlersForToken(type: string): BlockHandler[] }).getHandlersForToken;
 (proto as unknown as { getHandlersForToken(type: string): BlockHandler[] }).getHandlersForToken = function (type) {
   const handlers = blockHandlersFor.call(this, type);
-  if (!["list", "code", "heading", "hr"].includes(type)) return handlers;
+  if (!["list", "code", "heading", "hr", "table"].includes(type)) return handlers;
   return handlers.map(handler => !handler.parseMarkdown ? handler : { ...handler, parseMarkdown(token: Block, helpers: unknown) {
     const result = handler.parseMarkdown!.call(handler, token, helpers) as JSONContent | JSONContent[] | null;
     const written = blockWritten(token);
@@ -188,7 +189,11 @@ proto.getMarkClosing = function (type, mark, openingMode = "markdown", text = ""
 const renderNode = proto.renderNodeToMarkdown;
 proto.renderNodeToMarkdown = function (node, parent, index, level, meta) {
   const written = node.attrs?.written;
+  if (node.type === "hardBreak" && written === "\n") return written;
   if (mode !== "plain" && node.type === "hardBreak" && typeof written === "string" && /^(?: {2,}|\\)\n$/.test(written)) return written;
+  // The table writer pads every column and surrounds the table with line
+  // breaks of its own; rows that did not change keep their line instead.
+  if (node.type === "table") return writtenTable.call(this, node) ?? renderNode.call(this, node, parent, index, level, meta).replace(/^\n+|\n+$/g, "");
   // The writer puts list items on consecutive lines; keep blank lines that
   // separated them.
   if (["bulletList", "orderedList"].includes(node.type || "") && node.content?.some(item => item.attrs?.written === "\n\n"))
@@ -205,6 +210,29 @@ proto.encodeTextForMarkdown = function (text, node, parent) {
     .replace(/<(?=[A-Za-z/!?])/g, "\\<").replace(/&(?=#?[A-Za-z0-9]+;)/g, "\\&");
 };
 
+// A table as written: its delimiter row and every row whose cells still read
+// the same keep their line; changed or new rows are written without padding.
+function cellsOf(line: string) {
+  return line.trim().replace(/^\|/, "").replace(/(?<!\\)\|$/, "").split(/(?<!\\)\|/).map(cell => cell.trim());
+}
+function writtenTable(this: Manager, node: JSONContent) {
+  const written = node.attrs?.written;
+  if (typeof written !== "string") return undefined;
+  const lines = written.split("\n"), rows = node.content || [];
+  const columns = cellsOf(lines[1] || "").length;
+  const out: string[] = [];
+  for (const [r, row] of rows.entries()) {
+    const cells = (row.content || []).map(cell => {
+      const text = (cell.content || []).map(block => proto.renderNodeToMarkdown.call(this, block, cell)).join(" ").trim();
+      return text.replace(/(?<!\\)\|/g, "\\|");
+    });
+    if (cells.length !== columns) return undefined;
+    const line = lines[r === 0 ? 0 : r + 1];
+    out.push(line !== undefined && JSON.stringify(cellsOf(line)) === JSON.stringify(cells) ? line : `| ${cells.join(" | ")} |`);
+  }
+  return [out[0], lines[1], ...out.slice(1)].join("\n");
+}
+
 // Formulas and literal characters inside formatting go through the text
 // path as placeholders, because the writer would otherwise close and reopen
 // bold, italic, links and highlights around them; the reader likewise gives
@@ -214,6 +242,19 @@ const applyMark = proto.applyMarkToContent;
 proto.applyMarkToContent = function (type, content, attrs) {
   return applyMark.call(this, type, content, attrs).map((node, i) => !textLike.has(node.type || "") ? node
     : { ...node, content: undefined, marks: [...(content[i].marks || []), attrs ? { type, attrs } : { type }] });
+};
+
+// A line break inside a paragraph's text is a soft break: it shows as a
+// break in Write and is saved as a plain line break, not as a hard break.
+const parseInline = (proto as unknown as { parseInlineTokens(tokens: Token[]): JSONContent[] }).parseInlineTokens;
+(proto as unknown as { parseInlineTokens(tokens: Token[]): JSONContent[] }).parseInlineTokens = function (tokens) {
+  return parseInline.call(this, tokens).flatMap(node => {
+    if (node.type !== "text" || !node.text?.includes("\n") || node.marks?.some(mark => mark.type === "code")) return [node];
+    return node.text.split("\n").flatMap((text, i) => [
+      ...(i ? [{ type: "hardBreak", attrs: { written: "\n" }, ...(node.marks ? { marks: node.marks } : {}) }] : []),
+      ...(text ? [{ ...node, text }] : []),
+    ]);
+  });
 };
 
 // What a paragraph's inline content means, ignoring how it is written.

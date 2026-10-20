@@ -3461,6 +3461,28 @@ test("tasks after plain bullets in the same list keep their checked state", asyn
   await expect.poll(() => diskBody(page, id)).toBe(body.replace("Body.", "Edited Body."));
 });
 
+test("edited notes keep soft line breaks, the gaps between blocks and untouched table rows", async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    "Body. line one\nline two soft.",
+    "Body. para\n# one\n## two\n### three",
+    "Body. para\n\n\n| a | b |\n| --- | --- |\n| 1 | 2 |",
+    "Body. para\n\n- [ ] task\n- [x] done",
+    "x\n\nBody.\n\n\n\n\ny\n\nz\n\n\n\n- [ ] task",
+    "Intro.\n\n| a | b |\n| --- | --- |\n| Body. | 2 |\n| keep  |  this |",
+    "| Body. head | b |\n|:-|-:|\n| `x \\| y` | [[Note\\|label]] |",
+    "Body.\n\n- [x] First\n- [ ] Try\n",
+  ];
+  for (const body of cases) {
+    const id = await openSeed(page, body);
+    await mode(page, "Write");
+    await expect(page.locator("#rich-pane"), body).toBeVisible();
+    await page.locator(".tiptap").getByText("Body.", { exact: false }).first().click({ position: { x: 2, y: 8 } });
+    await page.keyboard.press("Home"); await page.keyboard.type("Edited ");
+    await expect.poll(() => diskBody(page, id), body).toBe(body.replace("Body.", "Edited Body."));
+  }
+});
+
 test("characters typed in Write are escaped only where they would become formatting", async ({ page }) => {
   const id = await openSeed(page, "Start.");
   await mode(page, "Write");
