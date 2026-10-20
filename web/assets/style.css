@@ -2817,3 +2817,19 @@ dialog.danger #modal-submit {
 @media (max-width: 360px) {
   #hint-help > span { display: none; }
 }
+/* Menu is part of the writing controls, and remains available at home. */
+.header-tools .menu-bar { margin: 0; flex-shrink: 0; }
+.header-tools .menu-bar button { width: 32px; height: 32px; padding: 0; justify-content: center; }
+.header-tools .menu-bar button svg { width: 22px; height: 22px; }
+.app.at-home .header-tools, .app.at-home .editor-bar { display: flex; }
+.app.at-home .header-tools { position: static; transform: none; margin: 0 auto 0 12px; }
+.app.at-home .editor-bar { order: 0; flex: 0 0 auto; margin: 0; padding: 0; border: 0; }
+.app.at-home .editor-bar > :not(.menu-bar) { display: none !important; }
+.menu-item[aria-expanded="true"] { background: var(--selected); }
+.menu-inline { margin: 4px 6px 8px 12px; padding-left: 8px; border-left: 1px solid var(--line); }
+@media (max-width: 639px) {
+  .menu-item[aria-expanded="true"] .menu-chevron { transform: none; }
+}
+@media (max-width: 530px) {
+  .app.at-home .header-tools { grid-column: 1; grid-row: 2; justify-self: start; margin: 0; }
+}

@@ -17,7 +17,7 @@
     <div class="app" id="app">
       <nav class="activity-rail" aria-label="Workspace">
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
-        <nav class="menu-bar" id="menu-bar" aria-label="Menu"><button type="button" class="icon-button" data-menu="workspace" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false"><span data-icon="menu"></span></button></nav>
+
         <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
         <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
         <button id="recent-notes" class="icon-button" aria-label="Recently opened notes" title="Recently opened notes" aria-pressed="false"><span data-icon="history"></span></button>
@@ -44,6 +44,7 @@
         </div>
         <div class="header-tools">
         <div class="editor-bar">
+        <nav class="menu-bar" id="menu-bar" aria-label="Menu"><button type="button" class="icon-button" data-menu="workspace" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false"><span data-icon="menu"></span></button></nav>
         <div class="view-switch" id="view-switch">
           <button
             id="view-type"
@@ -382,6 +383,7 @@
       </form>
     </dialog>
     <div id="menu-popup" class="menu-popup" role="menu" tabindex="-1" hidden></div>
+    <div id="menu-submenu" class="menu-popup" role="menu" tabindex="-1" hidden></div>
     <div
       id="view-menu"
       class="block-menu view-menu"
