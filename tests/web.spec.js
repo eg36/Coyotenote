@@ -3385,6 +3385,14 @@ test("Write keeps inline and display formulas exact through body edits", async (
     '# Heading $h_1$\n\n- item $x$\n- other $z$\n\n> quote $q$\n\nBody.',
     'Body.\n\n$$\n$$\n',
     'Price \\$5 and \\$6 or \\$x$ here.\n\nBody.',
+    '**bold $x^2$ text** and *it $\\alpha$* and ~~st $y$~~ and ==hl $z$==.\n\nBody.',
+    '**$x$** and [see $\\frac{a}{b}$](https://example.com) and **\\$5** and *$a*b$ c*.\n\nBody.',
+    '[link](http://x.org/$y$) text $q$\n\nBody.',
+    'Text\n$$\nx = 1\n$$\nBody.',
+    '- item\n\n  $$\n  x\n  $$\n  more\n\n  after\n- next\n\nBody.',
+    '- outer $o$\n  - inner\n\n    $$\n    x\n\n    y\n    $$\n\nBody.',
+    '> quote\n> $$\n> x\n> $$\n>\n> tail\n\nBody.',
+    '> - item\n>\n>   $$\n>   x\n>   $$\n\nBody.',
     'Body.\n\n$$\n\\sqrt{2}\n$$',
   ];
   for (const body of cases) {
@@ -3446,7 +3454,7 @@ test("Write creates formulas by typing and keeps unsupported math layouts in Mar
   await expect(display).toBeFocused();
   await display.fill("c^2"); await display.press("Control+Enter");
   await expect.poll(() => diskBody(page, id)).toBe("Start. Costs $5 and $6. Then $a+b$ done.\n\n$$\nc^2\n$$");
-  for (const body of ["**bold $x$** text", "- item\n\n  $$\n  x\n  $$", "Text\n$$\nx\n$$"]) {
+  for (const body of ["1. item\n\n   $$\n   x\n   $$", "- item\n$$\nx\n$$", "> quote\n$$\nx\n$$"]) {
     const other = await openSeed(page, body);
     await mode(page, "Write");
     await expect(page.locator("#source-pane"), body).toBeVisible();

@@ -12,7 +12,7 @@ interface RichOptions {
   imageFiles(transfer: DataTransfer | null): File[];
 }
 
-import { marked, Marked } from "marked";
+import { marked, Marked, Hooks } from "marked";
 import type { Token, Tokens } from "marked";
 import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -23,7 +23,7 @@ import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes } from "./footnotes.js";
 import { writingSettings } from "./preferences.js";
-import { InlineMath, MathBlock, EscapedDollar, inlineMathToken, mathBlockToken } from "./write-math.js";
+import { InlineMath, MathBlock, EscapedDollar, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -212,18 +212,24 @@ const ImageParagraph = Paragraph.extend({
   },
 });
 
-const richMarkdown = new Marked({ gfm: true, extensions: [{
+const hooks = new Hooks();
+hooks.emStrongMask = maskFormulas;
+const richMarkdown = new Marked({ gfm: true, hooks, extensions: [{
   name: "inlineFootnote", level: "inline", start: text => text.indexOf("^["), tokenizer: inlineFootnoteToken,
 }, {
   name: "inlineMath", level: "inline", start: text => text.indexOf("$"),
   tokenizer: (text, tokens) => inlineMathToken(text, tokens.at(-1)?.raw.slice(-1)),
 }, {
-  name: "mathBlock", level: "block", start: text => /^ {0,3}\$\$/m.exec(text)?.index, tokenizer: mathBlockToken,
+  name: "mathBlock", level: "block", start: text => /^ {0,3}\$\$/m.exec(text)?.index, tokenizer: (text, tokens) => mathBlockToken(text, tokens),
 }] });
 
 // The inline formulas the preview finds in a paragraph's source.
 function previewFormulas(text: string) {
-  text = withoutInlineFootnotes(text.replace(/(`+)[\s\S]*?\1/g, code => "\ufffc".repeat(code.length)));
+  // Code, link addresses and tags hold dollars that are not formulas.
+  const hidden = (part: string) => "\ufffc".repeat(part.length);
+  text = withoutInlineFootnotes(text.replace(/(`+)[\s\S]*?\1/g, hidden)
+    .replace(/\]\((?:\\.|[^\\()\n]|\((?:\\.|[^\\()\n])*\))*\)/g, part => "]" + hidden(part.slice(1)))
+    .replace(/<[^<>\n]*>/g, hidden));
   const found: string[] = [];
   for (let i = 0; i < text.length; i++) {
     if (text[i] === "\\") { i++; continue; }
@@ -233,42 +239,45 @@ function previewFormulas(text: string) {
   return found;
 }
 
-// Formulas stay exact when Write finds the same ones as the preview, outside
-// formatting (which Write would split around them) and display formulas sit
-// at the top level, after a blank line.
+// Formulas stay exact when Write finds the same ones as the preview. Display
+// formulas may sit anywhere but in numbered lists, whose items Write
+// re-indents, and must not be lazily continued from a list or quote above.
 function mathReason(tokens: Token[]) {
   let reason = "";
-  const changed = "Showing Markdown: Write would change this note's math. Edit its TeX in Markdown.";
-  function formulas(list: Token[] | undefined, formatted: boolean, found: string[]) {
+  function formulas(list: Token[] | undefined, found: string[]) {
     for (const token of list || []) {
-      if (token.type === "inlineMath") {
-        found.push(token.raw);
-        if (formatted) reason = "Showing Markdown: Write would split formatting around a formula in this note.";
-      }
-      formulas((token as Tokens.Generic).tokens, formatted || ["strong", "em", "del", "link", "highlight"].includes(token.type), found);
+      if (token.type === "inlineMath") found.push(token.raw);
+      formulas((token as Tokens.Generic).tokens, found);
     }
     return found;
   }
   function inline(raw: string, list: Token[] | undefined) {
-    if (formulas(list, false, []).join("\n") !== previewFormulas(raw).join("\n")) reason = changed;
+    if (formulas(list, []).join("\n") !== previewFormulas(raw).join("\n"))
+      reason = "Showing Markdown: Write would change this note's math. Edit its TeX in Markdown.";
   }
-  function walk(list: Token[], top: boolean) {
-    let before = "";
+  const display = (list: Token[]): boolean => list.some(token => token.type === "mathBlock"
+    || (token.type === "list" ? (token.items as Tokens.ListItem[]).some(item => display(item.tokens)) : display((token as Tokens.Generic).tokens || [])));
+  const lazy = "Showing Markdown: Write would move this display formula into the list or quote above it. Indent it or add a blank line.";
+  function walk(list: Token[]) {
     for (const token of list) {
-      if (token.type === "mathBlock") {
-        if (!top) reason = "Showing Markdown: Write would change display math inside a list, quote or table. Edit it in Markdown.";
-        else if (before && !/(?:^|[^\n])\n\n$/.test(before))
-          reason = "Showing Markdown: Write would change the spacing before this display formula.";
-      }
-      before += token.raw;
       if (token.type === "paragraph" || token.type === "heading" || (token.type === "text" && token.tokens)) inline(token.raw, token.tokens);
       else if (token.type === "table")
         for (const cell of [...token.header, ...token.rows.flat()] as Tokens.TableCell[]) inline(cell.text, cell.tokens);
-      else if (token.type === "list") for (const item of token.items as Tokens.ListItem[]) walk(item.tokens, false);
-      else if ((token as Tokens.Generic).tokens && token.type !== "inlineFootnote") walk((token as Tokens.Generic).tokens!, false);
+      else if (token.type === "list") {
+        for (const item of token.items as Tokens.ListItem[]) {
+          const indent = /^[ \t]*(?:[-+*]|\d+[.)])[ \t]*/.exec(item.raw)?.[0].length || 0;
+          if (item.raw.split("\n").slice(1).some(line => line.trim().startsWith("$$") && /^ */.exec(line)![0].length < indent)) reason = lazy;
+          walk(item.tokens);
+        }
+        if (token.ordered && display(token.items.flatMap((item: Tokens.ListItem) => item.tokens)))
+          reason = "Showing Markdown: Write would re-indent display math inside a numbered list. Edit it in Markdown.";
+      } else if (token.type === "blockquote") {
+        if (token.raw.split("\n").some(line => !/^ {0,3}>/.test(line) && line.trim().startsWith("$$"))) reason = lazy;
+        walk(token.tokens || []);
+      } else if ((token as Tokens.Generic).tokens && token.type !== "inlineFootnote") walk((token as Tokens.Generic).tokens!);
     }
   }
-  walk(tokens, true);
+  walk(tokens);
   return reason;
 }
 
@@ -352,6 +361,8 @@ export function createRich(
         StarterKit.configure({
           paragraph: false,
           document: false,
+          blockquote: false,
+          listItem: false,
           // Lists can exit naturally with Enter; an automatic paragraph
           // would leave a second, invisible blank block after that exit.
           trailingNode: { notAfter: ["taskList", "bulletList", "orderedList"] },
@@ -362,7 +373,7 @@ export function createRich(
           },
         }),
         Markdown.configure({
-          markedOptions: { gfm: true },
+          markedOptions: { gfm: true, hooks },
           indentation: { style: "space", size: 2 },
         }),
         StatusTaskList,
@@ -379,6 +390,8 @@ export function createRich(
         Highlight,
         InlineMath,
         MathBlock,
+        MathListItem,
+        MathBlockquote,
         EscapedDollar,
         imageNode(fileUrl),
       ],

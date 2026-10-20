@@ -260,9 +260,11 @@ edit its TeX in a field below it, with a live rendering; Apply or Ctrl/⌘ Enter
 saves, Escape cancels, and undo works as usual. Typing `$a+b$` makes an inline
 formula; typing `$$` on an empty line and pressing Enter starts a display
 formula. Delimiters, spacing and the TeX itself are saved exactly as written.
-Formulas inside bold, italic, strikethrough, highlights or links, display
-formulas inside lists, quotes or tables, and display formulas directly below a
-line of text without a blank line open in Markdown with a message instead.
+Formulas can sit inside bold, italic, strikethrough, highlights and links, and
+display formulas inside bullet lists and quotes. Two layouts still open in
+Markdown with a message: display formulas inside numbered lists, and a
+display formula written directly below a list or quote without indenting it
+or leaving a blank line (Preview ends the list there; Write would not).
 
 Use a fenced code block with the language `mermaid` for a diagram:
 

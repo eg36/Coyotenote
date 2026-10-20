@@ -1,5 +1,6 @@
 import { Node, InputRule } from "@tiptap/core";
 import { Plugin } from "@tiptap/pm/state";
+import { attachedBelow } from "./write-math.js";
 
 interface Definition {
   label: string;
@@ -298,6 +299,8 @@ export function footnoteExtensions(source: () => string) {
         if (previous?.type === "footnoteDefinition") result += previous.attrs?.after || "\n\n";
         else if (previous?.type === "taskList" || previous?.type === "mathBlock") result += previous.attrs?.after || "\n\n";
         else if (child.type === "footnoteDefinition") result += child.attrs?.before || (i ? "\n\n" : "");
+        // A display formula may sit directly below a line of text.
+        else if (attachedBelow(previous, child)) result += "\n";
         else if (i) result += "\n\n";
         result += helpers.renderChild!(child, i);
       });

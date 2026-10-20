@@ -1,5 +1,8 @@
 import { Node, InputRule } from "@tiptap/core";
-import type { Editor } from "@tiptap/core";
+import type { Editor, JSONContent } from "@tiptap/core";
+import { MarkdownManager } from "@tiptap/markdown";
+import { Blockquote } from "@tiptap/extension-blockquote";
+import { ListItem } from "@tiptap/extension-list";
 
 // These mirror the preview's dollar grammar in cmd/labradorite/math.go, so a
 // formula is a formula in Write exactly when the preview renders it.
@@ -21,7 +24,7 @@ export function inlineMathToken(source: string, previous = "") {
 
 // Display formulas are $$ lines around TeX, or $$…$$ on one line. Every
 // delimiter, indent and trailing space is kept so saving changes nothing.
-export function mathBlockToken(source: string) {
+export function mathBlockToken(source: string, previous: { raw?: string; type?: string }[] = []) {
   const lines = source.split("\n");
   const indent = /^ {0,3}/.exec(lines[0])![0];
   const rest = lines[0].slice(indent.length);
@@ -39,7 +42,10 @@ export function mathBlockToken(source: string) {
   }
   const raw = lines.slice(0, count).join("\n");
   const after = /^\n(?:[ \t]*\n)*/.exec(source.slice(raw.length))?.[0] || "";
-  return { type: "mathBlock", raw: raw + after, open, tex, close, single, filled, after };
+  // Directly below a line of text, with no blank line between them.
+  const tail = previous.slice(-2).map(token => token.raw || "").join("");
+  const attached = previous.length > 0 && previous.at(-1)?.type !== "space" && !/\n\n$/.test(tail);
+  return { type: "mathBlock", raw: raw + after, open, tex, close, single, filled, after, attached };
 }
 
 interface BlockAttrs { open: string; tex: string; close: string; single: boolean; filled: boolean }
@@ -167,7 +173,7 @@ export const InlineMath = Node.create({
 export const MathBlock = Node.create({
   name: "mathBlock", group: "block", atom: true, isolating: true,
   addAttributes() {
-    return { open: { default: "$$" }, tex: { default: "" }, close: { default: "$$" }, single: { default: false }, filled: { default: false }, after: { default: "" } };
+    return { open: { default: "$$" }, tex: { default: "" }, close: { default: "$$" }, single: { default: false }, filled: { default: false }, after: { default: "" }, attached: { default: false } };
   },
   parseHTML() { return [{ tag: "div[data-math-block]", getAttrs: el => ({ tex: el.getAttribute("data-math-block") }) }]; },
   renderHTML({ node }) { return ["div", { "data-math-block": node.attrs.tex }, blockMarkdown(node.attrs as BlockAttrs)]; },
@@ -176,11 +182,11 @@ export const MathBlock = Node.create({
   markdownTokenizer: {
     name: "mathBlock", level: "block",
     start: text => /^ {0,3}\$\$/m.exec(text)?.index ?? -1,
-    tokenize: source => mathBlockToken(source),
+    tokenize: (source, tokens) => mathBlockToken(source, tokens),
   },
   parseMarkdown(token) {
-    const { open, tex, close, single, filled, after } = token;
-    return { type: "mathBlock", attrs: { open, tex, close, single, filled, after } };
+    const { open, tex, close, single, filled, after, attached } = token;
+    return { type: "mathBlock", attrs: { open, tex, close, single, filled, after, attached } };
   },
   renderMarkdown(node) { return blockMarkdown(node.attrs as BlockAttrs); },
   // $$ then Enter in an empty paragraph starts a display formula.
@@ -220,3 +226,87 @@ export const EscapedDollar = Node.create({
   parseMarkdown() { return { type: "escapedDollar" }; },
   renderMarkdown() { return "\\$"; },
 });
+
+// Emphasis and strikethrough look for their closing marks in a masked copy
+// of the text; masking formulas there keeps a * or _ in TeX from closing
+// emphasis outside it, as in the preview.
+export function maskFormulas(masked: string) {
+  let result = masked;
+  for (let i = 0; i < masked.length; i++) {
+    const token = masked[i] === "$" && inlineMathToken(masked.slice(i), masked[i - 1]);
+    if (!token) continue;
+    result = result.slice(0, i + 1) + "a".repeat(token.raw.length - 2) + result.slice(i + token.raw.length - 1);
+    i += token.raw.length - 1;
+  }
+  return result;
+}
+
+// A display formula keeps sitting directly below a line of text, or after a
+// blank line, inside a bullet or a quote as at the top level.
+export function attachedBelow(previous: JSONContent | undefined, child: JSONContent) {
+  return child.type === "mathBlock" && !!child.attrs?.attached && ["paragraph", "heading"].includes(previous?.type || "");
+}
+function tightAfter(previous: JSONContent | undefined) {
+  return previous?.type === "mathBlock" && previous.attrs?.after === "\n";
+}
+type Helpers = { renderChild?: (node: JSONContent, index: number) => string; renderChildren: (nodes: JSONContent[]) => string; indent: (text: string) => string };
+const hasFormula = (node: JSONContent): boolean => (node.content || []).some(child => child.type === "mathBlock" || hasFormula(child));
+
+export const MathListItem = ListItem.extend({
+  renderMarkdown(node, h, ctx) {
+    if (ctx?.parentType !== "bulletList" || !hasFormula(node)) return this.parent!(node, h, ctx);
+    const helpers = h as unknown as Helpers, children = node.content || [];
+    let output = "- " + helpers.renderChildren([children[0]]);
+    children.slice(1).forEach((child, i) => {
+      const previous = children[i];
+      const text = helpers.renderChild?.(child, i + 1) ?? helpers.renderChildren([child]);
+      // Blank lines stay blank, as they were written, rather than indented.
+      const lines = text.split("\n").map(line => line ? helpers.indent(line) : "").join("\n");
+      const gap = child.type === "mathBlock" ? (attachedBelow(previous, child) ? "\n" : "\n\n")
+        : previous.type === "mathBlock" ? (tightAfter(previous) ? "\n" : "\n\n")
+        : child.type === "paragraph" ? "\n\n" : "\n";
+      output += gap + lines;
+    });
+    return output;
+  },
+});
+
+export const MathBlockquote = Blockquote.extend({
+  renderMarkdown(node, h, ctx) {
+    if (!hasFormula(node)) return this.parent!(node, h, ctx);
+    const helpers = h as unknown as Helpers, children = node.content || [];
+    return children.map((child, index) => {
+      const previous = children[index - 1];
+      const text = helpers.renderChild?.(child, index) ?? helpers.renderChildren([child]);
+      const lines = text.split("\n").map(line => line.trim() === "" ? ">" : `> ${line}`).join("\n");
+      if (!previous) return lines;
+      return (attachedBelow(previous, child) || tightAfter(previous) ? "\n" : "\n>\n") + lines;
+    }).join("");
+  },
+});
+
+// The Markdown writer closes bold, italic, links and highlights around any
+// inline node and reopens them after it, which would rewrite **a $x$ b**.
+// Formulas and escaped dollars inside formatting go through the text path
+// as placeholders instead, and their own Markdown replaces them afterwards.
+const textLike = new Set(["inlineMath", "escapedDollar"]);
+type Renderer = (this: MarkdownManager, nodes: JSONContent[], parent?: JSONContent, separator?: string, level?: number) => string;
+const manager = MarkdownManager.prototype as unknown as { renderNodesWithMarkBoundaries: Renderer; renderNodeToMarkdown(node: JSONContent, parent?: JSONContent, index?: number, level?: number): string };
+const renderWithMarks = manager.renderNodesWithMarkBoundaries;
+// The reader likewise gives marks only to text, so **$x$** would lose its bold.
+const parser = MarkdownManager.prototype as unknown as { applyMarkToContent(type: string, content: JSONContent[], attrs?: Record<string, unknown>): JSONContent[] };
+const applyMark = parser.applyMarkToContent;
+parser.applyMarkToContent = function (type, content, attrs) {
+  return applyMark.call(this, type, content, attrs).map((node, i) => !textLike.has(node.type || "") ? node
+    : { ...node, content: undefined, marks: [...(content[i].marks || []), attrs ? { type, attrs } : { type }] });
+};
+manager.renderNodesWithMarkBoundaries = function (nodes, parent, separator, level) {
+  const kept: string[] = [];
+  const mapped = nodes.map(node => {
+    if (!textLike.has(node.type || "") || !node.marks?.length) return node;
+    kept.push(manager.renderNodeToMarkdown.call(this, node, parent, 0, level));
+    return { type: "text", text: `\ue000${kept.length - 1}\ue001`, marks: node.marks };
+  });
+  const result = renderWithMarks.call(this, mapped, parent, separator, level);
+  return kept.length ? result.replace(/\ue000(\d+)\ue001/g, (_, i: string) => kept[Number(i)]) : result;
+};
