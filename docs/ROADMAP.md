@@ -73,6 +73,7 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 ### 1.4.0 — Footnotes in Write
 - Write edits footnotes and keeps their Markdown exact, so footnoted notes no
   longer fall back to Markdown view.
+- Align the breadcrumb folder icon with the folder name in every browser.
 
 ### 1.5.0 — Smooth everything, then release
 - Rename a note in place: clicking the title turns it into a text field
