@@ -346,7 +346,7 @@ test("both palettes draw text, accents, pills and focus rings at AA contrast", a
       return {
         text: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("text"), b))),
         muted: Math.min(...plain.map((b) => ratio(rgb("muted"), b))),
-        accentText: Math.min(...plain.map((b) => ratio(rgb("accent-text"), b))),
+        accentText: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("accent-text"), b))),
         taskMarks: Math.min(...plain.flatMap(b => ["task-question", "task-important", "task-deferred", "task-progress"].map(role => ratio(rgb(role), b)))),
         onPill: ratio(rgb("onPill"), rgb("accent")),
         focus: Math.min(...[...plain, ...tinted].map((b) => ratio(rgb("focus"), b))),
@@ -3135,21 +3135,67 @@ test("Format panel tools are disabled while a recovered draft holds the note", a
   for (const button of await tools.all()) await expect(button).toBeEnabled();
 });
 
-test("Tab visits the rail, notes, title row, Format panel and then the note", async ({ page }) => {
+test("Tab visits the rail, notes, title row, Format panel, the note and then the status bar", async ({ page }) => {
   await openSeed(page, "Tab order.");
   await expect(page.locator("#format-panel")).toBeVisible();
   await page.locator("#brand").focus();
   const regions = [];
-  for (let i = 0; i < 80 && regions.at(-1) !== "note"; i++) {
+  for (let i = 0; i < 80 && regions.at(-1) !== "status"; i++) {
     await page.keyboard.press("Tab");
     const region = await page.evaluate(() => {
       const el = document.activeElement;
       return el?.closest(".activity-rail") ? "rail" : el?.closest("#sidebar") ? "notes" : el?.closest(".topbar") ? "title"
-        : el?.closest("#format-panel") ? "format" : el?.closest(".workspace") ? "note" : "other";
+        : el?.closest("#format-panel") ? "format" : el?.closest(".statusbar") ? "status" : el?.closest(".workspace") ? "note" : "other";
     });
     if (regions.at(-1) !== region) regions.push(region);
   }
-  expect(regions).toEqual(["rail", "notes", "title", "format", "note"]);
+  expect(regions).toEqual(["rail", "notes", "title", "format", "note", "status"]);
+});
+
+test("Format panel and title row text reaches 4.5:1 as drawn in Light and Dark", async ({ page }) => {
+  await openSeed(page, "Drawn contrast.");
+  await expect(page.locator("#format-panel")).toBeVisible();
+  const group = await openAppearance(page);
+  for (const [id, name] of [["light", "Light"], ["dark", "Dark"]]) {
+    await group.getByRole("radio", { name }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", id);
+    // Measure the settled colours, not a theme fade in progress.
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+    const failures = await page.evaluate(() => {
+      // A canvas resolves any CSS colour syntax to sRGB bytes.
+      const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
+      const rgba = (color) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 1, 1);
+        const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+        return [r, g, b, a / 255];
+      };
+      const over = (top, base) => top.slice(0, 3).map((v, i) => v * top[3] + base[i] * (1 - top[3]));
+      // Composite backgrounds from the page down to the element.
+      const backdrop = (el) => {
+        const layers = [];
+        for (let node = el; node; node = node.parentElement) layers.push(rgba(getComputedStyle(node).backgroundColor));
+        return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]);
+      };
+      const lum = (c) => c.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ratio = (a, b) => {
+        const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+        return (x + 0.05) / (y + 0.05);
+      };
+      const out = [];
+      for (const el of document.querySelectorAll(".topbar *, #format-panel *")) {
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        if (!own || !el.checkVisibility()) continue;
+        const bg = backdrop(el), value = ratio(over(rgba(getComputedStyle(el).color), bg), bg);
+        if (value < 4.5) out.push(`${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}.${el.className} "${el.textContent.trim().slice(0, 20)}" ${value.toFixed(2)}`);
+      }
+      return out;
+    });
+    expect(failures, id).toEqual([]);
+  }
+  await page.keyboard.press("Escape");
 });
 
 test("the Format panel is one toolbar with named groups and arrow-key movement", async ({ page }) => {

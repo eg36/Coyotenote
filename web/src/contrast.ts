@@ -58,8 +58,9 @@ function readableRoles(colors: Record<string, string>) {
   const plain = [surface, chrome, mix(text, surface, 0.08), mix(text, chrome, 0.08)];
   const muted = readable(rgb(colors.muted || "#000000"), text, plain);
   // Links, list markers and key hints use the accent as text, also on the
-  // light accent tints of tags and the chosen quick-open row.
-  const accentText = readable(accent, extreme, [surface, chrome, mix(accent, surface, 0.16)]);
+  // light accent tints of tags and the chosen quick-open row, and pressed
+  // buttons draw their label with it on the selected tint.
+  const accentText = readable(accent, extreme, [surface, chrome, mix(accent, surface, 0.16), ...tinted]);
   // Focus rings need 3:1 (WCAG non-text contrast), also on selected rows.
   const focus = readable(accent, extreme, [surface, chrome, ...tinted], 3);
   const pill = rgb(colors.onPill || "#000000");
