@@ -30,7 +30,9 @@ const writing = () => note() && state.mode === "write";
 const rich = (name: string) => () => state.rich?.command(name);
 
 // Each item is [label, shortcut, action, when it is available, icon]; "-"
-// separates. Items with an icon show it before the label.
+// separates. Items with an icon show it before the label. The icon
+// "radio:on" or "radio:off" makes a choice of one, "check:on" or
+// "check:off" a choice of several; both show a check when chosen.
 type MenuEntry = "-" | [label: string, shortcut: string, run: () => unknown, when?: () => boolean, iconName?: string];
 const menus: Record<string, MenuEntry[]> = {
   file: [
@@ -130,6 +132,12 @@ function openMenu(name: string, focusItem = 0) {
       item.classList.toggle("current", iconName.slice(4) === calloutKind());
       item.setAttribute("role", "menuitemradio");
       item.setAttribute("aria-checked", String(iconName.slice(4) === calloutKind()));
+    } else if (/^(radio|check):/.test(iconName || "")) {
+      const [kind, on] = (iconName || "").split(":");
+      item.setAttribute("role", kind === "radio" ? "menuitemradio" : "menuitemcheckbox");
+      item.setAttribute("aria-checked", String(on === "on"));
+      item.classList.toggle("current", on === "on");
+      item.insertAdjacentHTML("beforeend", on === "on" ? icon("check") : '<span class="menu-check-space"></span>');
     } else if (iconName) item.insertAdjacentHTML("beforeend", icon(iconName));
     item.classList.toggle("danger", iconName === "trash");
     if (!item.hasAttribute("role")) item.setAttribute("role", "menuitem");
@@ -204,4 +212,18 @@ function setupMenus() {
   addEventListener("resize", () => closeMenu());
 }
 
-export { setupMenus };
+// showMenu opens a menu a caller builds, such as a property's choices,
+// under the button that carries data-menu="name". It focuses the chosen item.
+function showMenu(name: string, entries: MenuEntry[]) {
+  menus[name] = entries;
+  const chosen = entries.filter((entry) => entry !== "-" && (!entry[3] || entry[3]()))
+    .findIndex((entry) => entry !== "-" && /:on$/.test(entry[4] || ""));
+  openMenu(name, Math.max(0, chosen));
+}
+function toggleMenu(name: string, entries: () => MenuEntry[]) {
+  if (openName === name) closeMenu();
+  else showMenu(name, entries());
+}
+
+export type { MenuEntry };
+export { setupMenus, showMenu, toggleMenu };

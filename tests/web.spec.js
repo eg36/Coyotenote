@@ -3427,7 +3427,7 @@ test("the Issues sidebar and filter bar narrow the list grouped by status", asyn
   await expect(page.locator("#issues-empty")).toContainText("No issues match");
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(rows).toHaveCount(3);
-  // The arrows move through the rows, and Enter opens the issue's file in Notes.
+  // The arrows move through the rows; Enter opens the issue and "Open in Notes" its file.
   await rows.first().focus();
   await page.keyboard.press("ArrowDown");
   await expect(rows.nth(1)).toBeFocused();
@@ -3435,11 +3435,96 @@ test("the Issues sidebar and filter bar narrow the list grouped by status", asyn
   await page.keyboard.press("End");
   await expect(rows.last()).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(page.getByRole("complementary", { name: "Issue T-4" })).toBeVisible();
+  await page.getByRole("button", { name: "Open in Notes" }).click();
   await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
   await expect(page.locator("#document-title")).toHaveText("T-4");
   // Switching back keeps the Issues filters and the chosen row.
   await openIssues(page);
   await expect(page.locator('.issue-row[aria-selected="true"]')).toHaveAttribute("data-issue", "issues/T-4");
+});
+
+test("the issue panel edits one property at a time, ticks tasks and lists linked notes", async ({ page }) => {
+  const original = `---\ntitle: "Panel work"\nstatus: todo   # keep this comment\npriority: low\nlabels: [Feature]\nproject: Space\ncreated: 2026-10-20\n---\n\nSee [[Plain]] first.\n\n## Done when\n\n- [ ] First step\n- [x] Second step\n\n## Notes\n\n- [ ] not a done-when task\n`;
+  await seed(page, "issues/P-1", original);
+  await seed(page, "Plain", "Plain note.");
+  await seed(page, "Mentions", "Tracking [[issues/P-1]].");
+  await seed(page, "issues/Issues", "---\nprefix: P\nprojects: [Space, Later]\nlabels: [Feature, UX]\n---\n");
+  await openSeed(page, "Start.");
+  await openIssues(page);
+  const row = page.locator('.issue-row[data-issue="issues/P-1"]');
+  await row.click();
+  const panel = page.getByRole("complementary", { name: "Issue P-1" });
+  await expect(panel).toBeVisible();
+  await expect(panel.locator(".issue-panel-title")).toHaveText("Panel work");
+  await expect(panel.locator(".issue-description")).toContainText("See Plain first.");
+  await expect(panel.locator(".issue-description")).not.toContainText("First step");
+  await expect(panel.locator(".issue-panel-footer")).toContainText("Stored as issues/P-1.md");
+  // Status by keyboard: the menu opens on the current choice.
+  const status = panel.locator('[data-menu="issue-status"]');
+  await expect(status).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitemradio", { name: "Todo" })).toBeFocused();
+  await expect(page.getByRole("menuitemradio", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Enter");
+  await expect(status).toContainText("In progress");
+  await expect.poll(() => noteBody(page, "issues/P-1")).toBe(original.replace("status: todo ", "status: in-progress "));
+  // Priority and project by mouse; only their values change.
+  await panel.locator('[data-menu="issue-priority"]').click();
+  await page.getByRole("menuitemradio", { name: "Urgent" }).click();
+  await panel.locator('[data-menu="issue-project"]').click();
+  await page.getByRole("menuitemradio", { name: "Later" }).click();
+  await expect(panel.locator('[data-menu="issue-project"]')).toContainText("Later");
+  // Labels are a choice of several, and a new one can be added.
+  await panel.locator('[data-menu="issue-labels"]').click();
+  await expect(page.getByRole("menuitemcheckbox", { name: "Feature" })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("menuitemcheckbox", { name: "UX" }).click();
+  await panel.locator('[data-menu="issue-labels"]').click();
+  await page.getByRole("menuitem", { name: "New label…" }).click();
+  await page.getByLabel("Label", { exact: true }).fill("Design");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(panel.locator('[data-menu="issue-labels"]')).toContainText("Design");
+  // A done-when box saves the file; tasks elsewhere stay out of the list.
+  await expect(panel.locator(".issue-tasks").getByRole("checkbox")).toHaveCount(2);
+  await panel.getByRole("checkbox", { name: "First step" }).check();
+  await expect.poll(() => noteBody(page, "issues/P-1")).toBe(original
+    .replace("status: todo ", "status: in-progress ").replace("priority: low", "priority: urgent")
+    .replace("project: Space", "project: Later").replace("labels: [Feature]", "labels: [Feature, UX, Design]")
+    .replace("- [ ] First step", "- [x] First step"));
+  // The list follows the edits.
+  await expect(row.locator('[role="img"]').first()).toHaveAttribute("aria-label", "Priority: urgent");
+  // Linked notes list both directions and open in Notes.
+  await expect(panel.locator(".issue-link")).toHaveText([/Plain\s*Links to/, /Mentions\s*Linked from/]);
+  await panel.locator(".issue-link", { hasText: "Mentions" }).click();
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
+  await expect(page.locator("#document-title")).toHaveText("Mentions");
+  // Back in Issues, Escape closes the panel and returns to the row.
+  await openIssues(page);
+  await row.click();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(row).toBeFocused();
+  await row.press("Enter");
+  await panel.getByRole("button", { name: "Close issue" }).click();
+  await expect(row).toBeFocused();
+});
+
+test("a link to an issue opens it in the Issues panel", async ({ page }) => {
+  await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
+  await openSeed(page, "Start.");
+  await page.keyboard.press("Alt+p");
+  await page.keyboard.press("2");
+  await expect(page.locator(".issue-row")).toHaveCount(1);
+  await page.keyboard.press("Alt+p");
+  await page.keyboard.press("1");
+  // The palette's switch command and a direct open land on the panel.
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.type(">switch to issues");
+  await page.keyboard.press("Enter");
+  await page.locator('.issue-row[data-issue="issues/L-1"]').press("Enter");
+  await expect(page.getByRole("complementary", { name: "Issue L-1" })).toBeVisible();
 });
 
 test("Issues reads at AA in Light and Dark", async ({ page }) => {

@@ -5,6 +5,7 @@ import { $, showError, showToast } from "./core.js";
 import { icon } from "./icons.js";
 import { openModal } from "./dialogs.js";
 import { registerPlugin, type PluginCommand, type SpaceContext } from "./plugins.js";
+import { refreshPanel, setupPanel, showIssuePanel } from "./issues-panel.js";
 import {
   createIssue,
   createSettings,
@@ -252,9 +253,10 @@ function setFocus(file: string, move = false) {
     if (current && move) item.focus();
   }
 }
-// Until the issue panel exists, an issue opens as its note.
+// An issue opens in the panel beside the list, which takes focus.
 function openIssue(issue: Issue) {
-  context?.open("notes", issue.file);
+  showIssuePanel(issue);
+  $("issue-panel").querySelector<HTMLElement>(".issue-property-value")?.focus();
 }
 
 async function reload() {
@@ -262,6 +264,7 @@ async function reload() {
   issues = data.issues;
   settings = data.settings;
   render();
+  refreshPanel(issues);
 }
 
 function field(labelText: string, control: HTMLElement) {
@@ -397,7 +400,23 @@ function setup() {
         <p id="issues-empty-text"></p>
         <button type="button" id="issues-empty-clear">Clear filters</button>
       </div>
-    </section>`;
+    </section>
+    <aside class="issue-panel" id="issue-panel" hidden></aside>`;
+  setupPanel({
+    issues: () => issues,
+    projects,
+    labels,
+    changed(issue) {
+      issues = issues.map((item) => (item.file === issue.file ? issue : item));
+      render();
+    },
+    close: () => setFocus(focused, true),
+    openNote: (id) => context?.open("notes", id),
+    statusIcon,
+    priorityBars,
+    labelChip,
+    colourOf,
+  });
   $("issues-new").onclick = () => newIssue();
   $("issues-search-button").onclick = () => $("issues-search").focus();
   searchBox().oninput = () => {
@@ -488,6 +507,18 @@ function registerIssuesPlugin() {
     },
     unmount() {
       root().hidden = true;
+    },
+    // A link to an issue file opens it in the panel.
+    openLink(target) {
+      const issue = issues.find((item) => item.file === target);
+      if (issue) {
+        setFocus(issue.file);
+        openIssue(issue);
+      } else reload().then(() => {
+        const found = issues.find((item) => item.file === target);
+        if (found) { setFocus(found.file); openIssue(found); }
+      }).catch(showError);
+      return true;
     },
     focus() {
       const target = $("issues-list").querySelector<HTMLElement>('.issue-row[tabindex="0"]') || $("issues-new");

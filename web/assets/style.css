@@ -3059,3 +3059,44 @@ dialog.danger #modal-submit {
   .issues-main { border: 0; border-radius: 0; }
   .issue-labels, .issue-date { display: none; }
 }
+/* The issue panel opens beside the list. */
+.issues-app.issue-open { grid-template-columns: 236px minmax(0, 1fr) 400px; }
+.issues-app.issue-open.issues-sidebar-hidden { grid-template-columns: minmax(0, 1fr) 400px; }
+@media (max-width: 1100px) { .issues-app.issue-open { grid-template-columns: minmax(0, 1fr) 360px; } .issues-app.issue-open .issues-sidebar { display: none; } }
+.issue-panel { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--island-radius, 8px); overflow: hidden; }
+.issue-panel[hidden] { display: none; }
+.issue-panel-header { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 8px 0 16px; border-bottom: 1px solid var(--line); flex: none; }
+.issue-panel-header .issue-key { width: auto; }
+.issue-panel-action { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--control-fill); color: var(--text); font-size: 13px; }
+.issue-panel-action svg, .issue-link svg { width: 15px; height: 15px; }
+.issue-panel-header .icon-button { width: 32px; height: 32px; color: var(--muted); }
+.issue-panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px 20px; }
+.issue-panel-title { margin: 0 0 16px; font-size: 19px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.issue-properties { display: flex; flex-direction: column; gap: 4px; margin: 0 0 20px; }
+.issue-property { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; min-height: 32px; }
+.issue-property dt { font-size: 13px; color: var(--muted); }
+.issue-property dd { margin: 0; min-width: 0; }
+.issue-property-value { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 30px; max-width: 100%; padding: 2px 8px; border: 0; border-radius: 6px; background: none; color: var(--text); font-size: 13px; text-align: left; }
+.issue-property-value:hover, .issue-property-value[aria-expanded="true"] { background: var(--hover); }
+.issue-created { padding: 0 8px; font-size: 13px; }
+.issue-none { color: var(--muted); }
+.issue-section-heading, .issue-section h3 { margin: 20px 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.issue-description { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.issue-description > :first-child { margin-top: 0; }
+.issue-tasks, .issue-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.issue-task { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.5; }
+.issue-task input { margin-top: 4px; accent-color: var(--accent); }
+.issue-link { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--accent-text); font-size: 13px; text-align: left; }
+.issue-link:hover { background: var(--hover); }
+.issue-link-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue-link-relation { color: var(--muted); font-size: 12px; }
+.issue-panel-footer { display: flex; justify-content: space-between; gap: 8px; height: 36px; align-items: center; padding: 0 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); flex: none; }
+.issue-panel-footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-check-space { display: inline-block; width: 19px; flex: none; }
+@media (max-width: 799px) {
+  .issues-app.issue-open { grid-template-columns: minmax(0, 1fr); }
+  .issue-panel { position: fixed; inset: 0 0 0 var(--rail-width); z-index: 30; border-radius: 0; }
+}
+#menu-popup[data-open-menu^="issue-"] .menu-item { justify-content: flex-start; gap: 8px; min-height: 32px; }
+#menu-popup[data-open-menu^="issue-"] .menu-item svg { width: 16px; height: 16px; flex: none; }
+#menu-popup[data-open-menu^="issue-"] .menu-check-space { width: 16px; }

@@ -629,6 +629,7 @@ $("modal").onclick = (event) => {
 };
 
 export {
+  inputDialog,
   applyTheme,
   backlinksDialog,
   busyModal,
