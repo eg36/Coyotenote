@@ -62,7 +62,7 @@ import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
 import { activePlugin, isActive, openWith, ownerOf, startPlugins } from "./plugins.js";
 import { setupSwitcher } from "./switcher.js";
-import { registerNotesPlugin } from "./notes-plugin.js";
+import { openProperties, registerNotesPlugin } from "./notes-plugin.js";
 import { insertCallout, setupFormatting } from "./formatting.js";
 import { historyDialog } from "./history.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
@@ -215,10 +215,14 @@ $("properties-text").oninput = () => editProperties($("properties-text").value);
 for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
   button.onmousedown = (e) => e.preventDefault();
   button.onclick = () => {
+    if (!state.current || state.pendingDraft || state.busy) return;
     const name = button.dataset.format;
     if (name === "wiki") linkDialog(true);
     else if (name === "link") linkDialog();
     else if (name === "image") chooseImages();
+    else if (name === "attachment") chooseImages(true);
+    else if (name === "save") save().catch(showError);
+    else if (name === "properties") openProperties();
     else if (name === "callout") insertCallout();
     else if (name === "find") findInNote().catch(showError);
     else if (name === "history") historyDialog().catch(showError);

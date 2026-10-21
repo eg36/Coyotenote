@@ -2401,7 +2401,7 @@ test("front matter shows as properties in Write and keeps its exact form", async
     await expect(page.locator("#rich-pane")).toBeVisible();
     if (await page.getByRole("button", { name: "Edit YAML", exact: true }).isVisible())
       await page.getByRole("button", { name: "Edit YAML", exact: true }).click();
-    const box = page.getByLabel("Properties", { exact: true });
+    const box = page.getByRole("textbox", { name: "Properties", exact: true });
     await expect(box).toHaveValue(front.replace(/^\uFEFF/, "").split("\n").slice(1, -3).join("\n"));
     await page.locator(".tiptap p").click();
     await page.keyboard.press("End");
@@ -2414,7 +2414,7 @@ test("front matter shows as properties in Write and keeps its exact form", async
   await expect(page.locator("#outline-list button")).toHaveText(["Real heading"]);
   await page.keyboard.press("Alt+o");
   await page.getByRole("button", { name: "Edit YAML", exact: true }).click();
-  await page.getByLabel("Properties").fill("title: New\ntags: [travel, plans]");
+  await page.getByRole("textbox", { name: "Properties", exact: true }).fill("title: New\ntags: [travel, plans]");
   await expect.poll(() => diskBody(page, id)).toBe("---\ntitle: New\ntags: [travel, plans]\n---\n\n# Real heading\n\nText.");
   const bodyParagraph = page.locator(".tiptap p");
   await bodyParagraph.click();
@@ -2425,7 +2425,7 @@ test("front matter shows as properties in Write and keeps its exact form", async
 
   // A note without front matter can start some.
   const plain = await openSeed(page, "Plain text.");
-  await expect(page.getByLabel("Properties")).toBeHidden();
+  await expect(page.getByRole("textbox", { name: "Properties", exact: true })).toBeHidden();
   await page.keyboard.press("Control+k");
   await page.keyboard.type(">add properties");
   await page.keyboard.press("Enter");
@@ -4584,7 +4584,7 @@ test("typed properties edit one YAML value while preserving every untouched byte
   for (const yaml of ["nested:\n  key: value", "items:\n  - one\n  - two", "key: &anchor value", "key: yes", "key: value\nkey: another", "text: |\n  words"]) {
     const rawId = await openSeed(page, "---\n" + yaml + "\n---\n\nBody.");
     await mode(page, "Write");
-    await expect(page.getByLabel("Properties", { exact: true })).toHaveValue(yaml);
+    await expect(page.getByRole("textbox", { name: "Properties", exact: true })).toHaveValue(yaml);
     await page.locator(".tiptap p").click(); await page.keyboard.press("End"); await page.keyboard.type(" More.");
     await expect.poll(() => diskBody(page, rawId)).toBe("---\n" + yaml + "\n---\n\nBody. More.");
   }

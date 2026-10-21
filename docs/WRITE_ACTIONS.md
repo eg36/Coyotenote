@@ -36,7 +36,7 @@ Markdown view before returning to Write.
 | Ordinary link; remove a link | Link dialog button | Insert → Link; link dialog; Markdown syntax | Keep selection-aware editing/removal discoverable |
 | Wiki link, alias, heading or block target | Note-link dialog button | Insert → Link to a note; `[[…]]` input | Existing insertion; expose supported target/alias editing clearly |
 | Image attachment | Image button | Insert → Image; Insert image command; paste/drop | Existing insertion; decide controls for description and supported size syntax |
-| PDF/audio/video attachment | No dedicated Format button | Insert → PDF, audio or video; attachment command; paste/drop | Dedicated panel access is not exposed |
+| PDF/audio/video attachment | PDF, audio or video button under Insert | Insert → PDF, audio or video; attachment command; paste/drop | None for picker access |
 | Note/file/web embed target and label | In-document Edit embed fields | Create `![[…]]` in Markdown; media attachment inserts a file embed | Dedicated creation control for arbitrary embeds is not exposed |
 | Allowlisted HTML | No | Create in Markdown; rendered read-only in Write | Editing HTML source uses Markdown |
 | Table | Insert table button (3×3, header row) | Insert → Table; Markdown table input/source | Existing insertion; inventory table editing separately below |
@@ -48,10 +48,10 @@ Markdown view before returning to Write.
 | Mermaid diagram | Mermaid button inserts a diagram with source selected for replacement | Mermaid fence in Markdown; diagrams have a source editor | None for insertion/edit access |
 | Callout | Split button inserts the remembered type; arrow menu chooses a supported type | Type `[!type] ` in a quote; existing header edits type/title/folding | None for creation/header editing |
 | Markdown comment | No | Type `%%…%%`; Write shows it literally, Preview hides it | Add a comment action without implying a hidden rich comment editor exists |
-| Properties/front matter | No | Add properties command; property fields/raw YAML above the document; Markdown for complex syntax | Add a discoverable entry point; keep typed/raw fallbacks |
+| Properties/front matter | Properties button under Note opens existing fields/raw source, initializing only when absent | Add properties command; property fields/raw YAML above the document; Markdown for complex syntax | None for entry-point access; typed/raw fallbacks remain |
 | Cut/copy/paste; select all | No | Native browser/editor keyboard and clipboard interaction; image paste handler | Account for clipboard permissions and selection in proposed controls |
 | Undo/redo edits | Buttons under History | Edit menu; Mod+Z / Mod+Shift+Z | Existing access; distinguish it from stored note versions |
-| Save now | No | Edit → Save now; command; Mod+S; autosave | Add access if the editing group includes explicit save |
+| Save now | Save now button under Note | Edit → Save now; command; Mod+S; autosave | None for access |
 | Find/replace in this note | Find and replace button under Note | Edit menu; command; source-editor Mod+F | None for access; search restores the prior view |
 | Stored note history and restore | Note history button under Note | Title menu → Version history; File → Note history; command | None for access; remains distinct from undo/redo |
 

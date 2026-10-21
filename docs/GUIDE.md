@@ -149,6 +149,11 @@ formula selected, new content goes after it rather than replacing it. The
 tools are disabled while a recovered draft holds the note. Tab enters the panel
 at its last-used control; arrows, Home and End move between its tools. It is available in
 Write, and closes in source or preview modes.
+**PDF, audio or video** opens the attachment picker and inserts the selected
+files at the caret. Under **Note**, **Save now** saves pending edits, and
+**Properties** focuses the existing fields or raw editor. If the note has no
+front matter, Properties starts it with an empty `tags` field.
+
 The Format button or Escape hides it; this browser remembers the choice separately
 for desktop and smaller screens. On smaller screens it opens over the content;
 click outside to close. Focus mode temporarily hides it too.

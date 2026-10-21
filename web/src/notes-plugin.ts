@@ -13,13 +13,23 @@ import { dailyNote } from "./daily.js";
 import { showRecent, togglePin } from "./navigation.js";
 import { registerPlugin, type PluginCommand } from "./plugins.js";
 
-// addProperties starts front matter with a tags field, ready to fill in.
-function addProperties() {
-  editProperties("tags: ");
-  if (state.mode === "write") {
-    const box = document.querySelector<HTMLInputElement>(".properties-rows input") || $("properties-text");
-    box.focus();
-    box.setSelectionRange(box.value.length, box.value.length);
+// openProperties initializes missing front matter, then opens the existing
+// fields or raw editor. Revisiting properties never rewrites their source.
+function openProperties() {
+  if (!state.current || state.pendingDraft || state.busy) return;
+  if (!splitFrontMatter(state.body)) editProperties("tags: ");
+  if (state.mode !== "write") return;
+  const field = [...$("properties").querySelectorAll<HTMLInputElement>(".properties-rows input")]
+    .find(input => !input.disabled && input.getClientRects().length > 0);
+  if (field) {
+    field.focus();
+    if (["text", "search", "tel", "url", "password"].includes(field.type))
+      field.setSelectionRange(field.value.length, field.value.length);
+  } else {
+    const raw = $("properties-text");
+    if (raw.hidden) $("properties").querySelector<HTMLButtonElement>(".properties-toggle")?.click();
+    raw.focus();
+    raw.setSelectionRange(raw.value.length, raw.value.length);
   }
 }
 
@@ -38,7 +48,7 @@ const definitions: Definition[] = [
   ["Show notes linking here", "", backlinksDialog, true],
   ["Insert image", "", () => chooseImages(), true],
   ["Attach a PDF, audio or video file", "", () => chooseImages(true), true],
-  ["Add properties (front matter)", "", addProperties, true, () => !splitFrontMatter(state.body)],
+  ["Add properties (front matter)", "", openProperties, true, () => !splitFrontMatter(state.body)],
   ["Show note history", "", () => historyDialog().catch(showError), true],
   ["Download note as Markdown", "", () => exportNote(), true],
   ["Write view", "", () => setMode("write").catch(showError), true],
@@ -88,4 +98,4 @@ function registerNotesPlugin() {
   });
 }
 
-export { registerNotesPlugin };
+export { openProperties, registerNotesPlugin };
