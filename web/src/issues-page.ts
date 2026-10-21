@@ -93,7 +93,9 @@ function chip(name: string, label: string, content: Node[], entries: () => MenuE
   button.setAttribute("aria-haspopup", "menu");
   button.setAttribute("aria-expanded", "false");
   button.setAttribute("aria-label", label);
-  button.append(...content, el("span", "issue-chip-caret", "▾"));
+  const caret = el("span", "issue-chip-caret");
+  caret.innerHTML = icon("chevronDown");
+  button.append(...content, caret);
   const open = () => {
     menuChip = name;
     showMenu(name, entries());
@@ -274,8 +276,17 @@ function show(issue: Issue, keepFocus = false) {
     event.stopPropagation();
     host.openNote(id);
   });
-  article.append(bar, title(issue), chips(issue), text);
-  if (tasks.length) article.append(tasksSection(issue, tasks));
+  // The hero is lit in the project's colour and carries the issue's own
+  // steps ring; the text sits on a raised sheet below it.
+  const hero = el("header", "issue-hero state-" + issue.status);
+  hero.style.setProperty("--project", issue.project ? host.colourOf(issue.project) : "var(--accent)");
+  const heading = el("div", "issue-hero-text");
+  heading.append(title(issue), chips(issue));
+  hero.append(heading, ring(tasks.filter((task) => task.done).length, tasks.length));
+  const sheet = el("div", "issue-sheet");
+  sheet.append(text);
+  if (tasks.length) sheet.append(tasksSection(issue, tasks));
+  article.append(bar, hero, sheet);
   const footer = el("footer", "issue-page-footer");
   footer.append(el("span", "", `Stored as ${issue.file}.md`), el("span", "", "Edited " + longDate(issue.modified, true)));
   page().replaceChildren(article);
@@ -285,7 +296,20 @@ function show(issue: Issue, keepFocus = false) {
     api<{ html: string }>("/api/render", "POST", { id: issue.file, body: description })
       .then(({ html }) => { if (current === generation) text.innerHTML = html; })
       .catch(() => { text.textContent = description; });
-  linksSection(issue, current).then((section) => { if (current === generation) article.append(section); }).catch(() => {});
+  linksSection(issue, current).then((section) => { if (current === generation) sheet.append(section); }).catch(() => {});
+}
+// ring draws the issue's "Done when" steps as a cut hexagon, lit as far as
+// they are done.
+function ring(done: number, total: number) {
+  const box = el("div", "issues-ring issue-hero-ring");
+  box.setAttribute("role", "img");
+  box.setAttribute("aria-label", total ? `${done} of ${total} steps done` : "No steps yet");
+  const share = total ? done / total : 0;
+  box.innerHTML = `<svg viewBox="0 0 112 112" aria-hidden="true"><polygon class="issues-ring-base" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100"/><polygon class="issues-ring-lit" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100" stroke-dasharray="${(share * 100).toFixed(1)} 100"/></svg>`;
+  const label = el("span", "issues-ring-label");
+  label.append(el("strong", "", total ? `${done}/${total}` : "—"), el("small", "", total ? "steps done" : "no steps"));
+  box.append(label);
+  return box;
 }
 function closeIssuePage(returnFocus = false) {
   if (!shown) return;

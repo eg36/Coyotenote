@@ -3410,6 +3410,8 @@ test("Issues maps each project as an outline with its Done-when steps", async ({
   await seed(page, "issues/L-5", "---\ntitle: Loose end\nstatus: todo\nproject: Later\n---\n");
   await openSeed(page, "Start.");
   await openIssues(page);
+  // The outline is the other view beside the default board.
+  await page.locator(".issues-board-head").getByRole("button", { name: "Outline" }).click();
   const tree = page.locator("#issues-tree");
   // Open issues sit under their project, Now before Next before Later; Done is folded.
   await expect(tree.locator(".folder-group")).toHaveText([/Board work\s*1/, /Space\s*2/, /Not in a folder\s*1/, /Done\s*1/]);
@@ -3586,7 +3588,7 @@ test("the board moves issues between Now, Next, Later and Done by drag or by key
   await seed(page, "issues/Space/B-3", inFolder("Underway", "in-progress", "none", []));
   await openSeed(page, "Start.");
   await openIssues(page);
-  await page.getByRole("button", { name: "Show as a board" }).click();
+  // The board is the default view.
   await expect(page.getByRole("button", { name: "Show as a board" })).toHaveAttribute("aria-pressed", "true");
   const column = (name) => page.getByRole("list", { name: new RegExp("^" + name) });
   await expect(page.locator(".issues-column-heading")).toHaveText([/Now\s*1/, /Next\s*1/, /Later\s*1/, /Done\s*0/]);
@@ -3716,9 +3718,10 @@ test("Issues reads at AA in Light and Dark", async ({ page }) => {
     await page.locator('#issues-tree [data-issue="issues/C-1"]').click();
     await expect(page.getByRole("article", { name: "Issue C-1" })).toBeVisible();
     expect(await check("#issues-app"), name + " page").toEqual([]);
+    // The overview above was the default board; the outline reads too.
     await page.getByRole("button", { name: "Show as a board" }).click();
-    await page.locator(".issue-card").first().hover();
-    expect(await check("#issues-app"), name + " board").toEqual([]);
+    await expect(page.locator(".issues-doc")).toBeVisible();
+    expect(await check("#issues-app"), name + " outline").toEqual([]);
     await page.getByRole("button", { name: "Show as a board" }).click();
     await page.keyboard.press("Alt+p");
     await page.keyboard.press("1");

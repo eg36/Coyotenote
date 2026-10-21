@@ -45,7 +45,7 @@ const viewKey = () => "labradorite-issues-view:" + state.vaultId;
 let view = allProjects;
 // The page shows as an outline, or as a board of state columns.
 const boardKey = "labradorite-issues-board";
-let board = storage.get(boardKey) === "true";
+let board = storage.get(boardKey) !== "false";
 const root = () => $("issues-app");
 const searchBox = () => $("issues-search") as HTMLInputElement;
 const finished = (issue: Issue) => issue.status === "done" || issue.status === "cancelled";
@@ -221,7 +221,7 @@ function stepRing(done: number, total: number) {
   ring.setAttribute("role", "img");
   ring.setAttribute("aria-label", total ? `${done} of ${total} steps done` : "No steps yet");
   const share = total ? done / total : 0;
-  ring.innerHTML = `<svg viewBox="0 0 112 112" aria-hidden="true"><defs><linearGradient id="issues-ring-light" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--cyan)"/></linearGradient></defs><polygon class="issues-ring-base" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100"/><polygon class="issues-ring-lit" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100" stroke-dasharray="${(share * 100).toFixed(1)} 100"/></svg>`;
+  ring.innerHTML = `<svg viewBox="0 0 112 112" aria-hidden="true"><polygon class="issues-ring-base" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100"/><polygon class="issues-ring-lit" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100" stroke-dasharray="${(share * 100).toFixed(1)} 100"/></svg>`;
   const label = element("span", "issues-ring-label");
   label.append(element("strong", "", total ? `${Math.round(share * 100)}%` : "—"), element("small", "", "steps done"));
   ring.append(label);
@@ -257,12 +257,14 @@ function renderIntro() {
   intro.append(element("h1", "", "Map your projects"), element("p", "", "Each project is a folder of Markdown notes with its own ID prefix. Start a project with its first issue."), button);
   $("issues-page").replaceChildren(intro);
 }
-function renderOutline() {
-  const page = $("issues-page");
-  const doc = element("div", "issues-doc");
-  const shown = issues.filter((issue) => matches(issue) && inView(issue));
+// The header of a project, or of all projects: its steps ring, name and
+// facts, and the page's actions; issues not yet in a folder are offered
+// a move.
+function projectHeader(shown: Issue[]) {
+  const nodes: HTMLElement[] = [];
   const project = view === allProjects ? null : projectOf(view);
   const top = element("header", "issues-doc-top");
+  if (project) top.style.setProperty("--project", colourOf(project.name));
   const all = shown.flatMap(steps);
   top.append(stepRing(all.filter((step) => step.done).length, all.length));
   const titles = element("div", "issues-doc-titles");
@@ -273,7 +275,7 @@ function renderOutline() {
   else facts.push(`${projects().length} ${projects().length === 1 ? "project" : "projects"}`);
   titles.append(element("p", "issues-doc-facts", facts.join(" · ")));
   top.append(titles, pageActions());
-  doc.append(top);
+  nodes.push(top);
   const loose = issues.filter((issue) => issue.flat);
   if (view === allProjects && loose.length) {
     const note = element("div", "issues-banner");
@@ -281,8 +283,15 @@ function renderOutline() {
     move.type = "button";
     move.onclick = () => organise();
     note.append(element("span", "", `${loose.length} ${loose.length === 1 ? "issue is" : "issues are"} not in a project folder yet. Each moves into the folder of its project, keeping its ID.`), move);
-    doc.append(note);
+    nodes.push(note);
   }
+  return nodes;
+}
+function renderOutline() {
+  const page = $("issues-page");
+  const doc = element("div", "issues-doc");
+  const shown = issues.filter((issue) => matches(issue) && inView(issue));
+  doc.append(...projectHeader(shown));
   for (const [status, name] of statuses) {
     const inState = shown.filter((issue) => issue.status === status).sort(byAttention);
     if (!inState.length && status !== "in-progress" && status !== "todo") continue;
@@ -311,8 +320,11 @@ function moveMenu(issue: Issue) {
   showMenu("issue-move-" + issue.key, columns.map((status): MenuEntry =>
     [statusName(status), "", () => setStatus(issue, status), undefined, issue.status === status ? "radio:on" : "radio:off"]));
 }
+// A card is lit in its project's colour, with a cut facet in its corner;
+// Now cards glow and Done cards step back.
 function card(issue: Issue) {
-  const item = element("div", "issue-card");
+  const item = element("div", "issue-card state-" + issue.status);
+  item.style.setProperty("--project", issue.project ? colourOf(issue.project) : "var(--accent)");
   item.dataset.issue = issue.file;
   item.setAttribute("role", "listitem");
   item.draggable = true;
@@ -324,15 +336,28 @@ function card(issue: Issue) {
   item.ondragend = () => item.classList.remove("dragging");
   const open = element("button", "issue-card-open");
   open.type = "button";
-  open.append(element("span", "issue-card-title", issue.title), meta(issue, view === allProjects));
+  const top = element("span", "issue-card-top");
+  top.append(marker(issue.project), element("span", "issue-card-key", view === allProjects && issue.project ? `${issue.project} · ${issue.key}` : issue.key));
+  if (issue.priority !== "none") top.append(element("span", "issue-badge priority-" + issue.priority, priorityName(issue.priority)));
+  open.append(top, element("span", "issue-card-title", issue.title));
   if (steps(issue).length) open.append(facets(issue));
+  const foot = element("span", "issue-card-foot");
+  for (const label of issue.labels) {
+    const pill = element("span", "issue-pill");
+    const dot = element("span", "issue-pill-dot");
+    dot.style.background = colourOf(label);
+    pill.append(dot, label);
+    foot.append(pill);
+  }
   const notes = linkedNotes(issue).length;
   if (notes) {
     const linked = element("span", "issue-card-links");
     linked.innerHTML = icon("noteLink");
-    linked.append(`${notes} linked ${notes === 1 ? "note" : "notes"}`);
-    open.append(linked);
+    linked.append(String(notes));
+    linked.title = `${notes} linked ${notes === 1 ? "note" : "notes"}`;
+    foot.append(linked);
   }
+  if (foot.children.length) open.append(foot);
   open.onclick = () => openIssue(issue);
   open.onkeydown = (event) => {
     if (event.key.toLowerCase() !== "m" || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -354,8 +379,8 @@ function card(issue: Issue) {
 function renderBoard() {
   const shown = issues.filter((issue) => matches(issue) && inView(issue));
   const page = element("div", "issues-board-page");
-  const top = element("header", "issues-board-top");
-  top.append(element("h1", "", view === allProjects ? "All projects" : view), pageActions());
+  const head = element("div", "issues-board-head");
+  head.append(...projectHeader(shown));
   const wrap = element("div", "issues-board");
   for (const status of columns) {
     const inColumn = shown.filter((issue) => issue.status === status).sort(byAttention);
@@ -401,7 +426,7 @@ function renderBoard() {
     event.preventDefault();
     target?.querySelector<HTMLElement>(".issue-card-open")?.focus();
   });
-  page.append(top, wrap);
+  page.append(head, wrap);
   $("issues-page").replaceChildren(page);
 }
 function setBoard(on: boolean) {
