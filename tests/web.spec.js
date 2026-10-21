@@ -5374,3 +5374,223 @@ for (const view of ["Preview", "Write"]) {
     await expect(embeds.first().getByRole("button", { name: "Load embed", exact: true })).toBeDisabled();
   });
 }
+
+test("Write edits web embed URLs and labels without replaying network consent", async ({ page }) => {
+  const requests = [];
+  await page.route("https://example.com/**", async route => {
+    requests.push(route.request().url());
+    await route.fulfill({ contentType: "text/html", body: "<p>Test page</p>" });
+  });
+  const text = "Host text.\n\n![[https://example.com/old|Original]]\n\nOther ![[https://example.com/untouched|Keep me]] source.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  const embed = page.locator("#rich-editor .note-embed").first();
+  const edit = embed.getByRole("button", { name: "Edit embed", exact: true });
+  await expect(edit).toBeVisible();
+  await edit.focus();
+  await page.keyboard.press("Enter");
+  const target = embed.getByRole("textbox", { name: "Embed target or URL", exact: true });
+  const label = embed.getByRole("textbox", { name: "Embed label (optional)", exact: true });
+  await expect(target).toBeFocused();
+  await expect(target).toHaveValue("https://example.com/old");
+  await target.fill("https://example.com/new#part");
+  await label.fill("Revised page");
+  await label.press("Enter");
+  const updated = text.replace("https://example.com/old|Original", "https://example.com/new#part|Revised page");
+  await expect.poll(() => diskBody(page, id)).toBe(updated);
+  await expect(embed.locator(".web-embed-source")).toHaveText("Loads from https://example.com/new#part");
+  await expect(embed.getByRole("button", { name: "Load embed", exact: true })).toBeDisabled();
+  expect(requests).toEqual([]);
+  await expect(edit).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect.poll(() => diskBody(page, id)).toBe(text);
+  await expect(embed.locator(".web-embed-source")).toContainText("https://example.com/old");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect.poll(() => diskBody(page, id)).toBe(updated);
+
+  await page.locator("#settings-button").click();
+  const toggle = page.getByRole("switch", { name: "Allow web embeds" });
+  await expect(toggle).toBeEnabled();
+  await toggle.check();
+  await expect(toggle).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await embed.getByRole("button", { name: "Load embed", exact: true }).click();
+  await expect(embed.locator("iframe")).toHaveCount(1);
+  await expect.poll(() => requests.length).toBe(1);
+  await edit.click();
+  await target.fill("https://example.com/final");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed.locator("iframe")).toHaveCount(0);
+  await expect(embed.locator(".web-embed-source")).toContainText("https://example.com/final");
+  await expect(embed.getByRole("button", { name: "Load embed", exact: true })).toBeEnabled();
+  expect(requests).toHaveLength(1);
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(embed.locator(".web-embed-source")).toContainText("https://example.com/new#part");
+  await expect(embed.locator("iframe")).toHaveCount(0);
+  expect(requests).toHaveLength(1);
+  // A Load response arriving after Apply must not load the previous URL.
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route("**/api/web-embed", async route => { await held; await route.continue(); });
+  const loading = page.waitForRequest("**/api/web-embed");
+  await embed.getByRole("button", { name: "Load embed", exact: true }).click();
+  await loading;
+  await edit.click();
+  await target.fill("https://example.com/after-pending-load");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed.locator(".web-embed-source")).toContainText("https://example.com/after-pending-load");
+  const loaded = page.waitForResponse("**/api/web-embed");
+  release();
+  await loaded;
+  await expect(embed.locator("iframe")).toHaveCount(0);
+  expect(requests).toHaveLength(1);
+
+});
+
+test("Write embed editing cancels exactly, validates input and ignores cancelled validation", async ({ page }) => {
+  const text = "Before.\n\n![[ https://example.com/old | Original label ]]\n\nAfter.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  const embed = page.locator("#rich-editor .note-embed");
+  const edit = embed.getByRole("button", { name: "Edit embed", exact: true });
+  const target = embed.getByRole("textbox", { name: "Embed target or URL", exact: true });
+  await edit.click();
+  await target.fill("https://example.com/cancelled");
+  await target.press("Escape");
+  await expect(edit).toBeFocused();
+  await expect(edit).toHaveAttribute("aria-expanded", "false");
+  expect(await diskBody(page, id)).toBe(text);
+  await edit.press("Enter");
+  await target.fill("https://example.com/also-cancelled");
+  await embed.getByRole("button", { name: "Cancel", exact: true }).press("Enter");
+  await expect(edit).toHaveAttribute("aria-expanded", "false");
+  expect(await diskBody(page, id)).toBe(text);
+  await edit.press("Enter");
+  await expect(target).toHaveValue("https://example.com/old");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(edit).toHaveAttribute("aria-expanded", "false");
+  expect(await diskBody(page, id)).toBe(text);
+  await edit.click();
+  await target.fill("javascript:alert(1)");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed.getByRole("alert")).toContainText("HTTP or HTTPS");
+  await expect(target).toHaveAttribute("aria-invalid", "true");
+  expect(await diskBody(page, id)).toBe(text);
+  await embed.getByRole("button", { name: "Cancel", exact: true }).click();
+  await edit.click();
+  await target.fill("https://example.com/valid");
+  await embed.getByRole("textbox", { name: "Embed label (optional)", exact: true }).fill("Bad ] label");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed.getByRole("alert")).toContainText("brackets");
+  await embed.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route("**/api/embed-target", async route => { await held; await route.continue(); });
+  await edit.click();
+  await target.fill("https://example.com/late");
+  const validation = page.waitForRequest("**/api/embed-target");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await validation;
+  await embed.getByRole("button", { name: "Cancel", exact: true }).click();
+  const completed = page.waitForResponse("**/api/embed-target");
+  release();
+  await completed;
+  await expect(embed.getByRole("button", { name: "Apply", exact: true })).toBeHidden();
+  expect(await diskBody(page, id)).toBe(text);
+  await expect(embed.locator(".web-embed-source")).toContainText("https://example.com/old");
+});
+
+test("Write edits local embed targets, heading labels and file sizes with exact Undo", async ({ page }) => {
+  await seed(page, "Embed source one", "Whole original.");
+  await seed(page, "Embed source two", "Intro.\n\n## Part\n\nNew section.\n\n## Other\n\nNot this section.");
+  const text = "Host.\n\n![[Embed source one|Original]]\n\nKeep ![[Embed source one]] exact.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  const embed = page.locator("#rich-editor .note-embed").first();
+  await expect(embed).toContainText("Whole original.");
+  await embed.getByRole("button", { name: "Edit embed", exact: true }).click();
+  await embed.getByRole("textbox", { name: "Embed target or URL", exact: true }).fill("Embed source two#Part");
+  await embed.getByRole("textbox", { name: "Embed label (optional)", exact: true }).fill("A section");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed).toContainText("New section.");
+  await expect(embed).not.toContainText("Not this section.");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Embed source one|Original", "Embed source two#Part|A section"));
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect.poll(() => diskBody(page, id)).toBe(text);
+  await expect(embed).toContainText("Whole original.");
+  // A local file uses the same source editor; an image's label can set its size.
+  const { token } = await (await page.request.get("/api/state")).json();
+  await page.request.post("/api/attachment?name=edit-embed.svg", { headers: { "X-Labradorite-Token": token }, data: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40"/></svg>') });
+  await embed.getByRole("button", { name: "Edit embed", exact: true }).click();
+  await embed.getByRole("textbox", { name: "Embed target or URL", exact: true }).fill("edit-embed.svg");
+  await embed.getByRole("textbox", { name: "Embed label (optional)", exact: true }).fill("80");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed.locator("img")).toHaveAttribute("width", "80");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Embed source one|Original", "edit-embed.svg|80"));
+  await embed.getByRole("button", { name: "Edit embed", exact: true }).click();
+  await embed.getByRole("textbox", { name: "Embed label (optional)", exact: true }).fill("");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Embed source one|Original", "edit-embed.svg"));
+});
+
+test("editing an embed in a table keeps its escaped alias and untouched cells", async ({ page }) => {
+  await seed(page, "Table embed one", "First table source.");
+  await seed(page, "Table embed two", "Second table source.");
+  const text = "Before.\n\n| Item | Context |\n| --- | --- |\n| ![[Table embed one\\|Old label]] | Keep this. |\n| Untouched | Spaced text. |\n\nAfter.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  const embed = page.locator("#rich-editor .note-embed");
+  await expect(embed).toContainText("First table source.");
+  await embed.getByRole("button", { name: "Edit embed", exact: true }).click();
+  await embed.getByRole("textbox", { name: "Embed target or URL", exact: true }).fill("Table embed two");
+  await embed.getByRole("textbox", { name: "Embed label (optional)", exact: true }).fill("New label");
+  await embed.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(embed).toContainText("Second table source.");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Table embed one\\|Old label", "Table embed two\\|New label"));
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect.poll(() => diskBody(page, id)).toBe(text);
+});
+
+for (const width of [390, 1440]) {
+test(`embed source fields fit ${width}px and Edit reads at AA in Light and Dark`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await openSeed(page, "![[https://example.com/a-long-reference-path|Reading reference]]");
+  await mode(page, "Write");
+  for (const theme of ["Light", "Dark"]) {
+    const appearance = await openAppearance(page);
+    await appearance.getByRole("radio", { name: theme, exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme.toLowerCase());
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => Promise.allSettled(document.getAnimations().map(a => a.finished)));
+    const edit = page.locator("#rich-editor .write-embed-edit");
+    await edit.click();
+    await expect(page.getByRole("textbox", { name: "Embed target or URL", exact: true })).toBeFocused();
+    for (const field of await page.locator(".write-embed-panel input").all()) {
+      const box = await field.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+    await edit.evaluate(el => Promise.allSettled(el.getAnimations().map(a => a.finished)));
+    const contrast = await edit.evaluate(el => {
+      const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+      const rgba = color => {
+        ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1);
+        const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+        return [r, g, b, a / 255];
+      };
+      const over = (top, base) => top.slice(0, 3).map((v, i) => v * top[3] + base[i] * (1 - top[3]));
+      const layers = [];
+      for (let parent = el; parent; parent = parent.parentElement) layers.push(rgba(getComputedStyle(parent).backgroundColor));
+      const bg = layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]);
+      const lum = color => color.map(v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      const values = [lum(over(rgba(getComputedStyle(el).color), bg)), lum(bg)].sort((a, b) => b - a);
+      return (values[0] + .05) / (values[1] + .05);
+    });
+    expect(contrast, `${theme} ${width}`).toBeGreaterThanOrEqual(4.5);
+    await page.keyboard.press("Escape");
+    await expect(edit).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+});
+}

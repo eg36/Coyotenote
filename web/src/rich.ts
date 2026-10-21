@@ -24,7 +24,7 @@ import { StatusTaskList, StatusTaskItem } from "./task-status.js";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes, focusNextDefinition } from "./footnotes.js";
-import { hydrateWebEmbeds } from "./web-embeds.js";
+import { embedView } from "./write-embed.js";
 import { writingSettings } from "./preferences.js";
 import { SourceBlocks, stampSources } from "./source-blocks.js";
 import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
@@ -123,33 +123,7 @@ const NoteEmbed = Node.create({
     return `![[${node.attrs?.raw || ""}]]`;
   },
   addNodeView() {
-    return ({ node }) => {
-      const raw = node.attrs.raw as string;
-      const dom = document.createElement("span");
-      dom.className = "note-embed";
-      dom.dataset.embed = raw;
-      dom.contentEditable = "false";
-      const head = document.createElement("span");
-      head.className = "note-embed-head";
-      const link = document.createElement("span");
-      link.dataset.wiki = raw;
-      link.className = "wiki-link";
-      link.setAttribute("role", "link");
-      link.tabIndex = 0;
-      link.title = "Open " + raw.split("|")[0];
-      link.textContent = raw.split("|")[0];
-      if (/^https?:\/\//i.test(raw)) {
-        dom.classList.add("note-embed-web");
-        head.textContent = "Embedded web content";
-      }
-      else head.append("Embedded · ", link);
-      const body = document.createElement("span");
-      body.className = "note-embed-body preview-content";
-      body.textContent = "…";
-      dom.append(head, body);
-      renderEmbed(raw).then((html) => { body.innerHTML = html; hydrateWebEmbeds(body); }).catch(() => { body.textContent = `![[${raw}]]`; });
-      return { dom };
-    };
+    return props => embedView(props, raw => renderEmbed(raw));
   },
   markdownTokenName: "noteEmbed",
   markdownTokenizer: {

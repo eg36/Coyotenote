@@ -77,3 +77,20 @@ func TestWebEmbedURLsAndMarkdownSafety(t *testing.T) {
 		t.Fatalf("unescaped label or remote image: %s", out)
 	}
 }
+
+func TestEmbedTargetValidationNeverNeedsNetworkConsent(t *testing.T) {
+	a := testApp(t)
+	for _, target := range []string{"Recipe", "Recipe#Steps", "Recipe#^key", "attachments/photo.png", "recording.mp3", "https://example.com/article#part", "https://youtu.be/M7lc1UVf-VE"} {
+		got := request(t, a, "POST", "/api/embed-target", mutation{Body: target}, 200)
+		if got["valid"] != true {
+			t.Fatal(got)
+		}
+	}
+	for _, target := range []string{"", "  ", "Note|alias", "Note]]after", "Note\nOther", "javascript:alert(1)", "file:///etc/passwd", "https://user:pass@example.com/", "//example.com", "https://youtu.be/bad", strings.Repeat("a", 4097)} {
+		request(t, a, "POST", "/api/embed-target", mutation{Body: target}, 422)
+	}
+	if a.webEmbedsEnabled() {
+		t.Fatal("validation changed remote loading consent")
+	}
+	request(t, a, "POST", "/api/web-embed", mutation{Body: "https://example.com/"}, 403)
+}

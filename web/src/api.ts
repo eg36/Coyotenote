@@ -25,7 +25,7 @@ async function api<T = unknown>(
   // Saves report the stamps they move between; other writes may rename, move
   // or remove notes, which the change watcher must not mistake for others'.
   const changesNotes = method !== "GET" && !(method === "PUT" && path === "/api/note") &&
-    !["/api/render", "/api/web-embed", "/api/settings", "/api/recovery"].includes(path) && !path.startsWith("/api/attachment");
+    !["/api/render", "/api/embed-target", "/api/web-embed", "/api/settings", "/api/recovery"].includes(path) && !path.startsWith("/api/attachment");
   if (!changesNotes) return request<T>(path, method, data, retried);
   state.changing++;
   try {

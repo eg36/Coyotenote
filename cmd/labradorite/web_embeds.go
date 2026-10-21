@@ -87,3 +87,17 @@ func (a *webApp) embedWeb(l vault.Link) string {
 	}
 	return `<span class="web-embed" data-web-embed="` + html.EscapeString(raw) + `"><strong>` + html.EscapeString(label) + `</strong><span class="web-embed-source">Loads from <a href="` + html.EscapeString(source) + `" target="_blank" rel="noopener noreferrer">` + html.EscapeString(source) + `</a></span><span class="web-embed-hint">` + hint + `</span><button type="button" class="web-embed-load"` + disabled + `>Load embed</button></span>`
 }
+
+// checkEmbedTarget validates the source field without resolving or fetching it.
+// Missing local targets stay valid so notes can link files added later.
+func checkEmbedTarget(target string) error {
+	if strings.TrimSpace(target) == "" || len(target) > 4096 || strings.ContainsAny(target, "[]|\r\n") {
+		return &apiError{status: 422, message: "Enter a note or file path, or an HTTP/HTTPS URL, without brackets, pipes or line breaks."}
+	}
+	if strings.Contains(target, ":") || strings.HasPrefix(target, "//") {
+		if _, _, ok := webEmbedURL(target); !ok {
+			return &apiError{status: 422, message: "Use an HTTP or HTTPS URL without credentials. YouTube links need a valid video ID."}
+		}
+	}
+	return nil
+}

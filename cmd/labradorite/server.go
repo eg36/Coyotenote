@@ -714,6 +714,12 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		}
 		writeJSON(w, 200, map[string]any{"theme": in.Theme, "plugins": plugins, "webEmbeds": a.webEmbedsEnabled()})
 		return nil
+	case "POST /api/embed-target":
+		if err := checkEmbedTarget(in.Body); err != nil {
+			return err
+		}
+		writeJSON(w, 200, map[string]bool{"valid": true})
+		return nil
 	case "POST /api/web-embed":
 		if !a.webEmbedsEnabled() {
 			return &apiError{status: 403, message: "Web embeds are off. Enable them in Settings → Web embeds."}

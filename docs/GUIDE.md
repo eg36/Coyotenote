@@ -277,6 +277,12 @@ Beyond GitHub Flavored Markdown, Preview understands:
   the visible source link can open them in a browser tab instead.
   Preview and Write show the same controls, and Write keeps the embed source
   exactly when editing surrounding text. Raw HTML iframes stay blocked.
+- **Editing embeds in Write:** choose **Edit embed** on a web, note, image or
+  media embed. Change **Embed target or URL** and the optional label, then
+  **Apply** (or Enter). **Cancel** or Escape leaves the source unchanged.
+  Targets can include a heading or block reference; image labels can include
+  a size. Applying is one undoable change. A changed web destination unloads
+  its old frame and waits for **Load embed** again, including after Undo.
 - **Note embeds:** `![[Note]]` shows another note inside this one in Preview,
   `![[Note#Heading]]` just that section and `![[Note#^id]]` just that block,
   with the note's name as a link above. Embeds nest two notes deep; a note
