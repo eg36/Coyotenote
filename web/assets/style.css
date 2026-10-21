@@ -3163,3 +3163,5 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
   content: ""; display: inline-block; width: 1.05em; height: 1.05em; margin-right: .25em; vertical-align: -.17em;
   background: url("/assets/plugin-issues.png") center / contain no-repeat;
 }
+/* The rail scrolls only up and down; its open-panel bar may overhang. */
+.activity-rail { overflow-x: hidden; }

@@ -3773,6 +3773,17 @@ test("the Format drawer keeps every tool reachable at phone widths and shares th
   }
 });
 
+test("the rail never scrolls sideways", async ({ page }) => {
+  for (const height of [900, 420]) {
+    await page.setViewportSize({ width: 1280, height });
+    await openSeed(page, "Rail.");
+    const rail = page.locator(".activity-rail");
+    // No horizontal scrollbar takes height from the rail.
+    expect(await rail.evaluate((el) => el.offsetHeight - el.clientHeight - parseFloat(getComputedStyle(el).borderTopWidth) - parseFloat(getComputedStyle(el).borderBottomWidth))).toBe(0);
+    expect(await rail.evaluate((el) => getComputedStyle(el).overflowX)).toBe("hidden");
+  }
+});
+
 test("the switcher fits a phone and reads at AA in Light and Dark", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openSeed(page, "Phone switcher.");
