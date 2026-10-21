@@ -3712,7 +3712,10 @@ async function audit(page) {
   });
 }
 
-test("every Labradorite Space surface names its controls and keeps IDs unique", async ({ page }) => {
+for (const theme of ["light", "dark"]) {
+test(`every Labradorite Space surface names its controls and keeps IDs unique in ${theme}`, async ({ page }) => {
+  const { token } = await (await page.request.get("/api/state")).json();
+  await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { theme } });
   await seed(page, "issues/Space/Project", "---\nprefix: LS\n---\n");
   await seed(page, "issues/Space/LS-1", "---\ntitle: Audit me\nstatus: in-progress\npriority: high\nlabels: [UX]\n---\n\nSee [[Plain]].\n\n## Done when\n\n- [ ] Names\n");
   await openSeed(page, "Audit [[issues/Space/LS-1]].", "Plain");
@@ -3770,6 +3773,8 @@ test("every Labradorite Space surface names its controls and keeps IDs unique", 
   await page.keyboard.press("Tab");
   expect(await ring(".library-row:focus"), "library row").toBe(true);
 });
+
+}
 
 test("a link to an issue opens it in Issues", async ({ page }) => {
   await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
