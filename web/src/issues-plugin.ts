@@ -7,10 +7,14 @@ import { icon } from "./icons.js";
 import { openModal } from "./dialogs.js";
 import { registerPlugin, type PluginCommand, type SpaceContext } from "./plugins.js";
 import { closeIssuePage, refreshIssuePage, setupIssuePage, showIssuePage, shownIssue } from "./issues-page.js";
+import { showMenu, type MenuEntry } from "./menus.js";
 import {
   createIssue,
   createSettings,
   loadIssues,
+  parseIssue,
+  saveIssue,
+  setField,
   nextKey,
   priorities,
   priorityName,
@@ -28,6 +32,9 @@ let issues: Issue[] = [];
 let settings: IssueSettings = { prefix: "", projects: [], labels: [] };
 let context: SpaceContext | null = null;
 let query = "";
+// The overview shows as a page, or as a board of state columns.
+const boardKey = "labradorite-issues-board";
+let board = storage.get(boardKey) === "true";
 const root = () => $("issues-app");
 const searchBox = () => $("issues-search") as HTMLInputElement;
 const finished = (issue: Issue) => issue.status === "done" || issue.status === "cancelled";
@@ -176,9 +183,135 @@ function renderDocument() {
   }
   page.replaceChildren(doc);
 }
+// The board shows the same issues as cards in Now, Next, Later and Done.
+// A card moves by dragging it, by its "Move to…" button, or by M.
+const columns: Status[] = ["in-progress", "todo", "backlog", "done"];
+async function moveIssue(issue: Issue, status: Status) {
+  if (issue.status === status) return;
+  try {
+    const moved = parseIssue(await saveIssue(issue, setField(issue.body, "status", status)));
+    if (!moved) return;
+    issues = issues.map((item) => (item.file === moved.file ? moved : item));
+    render();
+    $("issues-page").querySelector<HTMLElement>(`.issue-card[data-issue="${CSS.escape(moved.file)}"] .issue-card-open`)?.focus();
+    showToast(`${moved.key} moved to ${statusName(status)}`);
+  } catch (error) {
+    showError(error);
+  }
+}
+function moveMenu(issue: Issue) {
+  showMenu("issue-move-" + issue.key, columns.map((status): MenuEntry =>
+    [statusName(status), "", () => moveIssue(issue, status), undefined, issue.status === status ? "radio:on" : "radio:off"]));
+}
+function card(issue: Issue) {
+  const item = element("div", "issue-card");
+  item.dataset.issue = issue.file;
+  item.setAttribute("role", "listitem");
+  item.draggable = true;
+  item.ondragstart = (event) => {
+    event.dataTransfer?.setData("application/x-labradorite-issue", issue.file);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    item.classList.add("dragging");
+  };
+  item.ondragend = () => item.classList.remove("dragging");
+  const open = element("button", "issue-card-open");
+  open.type = "button";
+  const meta = element("span", "issue-line-meta");
+  meta.append(element("span", "", issue.key));
+  if (issue.project) meta.append(element("span", "", issue.project));
+  if (issue.priority !== "none") meta.append(element("span", "issue-priority-word priority-" + issue.priority, priorityName(issue.priority)));
+  open.append(element("span", "issue-card-title", issue.title), meta);
+  if (issue.labels.length) {
+    const tags = element("span", "issue-card-tags");
+    tags.append(...issue.labels.map((label) => element("span", "issue-tag", "#" + label)));
+    open.append(tags);
+  }
+  const links = issue.backlinks.length + new Set([...issue.body.matchAll(/\[\[([^\]|#^]+)/g)].map((m) => m[1])).size;
+  if (links) {
+    const linked = element("span", "issue-card-links");
+    linked.innerHTML = icon("noteLink");
+    linked.append(`${links} linked ${links === 1 ? "note" : "notes"}`);
+    open.append(linked);
+  }
+  open.onclick = () => openIssue(issue);
+  open.onkeydown = (event) => {
+    if (event.key.toLowerCase() !== "m" || event.altKey || event.ctrlKey || event.metaKey) return;
+    event.preventDefault();
+    moveMenu(issue);
+  };
+  const move = element("button", "issue-card-move");
+  move.type = "button";
+  move.dataset.menu = "issue-move-" + issue.key;
+  move.setAttribute("aria-haspopup", "menu");
+  move.setAttribute("aria-expanded", "false");
+  move.setAttribute("aria-label", `Move ${issue.key} to…`);
+  move.title = "Move to… · M";
+  move.textContent = "Move to…";
+  move.onclick = () => moveMenu(issue);
+  item.append(open, move);
+  return item;
+}
+function renderBoard() {
+  if (shownIssue()) return;
+  const shown = issues.filter(matches);
+  const wrap = element("div", "issues-board");
+  for (const status of columns) {
+    const inColumn = shown.filter((issue) => issue.status === status).sort(byAttention);
+    const column = element("section", "issues-column state-" + status);
+    column.dataset.status = status;
+    const heading = element("h2", "issues-column-heading");
+    heading.id = "issues-column-" + status;
+    heading.append(element("span", "", statusName(status)), element("span", "issues-doc-count", String(inColumn.length)));
+    const list = element("div", "issues-column-cards");
+    list.setAttribute("role", "list");
+    list.setAttribute("aria-labelledby", heading.id);
+    list.append(...inColumn.map(card));
+    column.ondragover = (event) => {
+      if (!event.dataTransfer?.types.includes("application/x-labradorite-issue")) return;
+      event.preventDefault();
+      column.classList.add("drop-target");
+    };
+    column.ondragleave = (event) => {
+      if (!column.contains(event.relatedTarget as Node)) column.classList.remove("drop-target");
+    };
+    column.ondrop = (event) => {
+      event.preventDefault();
+      column.classList.remove("drop-target");
+      const issue = issues.find((item) => item.file === event.dataTransfer?.getData("application/x-labradorite-issue"));
+      if (issue) moveIssue(issue, status);
+    };
+    column.append(heading, list);
+    wrap.append(column);
+  }
+  // The arrows move between cards: up and down in a column, sideways across.
+  wrap.addEventListener("keydown", (event) => {
+    const from = (event.target as Element).closest<HTMLElement>(".issue-card");
+    if (!from || !(event.target as Element).classList.contains("issue-card-open")) return;
+    const cols = [...wrap.querySelectorAll<HTMLElement>(".issues-column-cards")].map((list) => [...list.querySelectorAll<HTMLElement>(".issue-card")]);
+    const col = cols.findIndex((cards) => cards.includes(from)), row = cols[col].indexOf(from);
+    let target: HTMLElement | undefined;
+    if (event.key === "ArrowDown") target = cols[col][row + 1];
+    else if (event.key === "ArrowUp") target = cols[col][row - 1];
+    else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      const step = event.key === "ArrowRight" ? 1 : -1;
+      for (let c = col + step; c >= 0 && c < cols.length && !target; c += step) target = cols[c][Math.min(row, cols[c].length - 1)];
+    } else return;
+    event.preventDefault();
+    target?.querySelector<HTMLElement>(".issue-card-open")?.focus();
+  });
+  $("issues-page").replaceChildren(wrap);
+}
+function setBoard(on: boolean) {
+  board = on;
+  storage.set(boardKey, String(on));
+  $("issues-board-toggle").setAttribute("aria-pressed", String(on));
+  closeIssuePage();
+  render();
+}
 function render() {
   renderTree();
-  renderDocument();
+  if (board && issues.length) renderBoard();
+  else renderDocument();
 }
 
 function openIssue(issue: Issue) {
@@ -311,6 +444,7 @@ function setup() {
         <button type="button" class="icon-button" id="issues-new" aria-label="New issue" title="New issue · Alt N"><span data-icon="plus">${icon("plus")}</span></button>
         <button type="button" class="icon-button" id="issues-search-button" aria-label="Find issues" title="Find issues" aria-expanded="false" aria-controls="issues-search-field"><span data-icon="search">${icon("search")}</span></button>
         <button type="button" class="icon-button" id="issues-overview" aria-label="Now, Next and Later" title="Now, Next and Later"><span data-icon="list">${icon("list")}</span></button>
+        <button type="button" class="icon-button" id="issues-board-toggle" aria-label="Show as a board" title="Show as a board" aria-pressed="${board}"><span data-icon="columns">${icon("columns")}</span></button>
       </div>
       <div class="issues-search-field" id="issues-search-field" hidden>
         <input type="search" id="issues-search" placeholder="Find by title or ID" aria-label="Find issues by title or ID" autocomplete="off">
@@ -321,10 +455,8 @@ function setup() {
     <main class="issues-page" id="issues-page" aria-label="Issue"></main>`;
   $("issues-new").onclick = () => newIssue();
   $("issues-search-button").onclick = () => toggleSearch();
-  $("issues-overview").onclick = () => {
-    closeIssuePage();
-    render();
-  };
+  $("issues-overview").onclick = () => setBoard(false);
+  $("issues-board-toggle").onclick = () => setBoard(!board);
   searchBox().oninput = () => {
     query = searchBox().value.trim();
     render();
@@ -425,7 +557,8 @@ function registerIssuesPlugin() {
   const commands: PluginCommand[] = [
     { label: "New issue", keys: "Alt N", run: () => newIssue() },
     { label: "Find issues", run: findIssues },
-    { label: "Show Now, Next and Later", run: () => { closeIssuePage(); render(); } },
+    { label: "Show Now, Next and Later", run: () => setBoard(false) },
+    { label: "Show issues as a board", run: () => setBoard(true) },
     { label: "Show or hide the issue projects", run: toggleSidebar },
   ];
   registerPlugin({

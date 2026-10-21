@@ -3075,3 +3075,22 @@ summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--mute
 }
 /* In the tree, a project's marker sits where Notes shows its folder icon. */
 .folder-group :is(.issues-project-marker, .issue-done-mark) { flex: none; margin: 0 3px; }
+/* The board: the same issues as calm cards in state columns. */
+.issues-board { display: flex; gap: 16px; min-height: 100%; padding: 24px; box-sizing: border-box; overflow-x: auto; align-items: flex-start; }
+.issues-column { flex: 1 1 0; min-width: 240px; display: flex; flex-direction: column; gap: 10px; padding: 4px; border-radius: 12px; }
+.issues-column.drop-target { background: var(--selected); }
+.issues-column-heading { display: flex; align-items: baseline; gap: 8px; margin: 0 6px 2px; font-size: 18px; font-weight: 600; }
+.issues-column.state-done .issues-column-heading { color: var(--muted); }
+.issues-column-cards { display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
+.issue-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px #0001; }
+.issue-card.dragging { opacity: .5; }
+.issue-card-open { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 14px 8px; border: 0; border-radius: 10px 10px 0 0; background: none; color: var(--text); text-align: left; }
+.issue-card-title { font-size: 14px; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
+.issue-card-tags { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; }
+.issue-card-links { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.issue-card-links svg { width: 13px; height: 13px; }
+.issue-card-move { align-self: flex-end; margin: 0 8px 8px; padding: 2px 8px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 12px; }
+.issue-card-move:hover, .issue-card-move[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+.issue-card:hover { border-color: var(--line-strong); }
+/* "Move to…" shows on the card in use; touch screens always show it. */
+@media (hover: hover) { .issue-card:not(:hover):not(:focus-within) .issue-card-move:not([aria-expanded="true"]) { opacity: 0; } }

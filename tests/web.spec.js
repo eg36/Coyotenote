@@ -3544,6 +3544,47 @@ test("the Issues tree panel lines up with the Notes panel", async ({ page }) => 
   expect(issues).toEqual(notes);
 });
 
+test("the board moves issues between Now, Next, Later and Done by drag or by keyboard", async ({ page }) => {
+  await seed(page, "issues/B-1", issueFile("Drag me", "todo", "high", ["UX"]));
+  await seed(page, "issues/B-2", issueFile("Move me", "backlog", "none", []));
+  await seed(page, "issues/B-3", issueFile("Underway", "in-progress", "none", []));
+  await openSeed(page, "Start.");
+  await openIssues(page);
+  await page.getByRole("button", { name: "Show as a board" }).click();
+  await expect(page.getByRole("button", { name: "Show as a board" })).toHaveAttribute("aria-pressed", "true");
+  const column = (name) => page.getByRole("list", { name: new RegExp("^" + name) });
+  await expect(page.locator(".issues-column-heading")).toHaveText([/Now\s*1/, /Next\s*1/, /Later\s*1/, /Done\s*0/]);
+  // Dragging a card to another column changes the state in the file.
+  await page.locator('.issue-card[data-issue="issues/B-1"]').dragTo(page.locator('.issues-column[data-status="in-progress"]'));
+  await expect(column("Now").locator('[data-issue="issues/B-1"]')).toBeVisible();
+  await expect.poll(() => noteBody(page, "issues/B-1")).toContain("status: in-progress\n");
+  // A focused card moves with M or its "Move to…" button.
+  const move = page.locator('.issue-card[data-issue="issues/B-2"] .issue-card-open');
+  await move.focus();
+  await page.keyboard.press("m");
+  await page.getByRole("menuitemradio", { name: "Done" }).click();
+  await expect(column("Done").locator('[data-issue="issues/B-2"]')).toBeVisible();
+  await expect(column("Done").locator('[data-issue="issues/B-2"] .issue-card-open')).toBeFocused();
+  await expect.poll(() => noteBody(page, "issues/B-2")).toContain("status: done\n");
+  await page.getByRole("button", { name: "Move B-2 to…" }).click();
+  await page.getByRole("menuitemradio", { name: "Next" }).click();
+  await expect(column("Next").locator('[data-issue="issues/B-2"]')).toBeVisible();
+  // The arrows move between cards and columns; Enter opens the issue.
+  await column("Now").locator(".issue-card-open").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(column("Now").locator(".issue-card-open").nth(1)).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(column("Next").locator(".issue-card-open").first()).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("article", { name: "Issue B-2" })).toBeVisible();
+  // The board choice is remembered.
+  await page.reload();
+  await openIssues(page);
+  await expect(page.locator(".issues-board")).toBeVisible();
+  await page.getByRole("button", { name: "Now, Next and Later" }).click();
+  await expect(page.locator(".issues-doc")).toBeVisible();
+});
+
 test("a link to an issue opens it in Issues", async ({ page }) => {
   await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
   await openSeed(page, "See [[issues/L-1]].", "Pointer");
@@ -3580,6 +3621,10 @@ test("Issues reads at AA in Light and Dark", async ({ page }) => {
     await page.locator('#issues-tree [data-issue="issues/C-1"]').click();
     await expect(page.getByRole("article", { name: "Issue C-1" })).toBeVisible();
     expect(await check("#issues-app"), name + " page").toEqual([]);
+    await page.getByRole("button", { name: "Show as a board" }).click();
+    await page.locator(".issue-card").first().hover();
+    expect(await check("#issues-app"), name + " board").toEqual([]);
+    await page.getByRole("button", { name: "Show as a board" }).click();
     await page.keyboard.press("Alt+p");
     await page.keyboard.press("1");
     await openAppearance(page);
