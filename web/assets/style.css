@@ -2937,3 +2937,9 @@ dialog.danger #modal-submit {
 .menu-dot:is(.callout-failure, .callout-danger, .callout-bug) { background: var(--danger); }
 .menu-dot.callout-example { background: var(--pink); }
 .menu-dot.callout-quote { background: var(--muted); }
+/* Format panel buttons share the title row's control fill: a faint solid
+   tint of the text on the panel, a stronger one on hover. Pressed buttons
+   keep the accent and the highlight swatches their colours. */
+#format-panel [data-format]:not(.hl-swatch), #callout-type { background: var(--control-fill); }
+#format-panel [data-format]:not(.hl-swatch):not(:disabled):hover, #callout-type:not(:disabled):hover { background: color-mix(in srgb, var(--text) 12%, var(--chrome)); }
+#format-panel [data-format]:not(.hl-swatch)[aria-pressed="true"] { background: var(--selected); color: var(--accent-text); }
