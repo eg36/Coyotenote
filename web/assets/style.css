@@ -3177,7 +3177,7 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 .issues-column { gap: 12px; padding: 6px; border-radius: 14px; }
 .issues-column-heading { align-items: center; gap: 10px; margin: 0 4px 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 15px; letter-spacing: .01em; }
 .issues-column.state-in-progress .issues-column-heading { border-bottom-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
-.issues-column.state-in-progress .issues-column-heading > span:first-child::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 2px; transform: rotate(45deg) translateY(-2px); background: var(--accent); box-shadow: 0 0 10px 1px color-mix(in srgb, var(--accent) 70%, transparent); }
+.issues-column.state-in-progress .issues-column-heading > span:first-child::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 2px; transform: rotate(45deg) translateY(-2px); background: var(--accent); }
 .issue-card {
   --facet: 16px;
   position: relative; border: 0; border-radius: 12px 0 12px 12px; isolation: isolate;
@@ -3192,7 +3192,7 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 .issue-card::after { content: ""; position: absolute; top: 0; left: 14px; right: calc(var(--facet) + 6px); height: 2px; border-radius: 0 0 2px 2px; pointer-events: none;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--project) 80%, transparent), transparent); }
 .issue-card:hover, .issue-card:focus-within { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 55%, var(--line)), 0 2px 4px rgb(0 0 0 / .2), 0 16px 32px -14px rgb(0 0 0 / .6); }
-.issue-card.state-in-progress { background: color-mix(in srgb, var(--project) 7%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, var(--line)), 0 1px 2px rgb(0 0 0 / .2), 0 12px 30px -12px color-mix(in srgb, var(--accent) 45%, transparent); }
+.issue-card.state-in-progress { background: color-mix(in srgb, var(--project) 7%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--line)), 0 1px 2px rgb(0 0 0 / .18), 0 10px 24px -14px rgb(0 0 0 / .55); }
 .issue-card.state-done { opacity: .72; }
 .issue-card.state-done .issue-card-title { color: var(--muted); }
 .issue-card-open { gap: 8px; padding: 14px 16px; border-radius: 12px 0 0 0; }
@@ -3218,7 +3218,7 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 .issue-hero .issue-page-title { margin-bottom: 16px; }
 .issue-hero .issue-chips { margin-bottom: 0; }
 .issue-hero .issue-chip { background: color-mix(in srgb, var(--surface) 70%, transparent); border-color: color-mix(in srgb, var(--project) 30%, var(--line)); }
-.issue-hero .issue-chip.state-in-progress { background: color-mix(in srgb, var(--accent) 28%, var(--surface)); color: var(--text); box-shadow: 0 0 18px -4px color-mix(in srgb, var(--accent) 70%, transparent); }
+.issue-hero .issue-chip.state-in-progress { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--text); }
 .issue-hero-ring { width: 96px; height: 96px; }
 .issue-hero-ring svg { width: 96px; height: 96px; }
 .issue-sheet { padding: 24px 28px 28px; border-radius: 14px; background: color-mix(in srgb, var(--text) 3%, var(--surface)); box-shadow: inset 0 0 0 1px var(--line), 0 8px 24px -18px rgb(0 0 0 / .6); }
