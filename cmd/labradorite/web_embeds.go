@@ -12,7 +12,7 @@ import (
 )
 
 func (a *webApp) webEmbedsEnabled() bool {
-	b, err := os.ReadFile(filepath.Join(a.store.Config, "web-embeds"))
+	b, err := os.ReadFile(filepath.Join(a.store.Dir, "web-embeds"))
 	return err == nil && string(b) == "true"
 }
 

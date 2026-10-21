@@ -509,8 +509,9 @@ What Labradorite stores in a vault:
 - **`attachments/`**: images added from the editor, linked from notes by path.
 - **`.lock`**, and after an interrupted write `.pending-*` or `.recovery-*`
   files, which are kept for you to inspect.
-- **`web-embeds`**: opt-in web embed permission (`true` or `false`), kept beside
-  the appearance and plugin settings. Missing means off.
+- **`web-embeds`**: opt-in web embed permission (`true` or `false`) in the
+  active vault, including when appearance and plugin settings live elsewhere.
+  Missing means off; another vault’s permission is not inherited.
 - **`theme`**: the chosen appearance (`light`, `dark` or `system`), in the
   default data folder (or the `-data-dir` folder).
 

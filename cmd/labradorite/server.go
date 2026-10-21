@@ -430,9 +430,9 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 	}
 	if route == "GET /api/library" {
 		// The Library lists every file; settings kept beside the notes stay out.
-		var skip []string
+		skip := []string{"web-embeds"}
 		if filepath.Clean(a.store.Config) == filepath.Clean(a.store.Dir) {
-			skip = []string{"theme", "plugins", "web-embeds"}
+			skip = append(skip, "theme", "plugins")
 		}
 		files, err := a.store.ListFiles(skip...)
 		if err != nil {
@@ -708,7 +708,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if in.WebEmbeds != nil {
-			if err = vault.AtomicWrite(a.store.Config, "web-embeds", []byte(strconv.FormatBool(*in.WebEmbeds))); err != nil {
+			if err = vault.AtomicWrite(a.store.Dir, "web-embeds", []byte(strconv.FormatBool(*in.WebEmbeds))); err != nil {
 				return err
 			}
 		}

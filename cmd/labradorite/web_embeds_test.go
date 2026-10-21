@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -93,4 +95,50 @@ func TestEmbedTargetValidationNeverNeedsNetworkConsent(t *testing.T) {
 		t.Fatal("validation changed remote loading consent")
 	}
 	request(t, a, "POST", "/api/web-embed", mutation{Body: "https://example.com/"}, 403)
+}
+
+func TestWebEmbedConsentIsIndependentAcrossVaultsWithSharedSettings(t *testing.T) {
+	a, b := testApp(t), testApp(t)
+	shared := t.TempDir()
+	a.store.Config, b.store.Config = shared, shared
+	// A previous opt-in in shared settings is not permission for either vault.
+	if err := os.WriteFile(filepath.Join(shared, "web-embeds"), []byte("true"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if a.webEmbedsEnabled() || b.webEmbedsEnabled() {
+		t.Fatal("new vault inherited consent from shared settings")
+	}
+	enabled := true
+	request(t, a, "POST", "/api/settings", mutation{WebEmbeds: &enabled}, 200)
+	if !a.webEmbedsEnabled() || b.webEmbedsEnabled() {
+		t.Fatal("enabling one vault changed another vault")
+	}
+	restarted, err := newWebApp(a.store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restarted.port = a.port
+	if !restarted.webEmbedsEnabled() {
+		t.Fatal("vault consent did not survive restart")
+	}
+	request(t, b, "POST", "/api/web-embed", mutation{Body: "https://example.com/"}, 403)
+	request(t, b, "POST", "/api/settings", mutation{WebEmbeds: &enabled}, 200)
+	enabled = false
+	request(t, a, "POST", "/api/settings", mutation{WebEmbeds: &enabled}, 200)
+	if a.webEmbedsEnabled() || !b.webEmbedsEnabled() {
+		t.Fatal("disabling one vault changed another vault")
+	}
+	for _, app := range []*webApp{a, b} {
+		files := request(t, app, "GET", "/api/library", nil, 200)["files"].([]any)
+		for _, file := range files {
+			if file.(map[string]any)["path"] == "web-embeds" {
+				t.Fatal("Library lists vault permission file")
+			}
+		}
+	}
+	// When default settings and vault coincide, the earlier file still works.
+	b.store.Config = b.store.Dir
+	if !b.webEmbedsEnabled() {
+		t.Fatal("default-vault permission lost compatibility")
+	}
 }
