@@ -25,6 +25,11 @@ reader.parseTokens = function (tokens, top) {
 
 // Keep the opening line, closing line and body independently: editing a
 // diagram must not replace its fence, info string or source indentation.
+// openNextDiagram makes the next diagram drawn open its source with the
+// text selected, as one inserted from the Format panel should.
+let openNext = false;
+export function openNextDiagram() { openNext = true; }
+
 export const MermaidBlock = Node.create({
   name: "mermaidBlock", priority: 200, group: "block", atom: true, isolating: true,
   addAttributes() {
@@ -105,6 +110,7 @@ export const MermaidBlock = Node.create({
         input.readOnly = !editor.isEditable; apply.disabled = !editor.isEditable; drawing.setAttribute("aria-disabled", String(!editor.isEditable));
       }
       sync();
+      if (openNext) { openNext = false; requestAnimationFrame(() => { open(); input.select(); }); }
       return { dom, stopEvent: () => true, ignoreMutation: () => true,
         update(next) { if (next.type !== current.type) return false; current = next; sync(); return true; },
         destroy() { destroyed = true; clearTimeout(timer); },

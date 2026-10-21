@@ -64,6 +64,9 @@ function render(target: HTMLElement, tex: string, display: boolean) {
 
 let fieldId = 0;
 let openNext = false;
+// openNextFormula makes the next formula drawn open its TeX field, as one
+// inserted from the Format panel should.
+export function openNextFormula() { openNext = true; }
 // A formula shows rendered; activating it opens its TeX in a field below,
 // with a live rendering, until Apply (Ctrl/⌘ Enter) or Cancel (Escape).
 function formulaView(display: boolean, validate: (value: string, pos: number, editor: Editor, attrs: Record<string, unknown>) => string | Record<string, unknown>) {

@@ -97,9 +97,18 @@ and view switch share the second; the rail opens the notes drawer.
 
 **Text formatting**, just before the view switch, opens a panel between Notes
 and the document.
-It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,
-and undo/redo. It is available in Write, and closes in source or preview modes.
-The close button or Escape hides it; this browser remembers the choice separately
+It groups paragraph styles, bold/italic/strike/code, highlights, lists and
+quotes, inserts and undo/redo, followed by labelled tools for the rest of Write:
+**Footnote** (the next free number at the caret, with its definition added at
+the end of the note, ready to type), **Inline** and **Block** formulas (an
+inline formula starts from the selected text), a **Mermaid** diagram (its
+starting source is selected for you to replace), **Callout** (wraps the current
+paragraph; the arrow beside it picks one of 13 types, and the button remembers
+the last one), and **Find and replace** and **Note history**. With a diagram or
+formula selected, new content goes after it rather than replacing it. The
+tools are disabled while a recovered draft holds the note. It is available in
+Write, and closes in source or preview modes.
+The Format button or Escape hides it; this browser remembers the choice separately
 for desktop and smaller screens. On smaller screens it opens over the content;
 click outside to close. Focus mode temporarily hides it too.
 

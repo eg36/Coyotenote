@@ -113,7 +113,6 @@
         aria-label="Close notes"
       ></button>
       <aside id="format-panel" class="format-panel" aria-label="Text formatting" hidden>
-        <div class="format-heading"><h2>Text</h2><button id="close-formatting" class="icon-button" aria-label="Close text formatting" title="Close text formatting"><span data-icon="close"></span></button></div>
         <section
           class="editor-toolbar"
           id="editor-toolbar"
@@ -192,8 +191,20 @@
           <button data-format="undo" title="Undo edit" aria-label="Undo edit">
             <span data-icon="undo"></span></button
           ><button data-format="redo" title="Redo edit" aria-label="Redo edit">
-            <span data-icon="redo"></span>
-          </button>
+            <span data-icon="redo"></span></button
+          ><h3 class="format-label">References</h3>
+          <button data-format="footnote" class="format-labelled" title="Add a footnote at the caret"><span data-icon="footnote"></span><span>Footnote</span></button
+          ><h3 class="format-label">Formula</h3>
+          <button data-format="inlineMath" class="format-labelled" title="Inline formula · or type $…$" aria-label="Inline formula"><span data-icon="sigma"></span><span>Inline</span></button
+          ><button data-format="mathBlock" class="format-labelled" title="Display formula · or type $$ and Enter" aria-label="Display formula"><span data-icon="formulaBlock"></span><span>Block</span></button
+          ><h3 class="format-label">Diagram</h3>
+          <button data-format="mermaid" class="format-labelled" title="Mermaid diagram" aria-label="Mermaid diagram"><span data-icon="diagram"></span><span>Mermaid</span></button
+          ><h3 class="format-label">Callout</h3>
+          <span class="split-button"><button data-format="callout" id="callout-insert" class="format-labelled" title="Callout · or type [!type] at the start of a quote" aria-label="Note callout"><span data-icon="info"></span><span id="callout-label">Note</span></button
+          ><button id="callout-type" type="button" data-menu="callout" aria-haspopup="menu" aria-expanded="false" aria-label="Callout type" title="Callout type"><span data-icon="chevronDown"></span></button></span
+          ><h3 class="format-label">Note</h3>
+          <button data-format="find" class="format-labelled" title="Find and replace in this note" aria-label="Find and replace"><span data-icon="replace"></span><span>Find and replace</span></button
+          ><button data-format="history" class="format-labelled" title="Note history" aria-label="Note history"><span data-icon="history"></span><span>Note history</span></button>
         </section>
       </aside>
       <button id="formatting-scrim" class="formatting-scrim" aria-label="Close text formatting panel" hidden></button>

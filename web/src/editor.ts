@@ -349,7 +349,7 @@ function applyEditability() {
   for (const select of $("rich-editor").querySelectorAll("select")) select.disabled = !editable;
   state.source?.readOnly(!editable);
   state.rich?.editor?.setEditable(editable, false);
-  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format], #block-type"))
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format], #block-type, #callout-type"))
     button.disabled = !editable;
 }
 function focusEditor() {

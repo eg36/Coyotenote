@@ -7,7 +7,7 @@ interface AppElements {
   "commands-button": HTMLButtonElement;
   "pin-note": HTMLButtonElement;
   "format-toggle": HTMLButtonElement;
-  "close-formatting": HTMLButtonElement;
+  "callout-type": HTMLButtonElement;
   "formatting-scrim": HTMLButtonElement;
   "pinned-notes": HTMLDetailsElement;
   "clear-folder": HTMLButtonElement;

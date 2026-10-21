@@ -1,4 +1,5 @@
 import { Node, InputRule } from "@tiptap/core";
+import { types } from "./callout-types.js";
 import type { JSONContent } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { icon } from "./icons.js";
@@ -8,15 +9,6 @@ import { icon } from "./icons.js";
 // edits the type, title and folding in the header and the body as text,
 // saving the first line exactly as written unless one of those changes.
 
-// Every type and alias, with the type it looks like and its icon, as in
-// the preview (cmd/labradorite/syntax.go). Unknown types look like a note.
-const types: [string, string, string][] = [
-  ["note", "pen", ""], ["abstract", "list", "summary tldr"], ["info", "info", ""],
-  ["todo", "checkSquare", ""], ["tip", "flame", "hint important"],
-  ["success", "check", "check done"], ["question", "help", "help faq"],
-  ["warning", "alert", "caution attention"], ["failure", "close", "fail missing"],
-  ["danger", "zap", "error"], ["bug", "bug", ""], ["example", "ordered", ""], ["quote", "quote", "cite"],
-];
 const looks = new Map<string, [string, string]>();
 for (const [name, glyph, aliases] of types)
   for (const alias of [name, ...aliases.split(" ").filter(Boolean)]) looks.set(alias, [name, glyph]);

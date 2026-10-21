@@ -214,6 +214,11 @@ function indentedBody(value: string, original: string) {
   }).join("\n");
 }
 
+// focusNextDefinition makes the next definition drawn take focus, as one
+// added with its reference from the Format panel should.
+let focusNext = false;
+export function focusNextDefinition() { focusNext = true; }
+
 export function footnoteExtensions(source: () => string) {
   const definition = Node.create({
     name: "footnoteDefinition", group: "block", atom: true, isolating: true,
@@ -272,6 +277,7 @@ export function footnoteExtensions(source: () => string) {
         label.append(heading, input); dom.append(label);
         const observer = new ResizeObserver(resize); observer.observe(dom);
         sync();
+        if (focusNext) { focusNext = false; requestAnimationFrame(() => { input.focus(); dom.scrollIntoView({ block: "nearest" }); }); }
         return {
           dom, stopEvent: event => event.target === input, ignoreMutation: () => true,
           update(next) { if (next.type !== current.type) return false; current = next; sync(); return true; },

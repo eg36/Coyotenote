@@ -3025,7 +3025,10 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   await pane.getByRole("button", { name: "Bold", exact: true }).click();
   await page.keyboard.press("Control+s");
   await expect.poll(() => diskBody(page, id)).toContain("**A paragraph to style.**");
-  await page.locator("#close-formatting").click();
+  // The panel has no close button of its own: Escape inside it or Format closes it.
+  await expect(page.locator("#close-formatting")).toHaveCount(0);
+  await pane.getByRole("button", { name: "Bold", exact: true }).focus();
+  await page.keyboard.press("Escape");
   await expect(pane).toBeHidden();
   await expect(toggle).toBeFocused();
   await page.reload();
@@ -3044,6 +3047,90 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   await page.locator("#formatting-scrim").click({position:{x:325,y:250}});
   await expect(pane).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+});
+
+test("the Format panel adds footnotes, formulas, diagrams and callouts as exact Markdown", async ({ page }) => {
+  const id = await openSeed(page, "First paragraph.\n\nSecond paragraph.");
+  const pane = page.locator("#format-panel"), tiptap = page.locator(".tiptap");
+  const tool = (name) => pane.getByRole("button", { name, exact: true });
+  const saved = async (body) => { await page.keyboard.press("Control+s"); await expect.poll(() => diskBody(page, id)).toBe(body); };
+  await expect(pane.locator(".format-label")).toHaveText(["Paragraph style", "Text style", "Highlight", "Lists and quotes", "Insert", "History", "References", "Formula", "Diagram", "Callout", "Note"]);
+  // A footnote takes the next number; its definition waits at the end, focused.
+  await tiptap.locator("p").first().click();
+  await page.keyboard.press("End");
+  await tool("Footnote").click();
+  await expect(page.getByRole("textbox", { name: "Footnote 1" })).toBeFocused();
+  await page.keyboard.type("A source.");
+  await saved("First paragraph.[^1]\n\nSecond paragraph.\n\n[^1]: A source.");
+  // An inline formula starts from the selected text and opens its TeX.
+  await tiptap.locator("p").nth(1).click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" E=mc^2");
+  for (let i = 0; i < 6; i++) await page.keyboard.press("Shift+ArrowLeft");
+  await tool("Inline formula").click();
+  await expect(page.getByRole("textbox", { name: "Formula TeX" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await saved("First paragraph.[^1]\n\nSecond paragraph. $E=mc^2$\n\n[^1]: A source.");
+  // A display formula opens empty.
+  await tiptap.locator("p").nth(1).click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await tool("Display formula").click();
+  await expect(page.getByRole("textbox", { name: "Display formula TeX" })).toBeFocused();
+  await page.keyboard.type("a^2+b^2=c^2");
+  await page.keyboard.press("Control+Enter");
+  await saved("First paragraph.[^1]\n\nSecond paragraph. $E=mc^2$\n\n$$\na^2+b^2=c^2\n$$\n\n[^1]: A source.");
+  // A diagram opens its starting source, selected to replace.
+  await tiptap.locator("p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await tool("Mermaid diagram").click();
+  const source = page.getByRole("textbox", { name: "Mermaid source" });
+  await expect(source).toBeFocused();
+  expect(await source.evaluate((el) => el.selectionEnd - el.selectionStart)).toBe("flowchart TD\n  A --> B".length);
+  await page.keyboard.press("Control+Enter");
+  const diagram = "```mermaid\nflowchart TD\n  A --> B\n```";
+  await saved(`First paragraph.[^1]\n\n${diagram}\n\nSecond paragraph. $E=mc^2$\n\n$$\na^2+b^2=c^2\n$$\n\n[^1]: A source.`);
+  // With the diagram still selected, a callout starts after it instead of replacing it.
+  await page.locator("#callout-type").click();
+  const types = page.locator("#menu-popup .menu-item");
+  await expect(types).toHaveCount(13);
+  await expect(page.locator("#menu-popup .menu-item.current")).toHaveText("Note");
+  await page.getByRole("menuitem", { name: "Warning", exact: true }).click();
+  await page.keyboard.type("Careful.");
+  await saved(`First paragraph.[^1]\n\n${diagram}\n\n> [!warning]\n> Careful.\n\nSecond paragraph. $E=mc^2$\n\n$$\na^2+b^2=c^2\n$$\n\n[^1]: A source.`);
+  // The button keeps the last type, after a reload too, and wraps the current paragraph.
+  await page.reload();
+  await expect(tool("Warning callout")).toBeVisible();
+  await tiptap.locator("p").first().click();
+  await tool("Warning callout").click();
+  await saved(`> [!warning]\n> First paragraph.[^1]\n\n${diagram}\n\n> [!warning]\n> Careful.\n\nSecond paragraph. $E=mc^2$\n\n$$\na^2+b^2=c^2\n$$\n\n[^1]: A source.`);
+  // The note tools open find and replace and the note's history.
+  await tool("Find and replace").click();
+  await expect(page.locator("#search-replacement")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await mode(page, "Write");
+  await tool("Note history").click();
+  await expect(page.getByRole("dialog", { name: "Note history" })).toBeVisible();
+  await page.keyboard.press("Escape");
+});
+
+test("Format panel tools are disabled while a recovered draft holds the note", async ({ page }) => {
+  await openSeed(page, "Read me only.");
+  await failSaves(page, { status: 503, error: "Simulated save outage" });
+  await page.locator(".tiptap").click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Draft.");
+  await expect(page.locator("#error-banner")).toContainText("Simulated save outage");
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  const tools = page.locator('#format-panel :is([data-format="footnote"], [data-format="inlineMath"], [data-format="mathBlock"], [data-format="mermaid"], [data-format="callout"], [data-format="find"], [data-format="history"]), #callout-type');
+  await expect(tools).toHaveCount(8);
+  for (const button of await tools.all()) await expect(button).toBeDisabled();
+  await allowSaves(page);
+  await page.locator("#discard-draft").click();
+  for (const button of await tools.all()) await expect(button).toBeEnabled();
 });
 
 test("the view switch holds the header's right end and views stay reachable", async ({ page }) => {

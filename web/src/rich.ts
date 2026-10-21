@@ -15,20 +15,20 @@ interface RichOptions {
 import { marked, Marked, Hooks } from "marked";
 import type { Token, Tokens } from "marked";
 import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
-import { TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
 import { StatusTaskList, StatusTaskItem } from "./task-status.js";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
-import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes } from "./footnotes.js";
+import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes, focusNextDefinition } from "./footnotes.js";
 import { writingSettings } from "./preferences.js";
 import { SourceBlocks, stampSources } from "./source-blocks.js";
 import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
 import { Callout, continuedCallout } from "./write-callout.js";
-import { InlineMath, MathBlock, NumberedList, splitLazyFormulas, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas } from "./write-math.js";
-import { MermaidBlock } from "./write-diagrams.js";
+import { InlineMath, MathBlock, NumberedList, splitLazyFormulas, MathListItem, MathBlockquote, inlineMathToken, mathBlockToken, maskFormulas, openNextFormula } from "./write-math.js";
+import { MermaidBlock, openNextDiagram } from "./write-diagrams.js";
 
 const WikiLink = Node.create({
   name: "wikiLink",
@@ -591,6 +591,11 @@ export function createRich(
     command(name, value) {
       if (!editor) return;
       const chain = editor.chain().focus();
+      // Inserting while a whole block (a diagram or formula) is selected must
+      // not replace it: the new content goes at the nearest caret after it.
+      const selected = editor.state.selection;
+      if (selected instanceof NodeSelection && ["footnote", "inlineMath", "mathBlock", "mermaid"].includes(name))
+        chain.command(({ tr }) => { tr.setSelection(Selection.near(tr.doc.resolve(selected.to))); return true; });
       switch (name) {
         case "bold":
           chain.toggleBold().run();
@@ -634,6 +639,56 @@ export function createRich(
             chain.extendMarkRange("link").setLink({ href: value }).run();
           else chain.unsetLink().run();
           break;
+        // A footnote takes the next unused number: its reference goes at the
+        // caret and its definition at the end of the note, ready to type.
+        case "footnote": {
+          const used = new Set<string>();
+          editor.state.doc.descendants((node) => {
+            if (node.type.name === "footnoteReference" || node.type.name === "footnoteDefinition") used.add(String(node.attrs.label));
+          });
+          let number = 1;
+          while (used.has(String(number))) number++;
+          const label = String(number);
+          focusNextDefinition();
+          const definition = editor.schema.nodes.footnoteDefinition.create({ label, prefix: `[^${label}]: ` });
+          chain.insertContent({ type: "footnoteReference", attrs: { label } })
+            .command(({ tr }) => {
+              tr.insert(tr.doc.content.size, definition);
+              return true;
+            }).run();
+          break;
+        }
+        // An inline formula starts from the selected text when that is valid
+        // TeX on one line, and otherwise from x placed after the selection.
+        case "inlineMath": {
+          const { from, to } = editor.state.selection;
+          const text = editor.state.doc.textBetween(from, to, "\n").trim();
+          openNextFormula();
+          if (text && inlineMathToken(`$${text}$`)?.raw === `$${text}$`)
+            chain.insertContent({ type: "inlineMath", attrs: { tex: text } }).run();
+          else chain.insertContentAt(to, { type: "inlineMath", attrs: { tex: "x" } }).run();
+          break;
+        }
+        case "mathBlock":
+          openNextFormula();
+          chain.insertContent({ type: "mathBlock" }).run();
+          break;
+        case "mermaid":
+          openNextDiagram();
+          chain.insertContent({ type: "mermaidBlock", attrs: { sourceText: "flowchart TD\n  A --> B" } }).run();
+          break;
+        // A callout wraps the current block, as Quote does, with the chosen
+        // type; beside a selected diagram or formula it starts an empty one.
+        case "callout": {
+          const attrs = { kind: value || "note", fold: "", space: "", title: "", empty: true };
+          if (selected instanceof NodeSelection)
+            editor.chain().focus().insertContentAt(selected.to, { type: "callout", attrs, content: [{ type: "paragraph" }] })
+              .setTextSelection(selected.to + 2).run();
+          else chain.wrapIn("callout", attrs).run();
+          // Focus at once, so typing right after the type menu lands inside.
+          editor.view.focus();
+          break;
+        }
         case "undo":
           chain.undo().run();
           break;

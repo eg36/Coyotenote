@@ -60,7 +60,8 @@ import { paletteDialog } from "./palette.js";
 import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
-import { setupFormatting } from "./formatting.js";
+import { insertCallout, setupFormatting } from "./formatting.js";
+import { historyDialog } from "./history.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
 import { applyWritingSettings } from "./preferences.js";
 import { settingsDialog } from "./settings.js";
@@ -206,6 +207,9 @@ for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
     if (name === "wiki") linkDialog(true);
     else if (name === "link") linkDialog();
     else if (name === "image") chooseImages();
+    else if (name === "callout") insertCallout();
+    else if (name === "find") findInNote().catch(showError);
+    else if (name === "history") historyDialog().catch(showError);
     else state.rich?.command(name || "", button.dataset.colour);
   };
 }

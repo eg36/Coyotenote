@@ -2914,3 +2914,26 @@ dialog.danger #modal-submit {
   .topbar #format-toggle .view-tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .view-switch button { width: 26px; }
 }
+/* Format panel tools that are less familiar carry a label beside the icon;
+   the callout button's type menu sits joined to its right. */
+#format-panel .format-labelled { width: auto; gap: 6px; align-items: center; padding: 0 10px; font-size: 13px; }
+#format-panel .format-labelled svg { width: 16px; height: 16px; flex: none; }
+#format-panel .split-button { display: inline-flex; gap: 1px; }
+#format-panel .split-button #callout-insert { border-radius: 6px 0 0 6px; }
+#format-panel .split-button #callout-insert svg { color: var(--accent-text); }
+#callout-type { display: grid; place-items: center; width: 26px; height: 36px; padding: 0; border-radius: 0 6px 6px 0; background: var(--hover); color: var(--muted); }
+#callout-type:hover, #callout-type[aria-expanded="true"] { color: var(--text); }
+#callout-type svg { width: 15px; height: 15px; }
+/* The callout type menu: two columns, a colour dot per type, the type the
+   button makes marked. */
+#menu-popup[data-open-menu="callout"] { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; width: 280px; }
+#menu-popup[data-open-menu="callout"][hidden] { display: none; }
+#menu-popup[data-open-menu="callout"] .menu-item { justify-content: flex-start; gap: 8px; min-height: 32px; }
+#menu-popup .menu-item.current { background: var(--selected); }
+.menu-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+.menu-dot:is(.callout-abstract, .callout-tip) { background: var(--cyan); }
+.menu-dot.callout-success { background: var(--good); }
+.menu-dot:is(.callout-question, .callout-warning) { background: var(--warn); }
+.menu-dot:is(.callout-failure, .callout-danger, .callout-bug) { background: var(--danger); }
+.menu-dot.callout-example { background: var(--pink); }
+.menu-dot.callout-quote { background: var(--muted); }

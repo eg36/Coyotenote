@@ -19,6 +19,8 @@ import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
 import { toggleOutline } from "./outline.js";
 import { dailyNote } from "./daily.js";
+import { calloutKind, capitalised, insertCallout } from "./formatting.js";
+import { calloutTypes } from "./callout-types.js";
 import { settingsDialog } from "./settings.js";
 
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -87,6 +89,8 @@ const menus: Record<string, MenuEntry[]> = {
     ["Move to trash", "", deleteDialog, note, "trash"],
   ],
 };
+// The callout button's type menu: each type with its colour.
+menus.callout = calloutTypes.map((kind) => [capitalised(kind), "", () => insertCallout(kind), writing, "dot:" + kind]);
 // The menu bar's own menus, in the order the arrow keys move between them.
 const barMenus = ["file", "edit", "view", "insert"];
 const trigger = (name: string) => document.querySelector<HTMLButtonElement>(`[data-menu="${name}"]`);
@@ -119,7 +123,12 @@ function openMenu(name: string, focusItem = 0) {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "menu-item";
-    if (iconName) item.insertAdjacentHTML("beforeend", icon(iconName));
+    if (iconName?.startsWith("dot:")) {
+      const dot = document.createElement("span");
+      dot.className = `menu-dot callout-${iconName.slice(4)}`;
+      item.append(dot);
+      item.classList.toggle("current", iconName.slice(4) === calloutKind());
+    } else if (iconName) item.insertAdjacentHTML("beforeend", icon(iconName));
     item.classList.toggle("danger", iconName === "trash");
     item.setAttribute("role", "menuitem");
     item.disabled = when ? !when() : false;
