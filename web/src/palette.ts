@@ -15,6 +15,7 @@ import { findNotes } from "./shortcuts.js";
 import { settingsDialog } from "./settings.js";
 import { activePlugin, inPluginFolder, isActive, plugins, switchPlugin, type PluginCommand } from "./plugins.js";
 import { openSwitcher } from "./switcher.js";
+import { openLibrary } from "./library.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
 // match: word starts and runs of consecutive letters count for more, and
@@ -77,6 +78,7 @@ const shellCommands: PluginCommand[] = [
   { label: "Settings", keys: "Ctrl Shift T", run: () => settingsDialog() },
   { label: "Change the appearance", run: () => settingsDialog({ appearance: true }) },
   { label: "Keyboard shortcuts", keys: "F1", run: helpDialog },
+  { label: "Open the library", keys: "Alt L", run: () => openLibrary() },
 ];
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
 // Switching plugins is the shell's too, one command per enabled plugin.

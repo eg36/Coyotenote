@@ -1596,7 +1596,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText(
     "Keyboard shortcuts",
   );
-  await expect(page.locator(".help-grid kbd")).toHaveCount(19);
+  await expect(page.locator(".help-grid kbd")).toHaveCount(20);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
   await page.keyboard.press("Escape");
   await page.locator("body").click({ position: { x: 5, y: 5 } });
@@ -3298,15 +3298,6 @@ test("Notes leaves enabled plugins' folders out of its list but still follows li
   await mode(page, "Preview");
   await page.locator("#preview a", { hasText: "issues/T-1" }).click();
   await expect(page.locator("#document-title")).toHaveText("T-1");
-  // The setting lists plugin folders again.
-  await page.locator("#settings-button").click();
-  await page.locator("#show-plugin-folders").check();
-  await page.keyboard.press("Escape");
-  await expect(row).toHaveCount(1);
-  await page.locator("#settings-button").click();
-  await page.locator("#show-plugin-folders").uncheck();
-  await page.keyboard.press("Escape");
-  await expect(row).toHaveCount(0);
   // Turning the plugin off gives its files back to Notes.
   const { token } = await (await page.request.get("/api/state")).json();
   await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { issues: false } } });
@@ -3626,6 +3617,37 @@ test("the board moves issues between Now, Next, Later and Done by drag or by key
   await expect(page.locator(".issues-board")).toBeVisible();
   await page.getByRole("button", { name: "Show as a board" }).click();
   await expect(page.locator(".issues-doc")).toBeVisible();
+});
+
+test("the Library lists every vault file and opens each in its plugin", async ({ page }) => {
+  await seed(page, "Plan", "A note.");
+  await seed(page, "issues/Space/Project", "---\nprefix: LS\n---\n");
+  await seed(page, "issues/Space/LS-1", "---\ntitle: Filed\nstatus: todo\n---\n");
+  await openSeed(page, "Start.");
+  await page.keyboard.press("Alt+l");
+  const dialog = page.getByRole("dialog", { name: "Library" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".library-heading")).toHaveText([/Notes/, /Issues\s*2/]);
+  await expect(dialog.locator('.library-row[data-path="issues/Space/LS-1.md"]')).toContainText("issues/Space");
+  await dialog.getByLabel("Filter files by name or folder").fill("LS-1");
+  await expect(dialog.locator(".library-row")).toHaveCount(1);
+  // An issue opens in Issues; a note opens in Notes.
+  await dialog.locator('.library-row[data-path="issues/Space/LS-1.md"]').click();
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "issues");
+  await expect(page.getByRole("article", { name: "Issue LS-1" })).toBeVisible();
+  await page.getByRole("button", { name: "Library" }).click();
+  await page.locator('.library-row[data-path="Plan.md"]').click();
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
+  await expect(page.locator("#document-title")).toHaveText("Plan");
+  // With every plugin off it still opens, and files download instead.
+  const { token } = await (await page.request.get("/api/state")).json();
+  await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { notes: false, issues: false } } });
+  await page.reload();
+  await expect(page.locator("#space-empty")).toBeVisible();
+  await page.keyboard.press("Alt+l");
+  const download = page.waitForEvent("download");
+  await page.locator('.library-row[data-path="Plan.md"]').click();
+  expect((await download).suggestedFilename()).toBe("Plan.md");
 });
 
 test("a link to an issue opens it in Issues", async ({ page }) => {

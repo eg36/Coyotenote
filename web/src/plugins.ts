@@ -114,18 +114,14 @@ function enablePlugin(id: string, on: boolean) {
   return setPluginEnabled(id, on).then(() => refresh()).catch(showError);
 }
 
-// Notes leaves out the files in enabled plugins' folders, unless the user
-// asked to see them; links to them still resolve.
-const showFoldersKey = "labradorite-show-plugin-folders";
-function showPluginFolders() {
-  return storage.get(showFoldersKey) === "true";
-}
-function setShowPluginFolders(on: boolean) {
-  storage.set(showFoldersKey, String(on));
-}
+// Notes leaves out the files in enabled plugins' folders; links to them
+// still resolve, and the Library lists them.
 function inPluginFolder(id: string) {
-  if (showPluginFolders()) return false;
   return Object.values(state.pluginFolders || {}).some((folder) => id.startsWith(folder + "/"));
+}
+// openWith switches to a plugin and opens a target in it.
+function openWith(id: string, target: string) {
+  context.open(id, target);
 }
 
 export type { LabradoritePlugin, PluginCommand, SpaceContext };
@@ -135,9 +131,8 @@ export {
   inPluginFolder,
   isActive,
   plugins,
+  openWith,
   registerPlugin,
-  setShowPluginFolders,
-  showPluginFolders,
   startPlugins,
   switchPlugin,
 };

@@ -277,6 +277,54 @@ func TestPluginFilesListTheirFolderWithText(t *testing.T) {
 	request(t, a, "GET", "/api/plugin-files?plugin=../x", nil, 404)
 }
 
+func TestLibraryListsEveryVaultFileAndDownloadsThem(t *testing.T) {
+	a := testApp(t)
+	request(t, a, "POST", "/api/note", mutation{ID: "Plan", Body: "x"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "issues/Space/LS-1", Body: "y"}, 201)
+	for name, data := range map[string]string{"attachments/pic.png": "png", "docs/report.pdf": "pdf", ".git/config": "hidden", ".hidden.txt": "hidden"} {
+		full := filepath.Join(a.store.Dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(filepath.Join(a.store.Dir, "Plan.md"), filepath.Join(a.store.Dir, "link.md")); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, f := range request(t, a, "GET", "/api/library", nil, 200)["files"].([]any) {
+		got[f.(map[string]any)["path"].(string)] = true
+	}
+	for _, want := range []string{"Plan.md", "issues/Space/LS-1.md", "attachments/pic.png", "docs/report.pdf"} {
+		if !got[want] {
+			t.Fatalf("missing %s in %v", want, got)
+		}
+	}
+	for _, hidden := range []string{".git/config", ".hidden.txt", "link.md", "theme", "plugins"} {
+		if got[hidden] {
+			t.Fatalf("listed %s", hidden)
+		}
+	}
+	req := httptest.NewRequest("GET", "http://127.0.0.1:4280/api/download?path=docs/report.pdf", nil)
+	req.Header.Set("X-Labradorite-Token", a.token)
+	rec := httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	if rec.Code != 200 || rec.Body.String() != "pdf" || !strings.Contains(rec.Header().Get("Content-Disposition"), "report.pdf") {
+		t.Fatalf("download: %d %q %q", rec.Code, rec.Body.String(), rec.Header().Get("Content-Disposition"))
+	}
+	for _, bad := range []string{"../outside", ".git/config", "link.md", "missing.txt"} {
+		req := httptest.NewRequest("GET", "http://127.0.0.1:4280/api/download?path="+url.QueryEscape(bad), nil)
+		req.Header.Set("X-Labradorite-Token", a.token)
+		rec := httptest.NewRecorder()
+		a.ServeHTTP(rec, req)
+		if rec.Code != 404 {
+			t.Fatalf("download %s: %d", bad, rec.Code)
+		}
+	}
+}
+
 func TestRetiredThemesOpenByBrightness(t *testing.T) {
 	a := testApp(t)
 	for saved, want := range map[string]string{"gruvbox-light": "light", "catppuccin-latte": "light", "nord": "dark", "tokyo-night": "dark", "unknown": "dark"} {

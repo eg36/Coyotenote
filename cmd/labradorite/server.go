@@ -427,6 +427,40 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "plugins": a.enabledPlugins(), "pluginFolders": a.enabledFolders(), "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
+	if route == "GET /api/library" {
+		// The Library lists every file; settings kept beside the notes stay out.
+		var skip []string
+		if filepath.Clean(a.store.Config) == filepath.Clean(a.store.Dir) {
+			skip = []string{"theme", "plugins"}
+		}
+		files, err := a.store.ListFiles(skip...)
+		if err != nil {
+			return err
+		}
+		if files == nil {
+			files = []vault.VaultFile{}
+		}
+		writeJSON(w, 200, map[string]any{"files": files, "folders": pluginFolders, "attachments": vault.AttachmentDir})
+		return nil
+	}
+	if route == "GET /api/download" {
+		// Any listed file can be saved from the Library, never one outside it.
+		rel := r.URL.Query().Get("path")
+		f, err := a.store.OpenFile(rel)
+		if err != nil || strings.HasPrefix(rel, "/") || strings.Contains("/"+rel+"/", "/../") {
+			return &apiError{status: 404, message: "That file is not in the vault."}
+		}
+		defer f.Close()
+		info, err := f.Stat()
+		if err != nil {
+			return &apiError{status: 404, message: "That file is not in the vault."}
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", `attachment; filename*=UTF-8''`+url.PathEscape(path.Base(rel)))
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+		http.ServeContent(w, r, "", info.ModTime(), f)
+		return nil
+	}
 	if route == "GET /api/plugin-files" {
 		// A plugin reads all its files at once, with their text and backlinks.
 		folder := pluginFolders[r.URL.Query().Get("plugin")]

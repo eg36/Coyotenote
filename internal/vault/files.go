@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -206,4 +207,56 @@ func (s *Store) SaveAttachment(name string, data []byte) (string, error) {
 			return "", err
 		}
 	}
+}
+
+// VaultFile is one file the Library lists.
+type VaultFile struct {
+	Path     string    `json:"path"`
+	Size     int64     `json:"size"`
+	Modified time.Time `json:"modified"`
+}
+
+// ListFiles lists every regular file below the vault root, as vault loading
+// sees the vault: hidden folders and files, symlinks and the app's own
+// pending and recovery files stay out. skip names root files to leave out,
+// such as settings kept beside the notes.
+func (s *Store) ListFiles(skip ...string) ([]VaultFile, error) {
+	var files []VaultFile
+	err := filepath.WalkDir(s.Dir, func(p string, e fs.DirEntry, err error) error {
+		if err != nil {
+			if p == s.Dir {
+				return err
+			}
+			return nil
+		}
+		if p == s.Dir {
+			return nil
+		}
+		if strings.HasPrefix(e.Name(), ".") {
+			if e.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if e.IsDir() || !e.Type().IsRegular() {
+			return nil
+		}
+		rel, err := filepath.Rel(s.Dir, p)
+		if err != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		for _, name := range skip {
+			if rel == name {
+				return nil
+			}
+		}
+		info, err := e.Info()
+		if err != nil {
+			return nil
+		}
+		files = append(files, VaultFile{Path: rel, Size: info.Size(), Modified: info.ModTime().UTC()})
+		return nil
+	})
+	return files, err
 }
