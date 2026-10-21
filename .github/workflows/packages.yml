@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Version stamped into all four binaries (no tag is created)
+        description: Version stamped into both Linux binaries (no tag is created)
         required: true
         type: string
 
@@ -30,16 +30,6 @@ jobs:
             artifact: linux_arm64
             executable: labradorite
             browser: false
-          - target: windows/amd64
-            runner: windows-2025
-            artifact: windows_amd64
-            executable: labradorite.exe
-            browser: true
-          - target: windows/arm64
-            runner: windows-11-arm
-            artifact: windows_arm64
-            executable: labradorite.exe
-            browser: false
     defaults:
       run:
         shell: bash
@@ -58,8 +48,7 @@ jobs:
         run: |
           go vet ./...
           go test -count=1 -v ./...
-      - name: Native race checks (supported targets)
-        if: matrix.target != 'windows/arm64'
+      - name: Native race checks
         run: go test -race -count=1 ./...
       - name: Packaging input checks
         run: python -m unittest discover -s scripts -p "*_test.py"
@@ -101,8 +90,8 @@ jobs:
           Target: {os.environ['BUILD_TARGET']}
           Passed: native Go vet/tests (paths, locking, atomic replacement, trash/restore, history, conflicts, browser-launch command), archive contents, architecture, version, SHA256, HTTP, durable save/restart and shutdown.
           Browser regression: {'full Chromium suite passed (including drafts)' if browser else 'not run on ARM; desktop/browser and draft recovery need manual validation'}.
-          Race detector: {'unavailable on Windows arm64' if os.environ['BUILD_TARGET'] == 'windows/arm64' else 'passed'}.
-          Manual desktop check pending: default browser association, visual behavior, and user download/run on Windows. Windows directory fsync is unavailable; acknowledged file saves are flushed before rename. Windows has no file change stamp, so an outside edit that keeps a note's size and restores an older modification time can go unnoticed until the note changes again. No installer or code signing is provided.
+          Race detector: passed.
+          Manual desktop check pending: default browser association and visual behavior on the target Linux desktop. No installer or code signing is provided.
           '''
           Path('dist/VALIDATION.txt').write_text(text, encoding='utf-8')
           PY
@@ -125,5 +114,5 @@ jobs:
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
               summary.write(f"### {os.environ['BUILD_TARGET']} — {os.environ['BUILD_VERSION']}\n\n")
               summary.write(f"[Download this target]({os.environ['ARTIFACT_URL']}) (sign in with repository read access; retained 90 days).\n\n")
-              summary.write('Unzip the Actions download, verify the inner archive with SHA256SUMS, then extract that archive. See the included guide for Windows PowerShell commands.\n\n```text\n' + text + '```\n')
+              summary.write('Extract the Actions download, verify the inner tar.gz archive with SHA256SUMS, then extract that archive. See the included guide for running Labradorite.\n\n```text\n' + text + '```\n')
           PY

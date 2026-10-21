@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 # Only exact stable tags publish, from main after CI and native package checks.
-# Use the same four tested archives as the manual artifact-only workflow.
+# Use the same two tested Linux archives as the manual artifact-only workflow.
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -57,18 +57,17 @@ jobs:
         with:
           pattern: labradorite_*
           path: tested-packages
-      - name: Collect the four tested archives
+      - name: Collect the two tested Linux archives
         shell: bash
         run: |
           set -euo pipefail
           mkdir dist
-          count=0
-          for package in tested-packages/*; do
+          test "$(find tested-packages -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 2
+          for target in linux_amd64 linux_arm64; do
+            package="tested-packages/labradorite_${GITHUB_REF_NAME}_${target}"
             (cd "$package" && sha256sum --check SHA256SUMS)
-            cp "$package"/labradorite_* dist/
-            count=$((count + 1))
+            cp "$package/labradorite_${GITHUB_REF_NAME}_${target}.tar.gz" dist/
           done
-          test "$count" -eq 4
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -9,6 +10,7 @@ import { load } from "js-yaml";
 const workflow = load(readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8"));
 const gate = workflow.jobs.gate.steps.find(step => step.name === "Require a commit on main and release notes").run;
 const publish = workflow.jobs.release.steps.find(step => step.name === "Publish release").run;
+const collect = workflow.jobs.release.steps.find(step => step.name === "Collect the two tested Linux archives").run;
 
 // Execute the workflow's actual shell steps in a disposable repository fixture.
 // Git ancestry and GitHub publishing are stubbed; no tag or release is created.
@@ -119,12 +121,11 @@ test("manual test builds only download artifacts after CI", () => {
   assert.equal(manual.jobs.packages.uses, "./.github/workflows/packages.yml");
 });
 
-test("native packages cover four targets and retain downloads for 90 days", () => {
+test("native packages cover only Linux amd64 and arm64 and retain downloads for 90 days", () => {
   const packages = load(readFileSync(new URL("../.github/workflows/packages.yml", import.meta.url), "utf8"));
   assert.deepEqual(packages.permissions, { contents: "read" });
   assert.deepEqual(packages.jobs.package.strategy.matrix.include.map(row => [row.target, row.runner]), [
     ["linux/amd64", "ubuntu-24.04"], ["linux/arm64", "ubuntu-24.04-arm"],
-    ["windows/amd64", "windows-2025"], ["windows/arm64", "windows-11-arm"],
   ]);
   const steps = packages.jobs.package.steps;
   const upload = steps.find(step => step.id === "upload");
@@ -135,6 +136,40 @@ test("native packages cover four targets and retain downloads for 90 days", () =
   assert.equal(packages.jobs.package.env.BUILD_VERSION, "${{ inputs.version }}");
   const all = JSON.stringify([manualWorkflow(), packages]);
   assert.doesNotMatch(all, /contents\":\"write|gh release|git tag|refs\/tags/);
+});
+
+function collectPackages(targets, corrupt = false) {
+  const root = mkdtempSync(join(tmpdir(), "labradorite-linux-release-"));
+  const tag = "v2026.1.0";
+  try {
+    mkdirSync(join(root, "tested-packages"));
+    for (const target of targets) {
+      const dir = join(root, "tested-packages", `labradorite_${tag}_${target}`);
+      mkdirSync(dir);
+      const name = `labradorite_${tag}_${target}.${target.startsWith("linux_") ? "tar.gz" : "zip"}`;
+      const content = Buffer.from(`Archive fixture for ${target}.\n`);
+      writeFileSync(join(dir, name), content);
+      writeFileSync(join(dir, "SHA256SUMS"), `${createHash("sha256").update(content).digest("hex")}  ${name}\n`);
+      if (corrupt && target === "linux_arm64") writeFileSync(join(dir, name), "Corrupted download");
+    }
+    const result = spawnSync("bash", ["-c", collect], {
+      cwd: root, encoding: "utf8", env: { ...process.env, GITHUB_REF_NAME: tag },
+    });
+    assert.ifError(result.error);
+    return { ...result, archives: existsSync(join(root, "dist")) ? readdirSync(join(root, "dist")).sort() : [] };
+  } finally { rmSync(root, { recursive: true, force: true }); }
+}
+
+test("release collection accepts exactly the two checksum-verified Linux archives", () => {
+  const result = collectPackages(["linux_amd64", "linux_arm64"]);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.deepEqual(result.archives, ["labradorite_v2026.1.0_linux_amd64.tar.gz", "labradorite_v2026.1.0_linux_arm64.tar.gz"]);
+});
+
+test("release collection rejects missing, Windows and extra packages or corrupt archives", () => {
+  for (const targets of [["linux_amd64"], ["linux_amd64", "windows_amd64"], ["linux_amd64", "linux_arm64", "windows_amd64"]])
+    assert.notEqual(collectPackages(targets).status, 0, targets.join(", "));
+  assert.notEqual(collectPackages(["linux_amd64", "linux_arm64"], true).status, 0);
 });
 
 function manualWorkflow() {

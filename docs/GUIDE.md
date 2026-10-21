@@ -1,9 +1,9 @@
 # Labradorite guide
 
-This guide describes **Labradorite Space 2026.1.0 development builds**. The
-published stable **v1.5.0** is the earlier notebook and does not include the
-Space plugin shell, Library or the later embed work. Development
-builds are stamped `2026.1.0+dev`; this guide does not announce a new release.
+This guide describes **Labradorite Space 2026.1.0**. Release and current test
+packages target Linux amd64 and arm64. The earlier **v1.5.0** notebook uses the
+same plain Markdown vault format. Development builds are stamped
+`2026.1.0+dev`; publication is controlled by the release workflow.
 
 Labradorite runs locally in your browser. The optional Notes plugin
 uses a shared rail, settings, command palette and vault. Notes are plain
@@ -20,15 +20,17 @@ you open yourself are never given one.
 
 ## Run it
 
-Release archives on the [Releases](https://github.com/eg36/Labradorite/releases)
-page hold the `labradorite` binary; run it from the unpacked folder. To build it
+For 2026.1.0, release archives on the
+[Releases](https://github.com/eg36/vc-labrt-exp/releases) page target Linux amd64
+and arm64 as `.tar.gz` packages, with `SHA256SUMS`. Each holds the `labradorite`
+binary; run it from the unpacked folder. To build it
 instead, Go **1.26+** is the only requirement. Browser assets are bundled and
 committed: Node and npm are **not** needed to run the app, and there are no CDNs
 or automatic runtime third-party requests. Opt-in web embeds contact external
 services only when explicitly loaded.
 
 ```sh
-git clone git@github.com:eg36/Labradorite.git
+git clone git@github.com:eg36/vc-labrt-exp.git
 cd Labradorite
 go build -o bin/labradorite ./cmd/labradorite
 ./bin/labradorite
@@ -555,8 +557,8 @@ tab, search or open a note; a note with unsaved edits is never replaced.
 
 Space keeps existing Markdown notes without conversion. Files previously
 created by the Issues plugin remain ordinary Markdown in their existing folders
-and open in Notes. No files are moved or deleted when upgrading. The next
-planned public release is 2026.1.0; 2.0.0 will not be released.
+and open in Notes. No files are moved or deleted when upgrading.
+Labradorite Space uses the 2026.1.0 release version; 2.0.0 will not be released.
 
 What Labradorite stores in a vault:
 
@@ -683,17 +685,21 @@ Prerelease tags do not publish through the Release workflow.
 
 ### Test-build downloads and Windows
 
-[Test builds](https://github.com/eg36/Labradorite/actions/workflows/test-build.yml)
-provides manually requested Linux amd64/arm64 (`.tar.gz`) and Windows amd64/arm64
-(`.zip`) packages. Open a successful run, then choose your target under **Artifacts**
+[Test builds](https://github.com/eg36/vc-labrt-exp/actions/workflows/test-build.yml)
+provides manually requested Linux amd64/arm64 (`.tar.gz`) packages. Open a successful run, then choose your target under **Artifacts**
 or its download link in the run summary. Sign in to GitHub with repository read
 access. Artifacts expire after **90 days**; they do not create tags or Releases,
-and stable v1.5.0 remains Linux amd64 only.
+and are separate from the Linux-only 2026.1.0 release.
 
 Unzip the Actions download first. It contains the actual platform archive,
 `SHA256SUMS`, `BUILDINFO.json` and `VALIDATION.txt`. The metadata gives the exact
 commit, version and target; validation lists native checks and remaining gaps.
-Choose amd64 for an Intel/AMD Windows PC, or arm64 for an ARM Windows PC (see
+Choose amd64 for an Intel/AMD Linux computer, or arm64 for an ARM Linux computer.
+
+The Windows instructions below describe earlier four-target test builds only;
+current release and test workflows do not produce Windows packages. For one of
+those historical packages, choose amd64 for an Intel/AMD Windows PC or arm64
+for an ARM Windows PC (see
 Settings → System → About → System type). These are portable console programs,
 with no installer or code signing.
 
@@ -719,22 +725,23 @@ With no arguments, notes and settings are in `%AppData%\labradorite`. With a
 positional vault, settings stay there; `-data-dir` keeps both in the named folder.
 No Go, Node, npm or Python installation is needed to run a downloaded package.
 
-All four packages in a run use the same commit and version. Native Go tests and
-packaged HTTP/persistence checks run on Linux and Windows, including both ARM
-runners. The full Chromium suite runs against the packaged amd64 binaries on
-Linux and Windows, covering browser drafts as well as editing. ARM browser/GUI
-checks and real default-browser associations require manual review; the Windows
+Both current Linux packages in a run use the same commit and version. Native Go
+tests and packaged HTTP/persistence checks run on amd64 and arm64 Linux runners.
+The full Chromium suite runs against the packaged amd64 binary, covering browser
+drafts as well as editing. ARM browser/GUI checks and real default-browser
+associations require manual review. Historical Windows test-build limitations
+remain relevant if using those older packages: the Windows
 arm64 race detector is unavailable. Windows does not provide the directory fsync
 used on Linux: file contents are flushed before replacement, but equivalent
 power-loss durability is not claimed. Windows also lacks the file change stamp
 Linux uses to spot outside edits: an edit by another program that keeps a note's
 size and restores an older modification time can go unnoticed until the note
 changes again. See `VALIDATION.txt` and
-[#16](https://github.com/eg36/Labradorite/issues/16) for recorded results.
+[#16](https://github.com/eg36/vc-labrt-exp/issues/16) for recorded results.
 
 To request another build, use **Run workflow** on main and enter a version such
 as `1.6.0-beta.2`. The workflow has read-only repository permissions and cannot
-publish a Release. Future approved stable releases consume the same four native
+publish a Release. The 2026.1.0 release consumes the same two Linux
 packages after their checks pass; the publisher verifies their checksums before
 uploading them. Publishing still requires explicit approval and a stable tag.
 
