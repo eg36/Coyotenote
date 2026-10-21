@@ -2583,7 +2583,7 @@ test("the footer shows the running version and links to the latest release on ev
       await page.goto(path);
       await expect(link).toHaveText(version);
       await expect(link).toBeInViewport();
-      await expect(link).toHaveAttribute("href", "https://github.com/eg36/Labradorite/releases/latest");
+      await expect(link).toHaveAttribute("href", "https://github.com/eg36/vc-labrt-exp/releases/latest");
       await expect(link).toHaveAttribute("target", "_blank");
       const footer = page.locator(".statusbar");
       expect(await footer.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBeTruthy();

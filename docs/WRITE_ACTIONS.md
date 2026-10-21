@@ -1,8 +1,8 @@
 # Write action inventory
 
-Inventory for [#14](https://github.com/eg36/Labradorite/issues/14), updated for
+Inventory for [#14](https://github.com/eg36/vc-labrt-exp/issues/14), updated for
 Labradorite Space through the Write embed editor in `62760f0`. The Format
-panel additions from [#40](https://github.com/eg36/Labradorite/issues/40) are
+panel additions from [#40](https://github.com/eg36/vc-labrt-exp/issues/40) are
 implemented. Rows marked as remaining record actions outside the current
 controls. Further sidebar expansion was canceled in #14; these entries are
 an inventory, not an active implementation plan.

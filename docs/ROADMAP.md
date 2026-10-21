@@ -3,9 +3,9 @@
 Working ideas from the 2026-10-20 and 2026-10-21 conversations. Build and refine
 with the user; this document does not authorize a release tag.
 
-Release [v1.5.0](https://github.com/eg36/Labradorite/releases/tag/v1.5.0) was
+Release [v1.5.0](https://github.com/eg36/vc-labrt-exp/releases/tag/v1.5.0) was
 published on 2026-10-20 after explicit approval; preparation is recorded in
-[#13](https://github.com/eg36/Labradorite/issues/13). The next public release is
+[#13](https://github.com/eg36/vc-labrt-exp/issues/13). The next public release is
 **Labradorite Space 2026.1.0**; 2.0.0 will not be released. Review builds use
 `2026.1.0+dev`. No additional public release is authorized by this document.
 GitHub issues are the source of truth and Linear team Labradorite mirrors them.
@@ -21,7 +21,7 @@ current plugin; the Issues plugin has been removed. Plugins are built in;
 third-party plugins are out of scope.
 
 - **2026.1.0**: the plugin shell
-  ([#46](https://github.com/eg36/Labradorite/issues/46)), Notes with the open
+  ([#46](https://github.com/eg36/vc-labrt-exp/issues/46)), Notes with the open
   interface, accessibility and documentation work below, and a Library of
   vault files.
 - **Later (target 2027.1)**: further plugins, such as calculation sheets.
@@ -137,7 +137,7 @@ planned toward 2.0.0; that release is replaced by Labradorite Space 2026.1.0,
 and their work carries into it. Development builds are stamped `2026.1.0+dev`.
 
 Start platform coverage early in 1.6, before completing the 1.6–1.9 feature list.
-[#16](https://github.com/eg36/Labradorite/issues/16) tracks Linux amd64/arm64
+[#16](https://github.com/eg36/vc-labrt-exp/issues/16) tracks Linux amd64/arm64
 and Windows amd64/arm64 packages, native platform checks and a Windows download
 review. Test packages will be Actions artifacts, retained for 90 days, with
 checksums and commit/version information. They will not create public Releases
@@ -150,13 +150,13 @@ future approved stable publishing.
 Public publishing accepts only stable `vMAJOR.MINOR.PATCH` tags, guarded again
 before packaging; prerelease tags never publish through that workflow. Every
 tag or release still needs explicit approval. See
-[#15](https://github.com/eg36/Labradorite/issues/15).
+[#15](https://github.com/eg36/vc-labrt-exp/issues/15).
 
-- [#8](https://github.com/eg36/Labradorite/issues/8): rethink the interface,
+- [#8](https://github.com/eg36/vc-labrt-exp/issues/8): rethink the interface,
   beginning with a user-led brainstorm before implementation.
-- [#11](https://github.com/eg36/Labradorite/issues/11): make custom task
+- [#11](https://github.com/eg36/vc-labrt-exp/issues/11): make custom task
   statuses look consistent in Write and Preview.
-- [#12](https://github.com/eg36/Labradorite/issues/12): edit only the note
+- [#12](https://github.com/eg36/vc-labrt-exp/issues/12): edit only the note
   name inline while preserving its folder; keep moving in Rename or move….
 
 ## 1.6.0 — Maintainable code, full documentation
@@ -174,7 +174,7 @@ tag or release still needs explicit approval. See
 - Write support for embeds and HTML, so fewer notes fall back to Markdown
   view.
 - PDF, audio and video attachments and embeds.
-- Web page and YouTube embeds are implemented in [#66](https://github.com/eg36/Labradorite/issues/66):
+- Web page and YouTube embeds are implemented in [#66](https://github.com/eg36/vc-labrt-exp/issues/66):
   off by default, enabled per vault, with the source shown and an explicit
   Load action for each embed in Preview and Write.
 
