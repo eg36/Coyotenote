@@ -3294,10 +3294,12 @@ test("Notes leaves enabled plugins' folders out of its list but still follows li
   await page.keyboard.type("T-1");
   await expect(page.locator(".palette-option", { hasText: "issues/T-1" })).toHaveCount(0);
   await page.keyboard.press("Escape");
-  // A link still opens the file in Notes.
+  // A link to it still resolves, and opens it in its plugin.
   await mode(page, "Preview");
   await page.locator("#preview a", { hasText: "issues/T-1" }).click();
-  await expect(page.locator("#document-title")).toHaveText("T-1");
+  await expect(page.getByRole("article", { name: "Issue T-1" })).toBeVisible();
+  await page.keyboard.press("Alt+p");
+  await page.keyboard.press("1");
   // Turning the plugin off gives its files back to Notes.
   const { token } = await (await page.request.get("/api/state")).json();
   await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { issues: false } } });
