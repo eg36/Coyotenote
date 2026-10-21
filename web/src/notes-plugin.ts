@@ -66,6 +66,7 @@ function registerNotesPlugin() {
     name: "Notes",
     description: "Markdown notes, links and search",
     icon: "notebook",
+    image: "/assets/plugin-notes.png",
     colour: "--plugin-notes",
     fileTypes: [".md"],
     railItems: () => railIds.map((id) => $(id)),

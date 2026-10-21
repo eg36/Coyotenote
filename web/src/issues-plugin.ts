@@ -567,6 +567,7 @@ function registerIssuesPlugin() {
     name: "Issues",
     description: "Track work as Markdown notes",
     icon: "issues",
+    image: "/assets/plugin-issues.png",
     colour: "--plugin-issues",
     folder: "issues",
     fileTypes: [".md"],

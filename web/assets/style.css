@@ -3094,3 +3094,7 @@ summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--mute
 .issue-card:hover { border-color: var(--line-strong); }
 /* "Move to…" shows on the card in use; touch screens always show it. */
 @media (hover: hover) { .issue-card:not(:hover):not(:focus-within) .issue-card-move:not([aria-expanded="true"]) { opacity: 0; } }
+/* Plugins with a picture show it in the switcher and in Settings. */
+.switcher-tile.pictured { background: none; }
+.switcher-tile img { width: 36px; height: 36px; object-fit: contain; }
+.setting-plugin-image { flex: none; width: 32px; height: 32px; object-fit: contain; }

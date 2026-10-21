@@ -15,7 +15,8 @@ interface LabradoritePlugin {
   id: string;
   name: string;
   description: string; // one line, for the switcher and settings
-  icon: string; // a key in icons.ts
+  icon: string; // a key in icons.ts, for small places such as menus
+  image?: string; // the plugin's picture, for the switcher and settings
   colour: string; // a theme variable, such as "--plugin-notes"
   folder?: string; // the vault folder it keeps its files in, if not the root
   fileTypes?: string[]; // file name endings it opens, such as ".md"

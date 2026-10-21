@@ -24,8 +24,9 @@ function render() {
     row.style.setProperty("--plugin-colour", `var(${plugin.colour})`);
     if (plugin === current) row.setAttribute("aria-current", "true");
     const tile = document.createElement("span");
-    tile.className = "switcher-tile";
-    tile.innerHTML = icon(plugin.icon);
+    tile.className = "switcher-tile" + (plugin.image ? " pictured" : "");
+    if (plugin.image) tile.innerHTML = `<img src="${plugin.image}" alt="" width="36" height="36">`;
+    else tile.innerHTML = icon(plugin.icon);
     const text = document.createElement("span");
     text.className = "switcher-text";
     const name = document.createElement("span");

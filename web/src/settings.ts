@@ -88,7 +88,16 @@ function pluginFields() {
     const hint = document.createElement("small");
     hint.textContent = plugin.description;
     text.append(hint);
-    toggle.append(check, text);
+    toggle.append(check);
+    if (plugin.image) {
+      const picture = document.createElement("img");
+      picture.className = "setting-plugin-image";
+      picture.src = plugin.image;
+      picture.alt = "";
+      picture.width = picture.height = 32;
+      toggle.append(picture);
+    }
+    toggle.append(text);
     container.append(toggle);
   }
   const folders = document.createElement("label");
