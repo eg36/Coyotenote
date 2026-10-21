@@ -24,6 +24,7 @@ import { StatusTaskList, StatusTaskItem } from "./task-status.js";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { footnoteDefinitions, withoutFootnoteDefinitions, footnoteExtensions, inlineFootnoteToken, withoutInlineFootnotes, focusNextDefinition } from "./footnotes.js";
+import { hydrateWebEmbeds } from "./web-embeds.js";
 import { writingSettings } from "./preferences.js";
 import { SourceBlocks, stampSources } from "./source-blocks.js";
 import { EscapedChar, CharacterReference, WrittenStyle } from "./exact-text.js";
@@ -137,12 +138,16 @@ const NoteEmbed = Node.create({
       link.tabIndex = 0;
       link.title = "Open " + raw.split("|")[0];
       link.textContent = raw.split("|")[0];
-      head.append("Embedded · ", link);
+      if (/^https?:\/\//i.test(raw)) {
+        dom.classList.add("note-embed-web");
+        head.textContent = "Embedded web content";
+      }
+      else head.append("Embedded · ", link);
       const body = document.createElement("span");
       body.className = "note-embed-body preview-content";
       body.textContent = "…";
       dom.append(head, body);
-      renderEmbed(raw).then((html) => { body.innerHTML = html; }).catch(() => { body.textContent = `![[${raw}]]`; });
+      renderEmbed(raw).then((html) => { body.innerHTML = html; hydrateWebEmbeds(body); }).catch(() => { body.textContent = `![[${raw}]]`; });
       return { dom };
     };
   },

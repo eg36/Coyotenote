@@ -98,7 +98,8 @@ type mutation struct {
 	Name     string `json:"name"`
 	Theme    string `json:"theme"`
 	// Plugins turns plugins on or off by ID; IDs it leaves out keep their state.
-	Plugins map[string]bool `json:"plugins"`
+	Plugins   map[string]bool `json:"plugins"`
+	WebEmbeds *bool           `json:"webEmbeds"`
 }
 
 type apiError struct {
@@ -156,7 +157,7 @@ func (a *webApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Frame-Options", "DENY")
-	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; frame-src 'self' https: http:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 	w.Header().Set("Cache-Control", "no-store")
 	if !a.trustedHost(r.Host) {
 		http.Error(w, "This local app only accepts loopback hosts.", http.StatusForbidden)
@@ -424,14 +425,14 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.Recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.Recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "plugins": a.enabledPlugins(), "pluginFolders": a.enabledFolders(), "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "webEmbeds": a.webEmbedsEnabled(), "plugins": a.enabledPlugins(), "pluginFolders": a.enabledFolders(), "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/library" {
 		// The Library lists every file; settings kept beside the notes stay out.
 		var skip []string
 		if filepath.Clean(a.store.Config) == filepath.Clean(a.store.Dir) {
-			skip = []string{"theme", "plugins"}
+			skip = []string{"theme", "plugins", "web-embeds"}
 		}
 		files, err := a.store.ListFiles(skip...)
 		if err != nil {
@@ -684,8 +685,8 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, 200, restored)
 		return nil
 	case "POST /api/settings":
-		// A request changes the theme, the enabled plugins or both.
-		if in.Theme == "" && in.Plugins == nil || in.Theme != "" && !validTheme(in.Theme) {
+		// A request changes theme, plugin choices or remote embed consent.
+		if in.Theme == "" && in.Plugins == nil && in.WebEmbeds == nil || in.Theme != "" && !validTheme(in.Theme) {
 			return &apiError{status: 422, message: "unknown theme"}
 		}
 		if !knownPlugins(in.Plugins) {
@@ -706,7 +707,22 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 		}
-		writeJSON(w, 200, map[string]any{"theme": in.Theme, "plugins": plugins})
+		if in.WebEmbeds != nil {
+			if err = vault.AtomicWrite(a.store.Config, "web-embeds", []byte(strconv.FormatBool(*in.WebEmbeds))); err != nil {
+				return err
+			}
+		}
+		writeJSON(w, 200, map[string]any{"theme": in.Theme, "plugins": plugins, "webEmbeds": a.webEmbedsEnabled()})
+		return nil
+	case "POST /api/web-embed":
+		if !a.webEmbedsEnabled() {
+			return &apiError{status: 403, message: "Web embeds are off. Enable them in Settings → Web embeds."}
+		}
+		source, referrer, ok := webEmbedURL(in.Body)
+		if !ok {
+			return &apiError{status: 422, message: "Use an HTTP or HTTPS URL without credentials."}
+		}
+		writeJSON(w, 200, map[string]string{"source": source, "referrer": referrer})
 		return nil
 	case "POST /api/resolve":
 		if len(in.Body) > 4096 {
@@ -986,7 +1002,8 @@ func (a *webApp) renderEmbedding(body, from string, notes []vault.Note, embeddin
 			body = body[:l.Start] + "[" + label + "](#" + anchorFor(l.Heading) + ")" + body[l.End:]
 			continue
 		}
-		if image := embedImage(body, l); image != "" {
+		remote := strings.Contains(l.Target, ":") || strings.HasPrefix(l.Target, "//")
+		if image := embedImage(body, l); image != "" && !remote {
 			body = body[:l.Start-1] + image + body[l.End:]
 			continue
 		}

@@ -58,6 +58,9 @@ func escapedAt(body string, at int) bool {
 // embedNote renders the note, heading section or block that the embed l
 // points to, framed with a link to it.
 func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolver vault.Resolver, embedding map[string]bool, budget *embedBudget) string {
+	if web := a.embedWeb(l); web != "" {
+		return web
+	}
 	if media := a.embedMedia(l, from); media != "" {
 		return media
 	}

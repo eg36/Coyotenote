@@ -6,7 +6,8 @@
 
 A small, local-first Markdown notebook that runs in your browser. Your notes are
 plain `.md` files in a folder you choose, and one binary serves the app to your
-own computer only. No account, cloud service or network access.
+own computer only. No account or cloud service. Works offline; optional web
+embeds contact external services only after being enabled and loaded.
 
 > AI-assisted software. Keep backups of the notes that matter.
 

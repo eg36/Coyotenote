@@ -15,6 +15,7 @@ import {
   storage,
   updateCounts,
 } from "./core.js";
+import { hydrateWebEmbeds, setWebEmbeds } from "./web-embeds.js";
 import { api } from "./api.js";
 import { findDraft, storeDraft, updateOrphans } from "./drafts.js";
 import { renderList, revealNote, updateBacklinks } from "./list.js";
@@ -112,6 +113,7 @@ async function refresh({ query = state.search } = {}) {
   state.vaultId = data.vaultId;
   state.themes = data.themes;
   state.pluginFolders = data.pluginFolders;
+  setWebEmbeds(data.webEmbeds);
   state.version = data.version;
   const versionLink = $("app-version");
   versionLink.textContent = data.version;
@@ -375,6 +377,7 @@ function schedulePreview(immediate = false) {
         const data = await api<{ html: string }>("/api/render", "POST", { id, body });
         if (generation === state.previewGeneration) {
           $("preview").innerHTML = data.html;
+          hydrateWebEmbeds($("preview"));
           const preview = $("preview");
           if (preview.querySelector(".math"))
             import("./preview-math.js").then(({ renderMath }) => {

@@ -180,8 +180,9 @@ tag or release still needs explicit approval. See
 - Write support for embeds and HTML, so fewer notes fall back to Markdown
   view.
 - PDF, audio and video attachments and embeds.
-- Web page, YouTube and similar embeds, opt-in because they contact the
-  network.
+- Web page and YouTube embeds are implemented in [#66](https://github.com/eg36/Labradorite/issues/66):
+  off by default, enabled per vault, with the source shown and an explicit
+  Load action for each embed in Preview and Write.
 
 ## Further ideas, not yet committed to this release
 

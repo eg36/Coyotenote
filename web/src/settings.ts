@@ -1,6 +1,9 @@
 // One settings window: the appearance, the writing preferences and the
 // plugins. Every change applies and is kept at once, so the window only needs
 // Done.
+import { api } from "./api.js";
+import { setWebEmbeds } from "./web-embeds.js";
+import type { StateResponse } from "./types.js";
 import { showToast, storage } from "./core.js";
 import { enablePlugin, plugins } from "./plugins.js";
 import { appearanceChooser, closeModal, openModal } from "./dialogs.js";
@@ -106,6 +109,39 @@ function pluginFields() {
   return container;
 }
 
+function webEmbedFields() {
+  const toggle = document.createElement("label");
+  toggle.className = "setting-toggle";
+  const check = document.createElement("input");
+  check.type = "checkbox";
+  check.role = "switch";
+  check.disabled = true;
+  const text = document.createElement("span");
+  text.textContent = "Allow web embeds";
+  const hint = document.createElement("small");
+  hint.textContent = "Off by default. Each embed shows its source and waits for Load. External services receive network information when loaded. This choice stays with this vault.";
+  text.append(hint);
+  toggle.append(check, text);
+  api<StateResponse>("/api/state").then((data) => {
+    check.checked = data.webEmbeds;
+    check.disabled = false;
+    setWebEmbeds(data.webEmbeds);
+  }).catch((error: Error) => { hint.textContent = error.message; });
+  check.onchange = async () => {
+    const previous = !check.checked;
+    check.disabled = true;
+    try {
+      const saved = await api<{ webEmbeds: boolean }>("/api/settings", "POST", { webEmbeds: check.checked });
+      check.checked = saved.webEmbeds;
+      setWebEmbeds(saved.webEmbeds);
+    } catch (error) {
+      check.checked = previous;
+      showToast(error instanceof Error ? error.message : "Could not save web embed settings.");
+    } finally { check.disabled = false; }
+  };
+  return toggle;
+}
+
 // settingsDialog opens the window; appearance focuses its chosen card, and
 // plugins the first plugin switch.
 function settingsDialog({ appearance = false, plugins: showPlugins = false } = {}) {
@@ -121,6 +157,7 @@ function settingsDialog({ appearance = false, plugins: showPlugins = false } = {
     section("Appearance", look.element),
     section("Writing", writingFields()),
     section("Plugins", pluginFields()),
+    section("Web embeds", webEmbedFields()),
     done,
   );
   openModal("Settings", container, null, {className:"settings", hideFooter:true});

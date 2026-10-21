@@ -18,7 +18,8 @@ Release archives on the [Releases](https://github.com/eg36/Labradorite/releases)
 page hold the `labradorite` binary; run it from the unpacked folder. To build it
 instead, Go **1.26+** is the only requirement. Browser assets are bundled and
 committed: Node and npm are **not** needed to run the app, and there are no CDNs
-or runtime third-party requests.
+or automatic runtime third-party requests. Opt-in web embeds contact external
+services only when explicitly loaded.
 
 ```sh
 git clone git@github.com:eg36/Labradorite.git
@@ -261,6 +262,21 @@ Beyond GitHub Flavored Markdown, Preview understands:
   height: `![[photo.png|200]]`, `![[photo.png|A trail|200x150]]` or
   `![Sunrise|200](attachments/photo.png)`. With only a width the picture keeps
   its proportions. Write and Preview both show the size.
+- **Web embeds:** `![[https://example.com/page]]` embeds a web page;
+  YouTube watch, short, live and embed links use the privacy-enhanced player.
+  An optional `|label` names the embed. Web embeds are **off by default**.
+  Turn on **Settings → Web embeds → Allow web embeds**, then choose **Load
+  embed** on each placeholder. The destination is shown before loading; no
+  remote frame, thumbnail or player code loads automatically, including after
+  a reload. **Unload embed** removes the frame; turning the setting off
+  unloads frames in the current tab. The setting stays with the vault.
+  General pages use a sandbox and send no referrer. YouTube receives only
+  the local app's origin because its player requires a referrer identity;
+  note names and paths are never sent. Loaded services receive normal network
+  information and may make their own requests. Some sites refuse embedding;
+  the visible source link can open them in a browser tab instead.
+  Preview and Write show the same controls, and Write keeps the embed source
+  exactly when editing surrounding text. Raw HTML iframes stay blocked.
 - **Note embeds:** `![[Note]]` shows another note inside this one in Preview,
   `![[Note#Heading]]` just that section and `![[Note#^id]]` just that block,
   with the note's name as a link above. Embeds nest two notes deep; a note
@@ -487,6 +503,8 @@ What Labradorite stores in a vault:
 - **`attachments/`**: images added from the editor, linked from notes by path.
 - **`.lock`**, and after an interrupted write `.pending-*` or `.recovery-*`
   files, which are kept for you to inspect.
+- **`web-embeds`**: opt-in web embed permission (`true` or `false`), kept beside
+  the appearance and plugin settings. Missing means off.
 - **`theme`**: the chosen appearance (`light`, `dark` or `system`), in the
   default data folder (or the `-data-dir` folder).
 

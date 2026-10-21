@@ -31,6 +31,7 @@ export interface StateResponse extends Session {
   themes: Theme[];
   theme: string;
   plugins: Record<string, boolean>;
+  webEmbeds: boolean;
   pluginFolders: Record<string, string>;
   vault: string;
   formerVaultIds: string[];

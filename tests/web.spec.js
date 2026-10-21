@@ -5307,3 +5307,70 @@ test("typing a custom task status creates an editable task", async ({ page }) =>
   await page.keyboard.press("Enter"); await page.keyboard.press("Enter"); await page.keyboard.type("After.");
   await expect.poll(() => diskBody(page, id)).toBe("- [?] New task\n\nAfter.");
 });
+
+for (const view of ["Preview", "Write"]) {
+  test(`web embeds wait for settings and a per-embed Load in ${view}`, async ({ page }) => {
+    const requests = [];
+    await page.route(/^https:\/\/(example\.com|www\.youtube-nocookie\.com)\//, async (route) => {
+      requests.push({ url: route.request().url(), referer: route.request().headers().referer });
+      await route.fulfill({ contentType: "text/html", body: "<h1>External test content</h1>" });
+    });
+    const text = "Host text.\n\n![[https://example.com/page#part|A page]]\n\n![[https://youtu.be/dQw4w9WgXcQ?t=12]]";
+    const id = await openSeed(page, text);
+    await mode(page, view);
+    const root = page.locator(view === "Write" ? "#rich-editor" : "#preview");
+    const embeds = root.locator(".web-embed");
+    await expect(embeds).toHaveCount(2);
+    await expect(embeds.first()).toContainText("Loads from https://example.com/page#part");
+    await expect(embeds.nth(1)).toContainText("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=12");
+    await expect(embeds.first().getByRole("button", { name: "Load embed", exact: true })).toBeDisabled();
+    expect(requests).toEqual([]);
+    await expect(root.locator(".web-embed iframe")).toHaveCount(0);
+
+    await page.locator("#settings-button").click();
+    const toggle = page.getByRole("switch", { name: "Allow web embeds" });
+    await expect(toggle).not.toBeChecked();
+    await toggle.check();
+    await expect(toggle).toBeEnabled();
+    await page.keyboard.press("Escape");
+    await expect(embeds.first().getByRole("button", { name: "Load embed", exact: true })).toBeEnabled();
+    expect(requests).toEqual([]);
+    await embeds.first().getByRole("button", { name: "Load embed", exact: true }).click();
+    const frame = embeds.first().locator("iframe");
+    await expect(frame).toHaveAttribute("src", "https://example.com/page#part");
+    await expect(frame).toHaveAttribute("sandbox", "allow-scripts allow-presentation");
+    await expect(frame).toHaveAttribute("referrerpolicy", "no-referrer");
+    await expect.poll(() => requests.length).toBe(1);
+    expect(requests[0].referer).toBeUndefined();
+    await expect(page.frameLocator('iframe[src="https://example.com/page#part"]').getByRole("heading")).toHaveText("External test content");
+    await embeds.nth(1).getByRole("button", { name: "Load embed", exact: true }).click();
+    await expect(embeds.nth(1).locator("iframe")).toHaveAttribute("referrerpolicy", "origin");
+    await expect.poll(() => requests.length).toBe(2);
+    expect(requests[1].referer).toBe(new URL(page.url()).origin + "/");
+    await embeds.first().getByRole("button", { name: "Unload embed", exact: true }).click();
+    await expect(embeds.first().locator("iframe")).toHaveCount(0);
+    if (view === "Write") {
+      await root.locator(".tiptap > p").first().click();
+      await page.keyboard.press("End");
+      await page.keyboard.type(" More.");
+      await expect.poll(() => diskBody(page, id)).toBe(text.replace("Host text.", "Host text. More."));
+    }
+    // Reload keeps the vault setting but never replays per-embed consent.
+    await page.reload();
+    await mode(page, view);
+    await expect(root.locator(".web-embed")).toHaveCount(2);
+    await expect(root.locator(".web-embed iframe")).toHaveCount(0);
+    await expect(embeds.first().getByRole("button", { name: "Load embed", exact: true })).toBeEnabled();
+    expect(requests).toHaveLength(2);
+    await embeds.first().getByRole("button", { name: "Load embed", exact: true }).click();
+    await expect(embeds.first().locator("iframe")).toHaveCount(1);
+    await page.locator("#settings-button").click();
+    await expect(page.getByRole("switch", { name: "Allow web embeds" })).toBeChecked();
+    await expect(page.getByRole("switch", { name: "Allow web embeds" })).toBeEnabled();
+    await page.getByRole("switch", { name: "Allow web embeds" }).uncheck();
+    await expect(page.getByRole("switch", { name: "Allow web embeds" })).toBeEnabled();
+    await page.keyboard.press("Escape");
+    await expect(root.locator(".web-embed iframe")).toHaveCount(0);
+    await expect(embeds.first().getByRole("button", { name: "Load embed", exact: true })).toBeDisabled();
+  });
+}
