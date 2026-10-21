@@ -4588,6 +4588,28 @@ test("note embeds show the other note's text in Preview and link to it", async (
   expect(await diskBody(page, id)).toBe(text);
 });
 
+test("Write shows embeds as the preview does and saves them exactly", async ({ page }) => {
+  const source = `Embedded ${Date.now()}`;
+  await seed(page, source, "# Source\n\nShared paragraph.\n\n## Part\n\nOnly this part. ^bit");
+  const text = `Host text.\n\n![[${source}]]\n\nInline ![[${source}#^bit]] mention.`;
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  // Write opens the note instead of falling back to Markdown.
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  const embeds = page.locator("#rich-editor .note-embed");
+  await expect(embeds).toHaveCount(2);
+  await expect(embeds.first()).toContainText("Shared paragraph.");
+  await expect(embeds.nth(1)).toContainText("Only this part.");
+  // Editing around them keeps every byte of the embeds.
+  await page.locator(".tiptap > p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" More.");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Host text.", "Host text. More."));
+  // The header opens the embedded note.
+  await embeds.first().locator(".note-embed-head .wiki-link").click();
+  await expect(page.locator("#document-title")).toHaveText(source);
+});
+
 test("long note titles take one line in the notes list", async ({ page }) => {
   const long = "A remarkably long note title that would otherwise wrap onto several lines " + Date.now();
   await openSeed(page, "Long.", long);

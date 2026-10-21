@@ -7,6 +7,7 @@ interface RichOptions {
   onSelection?(): void;
   onWarning(message: string): void;
   onWiki(raw: string): void;
+  renderEmbed(raw: string): Promise<string>;
   onFiles(files: File[]): void;
   fileUrl: FileUrl;
   imageFiles(transfer: DataTransfer | null): File[];
@@ -94,6 +95,72 @@ const WikiLink = Node.create({
         },
       }),
     ];
+  },
+});
+
+// An embed, ![[Note]], ![[Note#Heading]] or ![[image.png|100]], shows what
+// the preview shows for it, framed and read-only; its header opens the
+// target. It saves back exactly as written.
+let renderEmbed: (raw: string) => Promise<string> = async () => "";
+const NoteEmbed = Node.create({
+  name: "noteEmbed",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  priority: 1100,
+  addAttributes() {
+    return { raw: { default: "" } };
+  },
+  parseHTML() {
+    return [{ tag: "span[data-embed]", getAttrs: (el) => ({ raw: el.getAttribute("data-embed") || "" }) }];
+  },
+  renderHTML({ node }) {
+    return ["span", { "data-embed": node.attrs.raw, class: "note-embed" }, `![[${node.attrs.raw}]]`];
+  },
+  renderText({ node }) {
+    return `![[${node.attrs?.raw || ""}]]`;
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const raw = node.attrs.raw as string;
+      const dom = document.createElement("span");
+      dom.className = "note-embed";
+      dom.dataset.embed = raw;
+      dom.contentEditable = "false";
+      const head = document.createElement("span");
+      head.className = "note-embed-head";
+      const link = document.createElement("span");
+      link.dataset.wiki = raw;
+      link.className = "wiki-link";
+      link.setAttribute("role", "link");
+      link.tabIndex = 0;
+      link.title = "Open " + raw.split("|")[0];
+      link.textContent = raw.split("|")[0];
+      head.append("Embedded · ", link);
+      const body = document.createElement("span");
+      body.className = "note-embed-body preview-content";
+      body.textContent = "…";
+      dom.append(head, body);
+      renderEmbed(raw).then((html) => { body.innerHTML = html; }).catch(() => { body.textContent = `![[${raw}]]`; });
+      return { dom };
+    };
+  },
+  markdownTokenName: "noteEmbed",
+  markdownTokenizer: {
+    name: "noteEmbed",
+    level: "inline",
+    start: "![[",
+    tokenize(src) {
+      const match = /^!\[\[([^\]\n]+)\]\]/.exec(src);
+      if (match) return { type: "noteEmbed", raw: match[0], text: match[1] };
+    },
+  },
+  parseMarkdown(token) {
+    return { type: "noteEmbed", attrs: { raw: token.text } };
+  },
+  renderMarkdown(node) {
+    return `![[${node.attrs?.raw || ""}]]`;
   },
 });
 
@@ -306,8 +373,6 @@ export function supportsRich(body: string) {
     if (token.type === "def")
       reason =
         "Showing Markdown: Write would drop this note's reference-style link definitions.";
-    if (token.type === "text" && !token.tokens && /!\[\[[^\]\n]+\]\]/.test(token.raw))
-      reason = "Showing Markdown: Write would change this note's ![[…]] file embeds.";
     // Write keeps &amp;, &lt;, &gt; and &quot; but would show other named
     // references such as &copy; as literal text and save them escaped.
     if (
@@ -342,8 +407,9 @@ export function supportsRich(body: string) {
 
 export function createRich(
   element: HTMLElement,
-  { onChange, onSelection, onWarning, onWiki, onFiles, fileUrl, imageFiles }: RichOptions,
+  { onChange, onSelection, onWarning, onWiki, renderEmbed: embed, onFiles, fileUrl, imageFiles }: RichOptions,
 ): RichEditor {
+  renderEmbed = embed;
   let editor: Editor | null = null,
     loading = false,
     last = "",
@@ -390,6 +456,7 @@ export function createRich(
         // transient empty paragraphs produced while typing a new list.
         ...footnoteExtensions(() => parsedSource),
         ImageParagraph,
+        NoteEmbed,
         WikiLink,
         Highlight,
         InlineMath,

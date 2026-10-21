@@ -259,6 +259,8 @@ async function ensureRich() {
       onSelection: updateToolbar,
       onWarning: showToast,
       onWiki: (raw) => followWiki(raw).catch(showError),
+      // An embed in Write shows what the preview renders for it.
+      renderEmbed: async (raw) => (await api<{ html: string }>("/api/render", "POST", { id: state.current?.id || "", body: `![[${raw}]]` })).html,
       onFiles: addImages,
       fileUrl,
       imageFiles,
