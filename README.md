@@ -1,3 +1,3 @@
 <p align="center">
-  <img src="logo.png" alt="dupa dupa kurwa" width="240">
+  <img src="logo_d.png" alt="dupa dupa kurwa" width="240">
 </p>
