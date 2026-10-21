@@ -60,7 +60,7 @@ import { paletteDialog } from "./palette.js";
 import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
-import { activePlugin, isActive, startPlugins } from "./plugins.js";
+import { activePlugin, isActive, openWith, ownerOf, startPlugins } from "./plugins.js";
 import { registerIssuesPlugin } from "./issues-plugin.js";
 import { setupSwitcher } from "./switcher.js";
 import { registerNotesPlugin } from "./notes-plugin.js";
@@ -384,9 +384,10 @@ $("preview").onclick = (event) => {
   if (u.origin === location.origin) {
     if (u.searchParams.has("note")) {
       event.preventDefault();
-      openNote(u.searchParams.get("note") || "", {
-        heading: decodeURIComponent(u.hash.slice(1)),
-      }).catch(showError);
+      // A link into a plugin's folder opens in that plugin.
+      const id = u.searchParams.get("note") || "", owner = ownerOf(id);
+      if (owner) openWith(owner, id);
+      else openNote(id, { heading: decodeURIComponent(u.hash.slice(1)) }).catch(showError);
     } else if (u.searchParams.has("new")) {
       event.preventDefault();
       followWiki(u.searchParams.get("new") || "").catch(showError);

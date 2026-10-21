@@ -3158,3 +3158,8 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
   #format-panel .hl-swatch { width: 40px; height: 40px; }
   #format-panel #callout-type { width: 40px; height: 40px; }
 }
+/* Links into a plugin's folder carry the plugin's picture. */
+:is(#preview a[href^="/?note=issues%2F"], .wiki-link[data-wiki^="issues/"])::before {
+  content: ""; display: inline-block; width: 1.05em; height: 1.05em; margin-right: .25em; vertical-align: -.17em;
+  background: url("/assets/plugin-issues.png") center / contain no-repeat;
+}

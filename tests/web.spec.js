@@ -3650,6 +3650,34 @@ test("the Library lists every vault file and opens each in its plugin", async ({
   expect((await download).suggestedFilename()).toBe("Plan.md");
 });
 
+test("links to issue files open in Issues and carry its picture", async ({ page }) => {
+  await seed(page, "issues/Space/Project", "---\nprefix: LS\n---\n");
+  await seed(page, "issues/Space/LS-1", "---\ntitle: Linked work\nstatus: todo\n---\n");
+  await openSeed(page, "Work on [[issues/Space/LS-1]] today.", "Daily");
+  const picture = (locator) => locator.evaluate((el) => getComputedStyle(el, "::before").backgroundImage);
+  // Write: the link shows the Issues picture and opens the issue's page.
+  const inWrite = page.locator('.wiki-link[data-wiki="issues/Space/LS-1"]');
+  expect(await picture(inWrite)).toContain("plugin-issues.png");
+  await inWrite.click();
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "issues");
+  await expect(page.getByRole("article", { name: "Issue LS-1" })).toBeVisible();
+  // Preview: the same.
+  await page.keyboard.press("Alt+p");
+  await page.keyboard.press("1");
+  await mode(page, "Preview");
+  const inPreview = page.locator("#preview a", { hasText: "issues/Space/LS-1" });
+  expect(await picture(inPreview)).toContain("plugin-issues.png");
+  await inPreview.click();
+  await expect(page.getByRole("article", { name: "Issue LS-1" })).toBeVisible();
+  // With Issues off, the link opens the file in Notes.
+  const { token } = await (await page.request.get("/api/state")).json();
+  await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { issues: false } } });
+  await page.goto("/?note=Daily");
+  await mode(page, "Preview");
+  await page.locator("#preview a", { hasText: "issues/Space/LS-1" }).click();
+  await expect(page.locator("#document-title")).toHaveText("LS-1");
+});
+
 test("a link to an issue opens it in Issues", async ({ page }) => {
   await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
   await openSeed(page, "See [[issues/L-1]].", "Pointer");

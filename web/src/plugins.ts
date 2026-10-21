@@ -123,6 +123,11 @@ function inPluginFolder(id: string) {
 function openWith(id: string, target: string) {
   context.open(id, target);
 }
+// ownerOf names the enabled plugin whose folder holds a vault file, if any.
+function ownerOf(file: string) {
+  const entry = Object.entries(state.pluginFolders || {}).find(([, folder]) => file.startsWith(folder + "/"));
+  return entry && plugins().some((plugin) => plugin.id === entry[0]) ? entry[0] : "";
+}
 
 export type { LabradoritePlugin, PluginCommand, SpaceContext };
 export {
@@ -132,6 +137,7 @@ export {
   isActive,
   plugins,
   openWith,
+  ownerOf,
   registerPlugin,
   startPlugins,
   switchPlugin,

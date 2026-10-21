@@ -1,4 +1,5 @@
 import { renameNavigation } from "./navigation.js";
+import { openWith, ownerOf } from "./plugins.js";
 import type { Note } from "./types.js";
 interface ModalOptions { submit?: string; hideFooter?: boolean; className?: string }
 interface InputOptions extends ModalOptions { required?: boolean; description?: string }
@@ -550,7 +551,10 @@ async function followWiki(raw: string) {
     body: raw,
   });
   if (result.found) {
-    await openNote(result.id, { heading: result.heading });
+    // A link into a plugin's folder opens in that plugin.
+    const owner = ownerOf(result.id);
+    if (owner) openWith(owner, result.id);
+    else await openNote(result.id, { heading: result.heading });
     return;
   }
   inputDialog(
