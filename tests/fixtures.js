@@ -10,8 +10,15 @@ const binary = resolve(process.env.LABRADORITE_BINARY || join("bin", process.pla
 // Each test gets its own server on an empty vault and a free port, so tests
 // run in parallel and never see each other's notes or settings.
 export const test = base.extend({
-  baseURL: async ({}, use) => {
+  vault: async ({}, use) => {
     const vault = mkdtempSync(join(tmpdir(), "labradorite-test-"));
+    try {
+      await use(vault);
+    } finally {
+      rmSync(vault, { recursive: true, force: true, maxRetries: 5 });
+    }
+  },
+  baseURL: async ({ vault }, use) => {
     const server = spawn(binary, ["-no-browser", "-listen", "127.0.0.1:0", "-data-dir", vault], { stdio: ["ignore", "pipe", "inherit"] });
     const exited = new Promise((done) => server.once("exit", done));
     const address = await new Promise((done, fail) => {
@@ -26,7 +33,6 @@ export const test = base.extend({
     } finally {
       server.kill();
       await exited;
-      rmSync(vault, { recursive: true, force: true, maxRetries: 5 });
     }
   },
 });

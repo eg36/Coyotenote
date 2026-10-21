@@ -90,7 +90,7 @@ func (s *Store) ResolveFile(src, from string) (string, bool) {
 // written plainly or in <angle brackets>.
 var imageLink = regexp.MustCompile(`!\[(?:[^\]\\\n]|\\.)*\]\([ \t]*(<[^<>\n]*>|[^\s()<>]+)`)
 
-// MovedFileLinks rewrites the image addresses in body, the text of a note
+// MovedFileLinks rewrites the file embeds in body, the text of a note
 // that moved from oldID to newID, so each still shows the file it showed
 // before: an address that from the new folder would find another file, or
 // none, becomes a path from the new folder to the original file. Images in
@@ -98,6 +98,10 @@ var imageLink = regexp.MustCompile(`!\[(?:[^\]\\\n]|\\.)*\]\([ \t]*(<[^<>\n]*>|[
 func (s *Store) MovedFileLinks(body, oldID, newID string) string {
 	if FolderOf(oldID) == FolderOf(newID) || !strings.Contains(body, "![") {
 		return body
+	}
+	from := filepath.FromSlash(FolderOf(newID))
+	if from == "" {
+		from = "."
 	}
 	code := codeRanges(body)
 	matches := imageLink.FindAllStringSubmatchIndex(body, -1)
@@ -118,10 +122,6 @@ func (s *Store) MovedFileLinks(body, oldID, newID string) string {
 		if now, found := s.ResolveFile(src, newID); found && now == target {
 			continue
 		}
-		from := filepath.FromSlash(FolderOf(newID))
-		if from == "" {
-			from = "."
-		}
 		rel, err := filepath.Rel(from, filepath.FromSlash(target))
 		if err != nil {
 			continue
@@ -131,6 +131,42 @@ func (s *Store) MovedFileLinks(body, oldID, newID string) string {
 			address = "<" + address + ">"
 		}
 		body = body[:m[2]] + address + body[m[3]:]
+	}
+	links := ParseLinks(body)
+	for i := len(links) - 1; i >= 0; i-- {
+		l := links[i]
+		if l.Start == 0 || body[l.Start-1] != '!' || escaped(body, l.Start-1) ||
+			strings.Contains(l.Target, ":") || strings.HasPrefix(l.Target, "//") ||
+			ImageType(l.Target) == "" && MediaType(l.Target) == "" {
+			continue
+		}
+		src := l.Target
+		if ImageType(src) != "" {
+			if decoded, err := url.PathUnescape(src); err == nil {
+				src = decoded
+			}
+		}
+		target, ok := s.ResolveFile(src, oldID)
+		if !ok {
+			target, ok = s.FindFile(src)
+		}
+		if !ok {
+			continue
+		}
+		now, found := s.ResolveFile(src, newID)
+		if !found {
+			now, found = s.FindFile(src)
+		}
+		if found && now == target {
+			continue
+		}
+		if rel, err := filepath.Rel(from, filepath.FromSlash(target)); err == nil {
+			address := filepath.ToSlash(rel)
+			if ImageType(src) != "" {
+				address = (&url.URL{Path: address}).EscapedPath()
+			}
+			body = body[:l.TargetStart] + address + body[l.TargetEnd:]
+		}
 	}
 	return body
 }

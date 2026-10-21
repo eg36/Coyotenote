@@ -78,3 +78,36 @@ func TestSaveAttachmentChoosesFreePortableNames(t *testing.T) {
 		t.Errorf("attachments listed as notes: %v", ids(notes))
 	}
 }
+
+func TestMovedFileLinksPreservesWikiEmbeds(t *testing.T) {
+	s := testStore(t)
+	for _, rel := range []string{"Work/picture.png", "Other/picture.png", "Work/my picture.png", "Other/my picture.png", "Work/picture#1.png", "Other/picture#1.png", "Work/file.pdf", "Other/file.pdf", "Work/talk.mp3", "Other/talk.mp3", "Work/clip.mp4", "Other/clip.mp4", "attachments/shared.png", "Elsewhere/fallback.mp4", "Other/fallback.mp4"} {
+		p := filepath.Join(s.Dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(rel), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct{ body, want string }{
+		{"![[picture.png|100x80]]", "![[../Work/picture.png|100x80]]"},
+		{"![[my%20picture.png]]", "![[../Work/my%20picture.png]]"},
+		{"![[picture%231.png]]", "![[../Work/picture%231.png]]"},
+		{"![[file.pdf#page=2|Pages]]", "![[../Work/file.pdf#page=2|Pages]]"},
+		{"![[talk.mp3|Talk]] ![[clip.mp4]]", "![[../Work/talk.mp3|Talk]] ![[../Work/clip.mp4]]"},
+		{"![[picture.png\\|100]]", "![[../Work/picture.png\\|100]]"},
+		{"![[fallback.mp4]]", "![[../Elsewhere/fallback.mp4]]"},
+		{"![[attachments/shared.png]] ![[missing.mp4]] ![[Note]]", "![[attachments/shared.png]] ![[missing.mp4]] ![[Note]]"},
+		{"`![[clip.mp4]]`\n\n    ![[clip.mp4]]\n\n```\n![[clip.mp4]]\n```\n\\![[clip.mp4]]", "`![[clip.mp4]]`\n\n    ![[clip.mp4]]\n\n```\n![[clip.mp4]]\n```\n\\![[clip.mp4]]"},
+		{"![[https://example.com/clip.mp4]]", "![[https://example.com/clip.mp4]]"},
+		{"![pic](picture.png) ![[clip.mp4]]", "![pic](../Work/picture.png) ![[../Work/clip.mp4]]"},
+	} {
+		if got := s.MovedFileLinks(tc.body, "Work/Note", "Other/Note"); got != tc.want {
+			t.Errorf("%q: got %q, want %q", tc.body, got, tc.want)
+		}
+		if got := s.MovedFileLinks(tc.body, "Work/Note", "Work/Renamed"); got != tc.body {
+			t.Errorf("same-folder rename changed %q", tc.body)
+		}
+	}
+}

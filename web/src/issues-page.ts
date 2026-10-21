@@ -51,9 +51,14 @@ function doneWhen(body: string) {
   const offset = front ? front.prefix.length : 0;
   const lines = (front ? front.rest : body).split("\n");
   const tasks: Task[] = [];
-  let inside = false, start = -1, end = lines.length, at = offset;
+  let inside = false, start = -1, end = lines.length, at = offset, fence = "";
   for (const [index, line] of lines.entries()) {
-    if (/^#{1,6}\s/.test(line)) {
+    const code = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (code && code[1][0] === fence[0] && code[1].length >= fence.length && !code[2].trim()) fence = "";
+    } else if (code && (code[1][0] === "~" || !code[2].includes("`"))) {
+      fence = code[1];
+    } else if (/^#{1,6}\s/.test(line)) {
       if (inside) { end = index; break; }
       if (/^#{1,6}\s+Done when\s*$/i.test(line)) { inside = true; start = index; }
     } else if (inside) {

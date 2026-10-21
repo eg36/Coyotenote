@@ -41,8 +41,10 @@ const enabled = (id: string) => plugins().some((plugin) => plugin.id === id);
 async function open(file: VaultFile, group: string) {
   const id = file.path.replace(/\.md$/, "");
   const owner = group === "attachments" || group === "other" ? "" : group;
-  if (owner && enabled(owner)) return openWith(owner, id);
-  if (file.path.endsWith(".md") && enabled("notes")) return openWith("notes", id);
+  if (file.path.endsWith(".md")) {
+    if (owner && enabled(owner) && await openWith(owner, id)) return;
+    if (enabled("notes")) return openWith("notes", id);
+  }
   await download(file);
 }
 async function download(file: VaultFile) {
@@ -87,7 +89,7 @@ async function libraryDialog() {
         row.type = "button";
         row.dataset.path = file.path;
         const slash = file.path.lastIndexOf("/");
-        const opens = (group !== "attachments" && group !== "other" && enabled(group)) || (file.path.endsWith(".md") && enabled("notes"));
+        const opens = file.path.endsWith(".md") && ((group !== "attachments" && group !== "other" && enabled(group)) || enabled("notes"));
         row.innerHTML = icon(opens ? "note" : "download");
         const text = el("span", "library-name");
         text.append(el("span", "library-file", file.path.slice(slash + 1)), el("span", "library-folder", slash > 0 ? file.path.slice(0, slash) : "Vault"));

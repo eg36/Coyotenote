@@ -7,7 +7,7 @@ import { refresh } from "./editor.js";
 
 interface PluginCommand { label: string; keys?: string; run: () => unknown; when?: () => unknown }
 // SpaceContext is what the shell offers a plugin while it is mounted.
-interface SpaceContext { open(plugin: string, target?: string): void }
+interface SpaceContext { open(plugin: string, target?: string): Promise<boolean> }
 // The contract every plugin implements. contract says which version of it,
 // so the shell can refuse a plugin written against another one.
 interface LabradoritePlugin {
@@ -25,7 +25,7 @@ interface LabradoritePlugin {
   mount(ctx: SpaceContext): void; // show it; it keeps its state between mounts
   unmount(): void; // hide it and finish pending work
   focus(): void; // move focus to its main area
-  openLink?(target: string): boolean; // open a link into this plugin
+  openLink?(target: string): boolean | Promise<boolean>; // false when another plugin should open it
   shortcut?(chord: string): boolean; // run a key chord while active; true if handled
   shortcutHelp?(): [keys: string, description: string][]; // its shortcuts, for F1
   settings?(): HTMLElement; // its own section in Settings
@@ -36,9 +36,11 @@ let enabled: Record<string, boolean> = {};
 let active: LabradoritePlugin | null = null;
 const activeKey = () => "labradorite-plugin:" + state.vaultId;
 const context: SpaceContext = {
-  open(id, target) {
-    switchPlugin(id);
-    if (target && active?.id === id) active.openLink?.(target);
+  async open(id, target) {
+    if (!switchPlugin(id)) return false;
+    if (!target) return true;
+    if (await active?.openLink?.(target)) return true;
+    return id !== "notes" ? context.open("notes", target) : false;
   },
 };
 
@@ -122,7 +124,7 @@ function inPluginFolder(id: string) {
 }
 // openWith switches to a plugin and opens a target in it.
 function openWith(id: string, target: string) {
-  context.open(id, target);
+  return context.open(id, target);
 }
 // ownerOf names the enabled plugin whose folder holds a vault file, if any.
 function ownerOf(file: string) {

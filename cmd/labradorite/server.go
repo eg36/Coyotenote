@@ -561,11 +561,11 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		}
 		switch route {
 		case "PUT /api/note":
-			if err = validateBody(in.Body); err != nil {
-				return err
-			}
 			_, crlf := vault.EditorText(n.Body)
 			body := vault.DiskText(in.Body, crlf)
+			if err = validateBody(body); err != nil {
+				return err
+			}
 			warning := a.keepVersion(n, false)
 			before := a.stamp(notes)
 			if err = a.store.Save(n, body); err != nil {
@@ -647,6 +647,9 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, 200, map[string]int{"deleted": deleted})
 		return nil
 	case "POST /api/history/restore":
+		if in.Revision == "" {
+			return &apiError{status: 428, message: "A revision is required to protect existing edits."}
+		}
 		n, _, err := a.current(in.ID, notes, in.Revision)
 		if err != nil {
 			return err

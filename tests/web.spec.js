@@ -1,4 +1,6 @@
 import { test, expect } from "./fixtures.js";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 let counter = 0;
 async function seed(page, name, body = "") {
@@ -3578,6 +3580,27 @@ test("the issue page edits one property at a time, ticks tasks and lists linked 
   await expect(page.locator('#issues-tree [data-issue="issues/Later work/P-1"]')).toBeFocused();
 });
 
+for (const mark of ["`", "~"]) {
+  test(`Issues leaves ${mark} fenced examples out of Done when tasks`, async ({ page }) => {
+    const fence = mark.repeat(4);
+    const example = `${fence}markdown\n## Done when\n- [ ] Example only\n${mark.repeat(3)}\n- [ ] Still an example\n${fence}\n`;
+    const original = `---\ntitle: Fences\n---\n\n${example}\n## Done when\n\n- [ ] First real task\n\n${fence}markdown\n## Not a real heading\n- [ ] Code only\n${fence} trailing text\n- [ ] Still code\n${mark === "`" ? "~~~~" : "````"}\n${fence}\n\n- [ ] Last real task\n\n## Notes\nKept description.\n`;
+    await seed(page, ...project("Space", "P"));
+    await seed(page, "issues/Space/P-1", original);
+    await openSeed(page, "Start.");
+    await openIssues(page);
+    await page.locator('#issues-tree [data-issue="issues/Space/P-1"]').click();
+    const article = page.getByRole("article", { name: "Issue P-1" });
+    await expect(article.locator(".issue-description code")).toContainText("Example only");
+    await expect(article.locator(".issue-description")).toContainText("Kept description.");
+    await expect(article.locator(".issue-tasks").getByRole("checkbox")).toHaveCount(2);
+    await expect(article.locator(".issues-ring")).toHaveAttribute("aria-label", "0 of 2 steps done");
+    await article.getByRole("checkbox", { name: "Last real task" }).check();
+    await expect.poll(() => noteBody(page, "issues/Space/P-1")).toBe(original.replace("- [ ] Last real task", "- [x] Last real task"));
+    await expect(article.locator(".issues-ring")).toHaveAttribute("aria-label", "1 of 2 steps done");
+  });
+}
+
 test("the Issues tree panel lines up with the Notes panel", async ({ page }) => {
   await seed(page, "issues/A-1", issueFile("Aligned", "todo", "none", []));
   await openSeed(page, "Start.");
@@ -3668,6 +3691,49 @@ test("the Library lists every vault file and opens each in its plugin", async ({
   await page.locator('.library-row[data-path="Plan.md"]').click();
   expect((await download).suggestedFilename()).toBe("Plan.md");
 });
+
+for (const notes of [true, false]) for (const issues of [true, false]) {
+  test(`Library routes project files with Notes ${notes} and Issues ${issues}`, async ({ page, vault }) => {
+    await seed(page, ...project("Space", "LS"));
+    await seed(page, "issues/Space/LS-1", "---\ntitle: Filed\n---\n");
+    await seed(page, "issues/Space/Readme", "Supporting Markdown.\n");
+    writeFileSync(join(vault, "issues", "Space", "reference.txt"), "Supporting file.\n");
+    const { token } = await (await page.request.get("/api/state")).json();
+    await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { notes, issues } } });
+    await page.goto("/");
+    await expect(page.locator("#app")).toHaveAttribute("data-plugin", notes ? "notes" : issues ? "issues" : "");
+    for (const name of ["Project.md", "Readme.md", "LS-1.md", "reference.txt"]) {
+      await page.getByRole("button", { name: "Library", exact: true }).click();
+      const row = page.locator(`.library-row[data-path="issues/Space/${name}"]`);
+      if (name === "LS-1.md" && issues) {
+        await row.click();
+        await expect(page.locator("#app")).toHaveAttribute("data-plugin", "issues");
+        await expect(page.getByRole("article", { name: "Issue LS-1" })).toBeVisible();
+      } else if (name.endsWith(".md") && notes) {
+        await row.click();
+        await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
+        await expect(page.locator("#document-title")).toHaveText(name.slice(0, -3));
+      } else {
+        const downloading = page.waitForEvent("download");
+        await row.click();
+        expect((await downloading).suggestedFilename()).toBe(name);
+        if (await page.locator("#modal").isVisible()) await page.locator("#modal-close").click();
+      }
+    }
+  });
+}
+
+for (const view of ["Write", "Preview"]) {
+  test(`links to project configuration fall back to Notes in ${view}`, async ({ page }) => {
+    await seed(page, ...project("Space", "LS"));
+    await openSeed(page, "See [[issues/Space/Project]].", "Daily");
+    await mode(page, view);
+    const link = view === "Write" ? page.locator('.wiki-link[data-wiki="issues/Space/Project"]') : page.locator('#preview a', { hasText: "issues/Space/Project" });
+    await link.click();
+    await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
+    await expect(page.locator("#document-title")).toHaveText("Project");
+  });
+}
 
 test("links to issue files open in Issues and carry its picture", async ({ page }) => {
   await seed(page, "issues/Space/Project", "---\nprefix: LS\n---\n");

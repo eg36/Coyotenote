@@ -878,11 +878,12 @@ function registerIssuesPlugin() {
     openLink(target) {
       const open = () => {
         const issue = issues.find((item) => item.file === target);
-        if (issue) openIssue(issue);
+        if (!issue) return false;
+        openIssue(issue);
+        return true;
       };
-      if (issues.some((item) => item.file === target)) open();
-      else reload().then(open).catch(showError);
-      return true;
+      if (issues.some((item) => item.file === target)) return open();
+      return reload().then(open).catch((error) => { showError(error); return false; });
     },
     focus() {
       const target = $("issues-tree").querySelector<HTMLElement>(".note-row.selected, .folder-group.current") || $("issues-tree").querySelector<HTMLElement>("button") || $("issues-new");

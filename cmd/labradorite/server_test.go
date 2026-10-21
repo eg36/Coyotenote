@@ -140,6 +140,37 @@ func TestLineEndingsPreserved(t *testing.T) {
 	}
 }
 
+func TestSaveLimitIncludesPreservedLineEndings(t *testing.T) {
+	for _, ending := range []string{"\n", "\r\n"} {
+		t.Run(fmt.Sprintf("ending-%q", ending), func(t *testing.T) {
+			a := testApp(t)
+			original := "original" + ending
+			if err := os.WriteFile(a.store.Path("Boundary"), []byte(original), 0600); err != nil {
+				t.Fatal(err)
+			}
+			n := request(t, a, "GET", "/api/note?id=Boundary", nil, 200)
+			body := strings.Repeat("x", vault.MaxNoteBytes-100) + strings.Repeat("\n", 100)
+			if ending == "\r\n" {
+				request(t, a, "PUT", "/api/note", mutation{ID: "Boundary", Body: body, Revision: n["revision"].(string)}, 422)
+				if disk, err := os.ReadFile(a.store.Path("Boundary")); err != nil || string(disk) != original {
+					t.Fatal("rejected save changed the file", err)
+				}
+				if versions, err := a.store.History("Boundary"); err != nil || len(versions) != 0 {
+					t.Fatal("rejected save changed history", err)
+				}
+				body = body[100:]
+			}
+			request(t, a, "PUT", "/api/note", mutation{ID: "Boundary", Body: body, Revision: n["revision"].(string)}, 200)
+			if disk, err := os.Stat(a.store.Path("Boundary")); err != nil || disk.Size() != vault.MaxNoteBytes {
+				t.Fatal("boundary save did not preserve the disk limit", err)
+			}
+			if got := request(t, a, "GET", "/api/note?id=Boundary", nil, 200)["body"]; got != body {
+				t.Fatal("saved note is not readable")
+			}
+		})
+	}
+}
+
 func TestRenameRewritesLinksAndBacklinks(t *testing.T) {
 	a := testApp(t)
 	note := request(t, a, "POST", "/api/note", mutation{ID: "Work/Plan", Body: "# Plan"}, 201)
@@ -834,6 +865,10 @@ func TestHistoryKeepsReplacedTextAndRestoresIt(t *testing.T) {
 
 	// Restoring needs the current revision and keeps the text it replaces.
 	current := request(t, a, "GET", "/api/note?id=Plan", nil, 200)
+	request(t, a, "POST", "/api/history/restore", map[string]string{"id": "Plan", "name": oldest}, 428)
+	if body := request(t, a, "GET", "/api/note?id=Plan", nil, 200)["body"]; body != current["body"] || len(versions("Plan")) != 2 {
+		t.Fatal("restore without a revision changed the note or history")
+	}
 	request(t, a, "POST", "/api/history/restore", mutation{ID: "Plan", Name: oldest, Revision: "stale"}, 409)
 	restored := request(t, a, "POST", "/api/history/restore", mutation{ID: "Plan", Name: oldest, Revision: current["revision"].(string)}, 200)
 	if restored["body"] != "first" {
@@ -931,7 +966,7 @@ func TestRenameLeavesWikiSyntaxInCodeAlone(t *testing.T) {
 
 func TestMovingANoteKeepsItsImagesPointingAtTheSameFiles(t *testing.T) {
 	a := testApp(t)
-	for _, file := range []string{"Work/diagram.png", "Other/diagram.png", "attachments/x.png"} {
+	for _, file := range []string{"Work/diagram.png", "Other/diagram.png", "attachments/x.png", "Work/clip.mp4", "Other/clip.mp4"} {
 		path := filepath.Join(a.store.Dir, filepath.FromSlash(file))
 		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 			t.Fatal(err)
@@ -940,16 +975,16 @@ func TestMovingANoteKeepsItsImagesPointingAtTheSameFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	body := "![d](diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<diagram.png> \"title\")"
+	body := "![d](diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<diagram.png> \"title\") ![[clip.mp4|Clip]]"
 	n := request(t, a, "POST", "/api/note", mutation{ID: "Work/Note", Body: body}, 201)
 	moved := request(t, a, "POST", "/api/rename", mutation{ID: "Work/Note", Name: "Other/Note", Revision: n["revision"].(string)}, 200)
-	want := "![d](../Work/diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<../Work/diagram.png> \"title\")"
+	want := "![d](../Work/diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<../Work/diagram.png> \"title\") ![[../Work/clip.mp4|Clip]]"
 	if got := request(t, a, "GET", "/api/note?id=Other/Note", nil, 200)["body"]; got != want {
 		t.Fatalf("after move: %q", got)
 	}
 	note := moved["note"].(map[string]any)
 	request(t, a, "POST", "/api/rename", mutation{ID: "Other/Note", Name: "Note", Revision: note["revision"].(string)}, 200)
-	want = "![d](Work/diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<Work/diagram.png> \"title\")"
+	want = "![d](Work/diagram.png) ![r](attachments/x.png) `![c](diagram.png)` ![m](missing.png) ![s](<Work/diagram.png> \"title\") ![[Work/clip.mp4|Clip]]"
 	if got := request(t, a, "GET", "/api/note?id=Note", nil, 200)["body"]; got != want {
 		t.Fatalf("after move to the top: %q", got)
 	}
