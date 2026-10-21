@@ -489,11 +489,14 @@ function openBlockMenu() {
   highlightBlock(blockStyles.findIndex(([value]) => value === state.block));
   menu.focus({ preventScroll: true });
 }
-function closeBlockMenu(refocus = false) {
+// closeBlockMenu hides the style list; refocus returns to the writing, or
+// to the style button when the list is dismissed with Escape or Tab.
+function closeBlockMenu(refocus: boolean | "button" = false) {
   if ($("block-menu").hidden) return;
   $("block-menu").hidden = true;
   $("block-type").setAttribute("aria-expanded", "false");
-  if (refocus) state.rich?.focus();
+  if (refocus === "button") $("block-type").focus();
+  else if (refocus) state.rich?.focus();
 }
 function highlightBlock(index: number) {
   const options = [...$("block-menu").children];

@@ -243,7 +243,7 @@ $("block-menu").onkeydown = (event) => {
   if (event.key in moves) highlightBlock(moves[event.key]);
   else if (event.key === "Enter" || event.key === " ")
     chooseBlock(options[index]?.dataset.block || "p");
-  else if (event.key === "Escape" || event.key === "Tab") closeBlockMenu(true);
+  else if (event.key === "Escape" || event.key === "Tab") closeBlockMenu("button");
   else return;
   event.preventDefault();
   event.stopPropagation();

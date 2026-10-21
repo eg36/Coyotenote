@@ -264,7 +264,8 @@ test("the text style menu previews each style and applies it by mouse or keyboar
   await page.locator("#block-type").click();
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
-  await expect(page.locator(".tiptap")).toBeFocused();
+  // Escape returns to the style button; choosing a style returns to the writing.
+  await expect(page.locator("#block-type")).toBeFocused();
   await page.locator("#block-type").click();
   await page.keyboard.press("Home");
   await page.keyboard.press("Enter");
@@ -3096,7 +3097,8 @@ test("the Format panel adds footnotes, formulas, diagrams and callouts as exact 
   const types = page.locator("#menu-popup .menu-item");
   await expect(types).toHaveCount(13);
   await expect(page.locator("#menu-popup .menu-item.current")).toHaveText("Note");
-  await page.getByRole("menuitem", { name: "Warning", exact: true }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Note", exact: true })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("menuitemradio", { name: "Warning", exact: true }).click();
   await page.keyboard.type("Careful.");
   await saved(`First paragraph.[^1]\n\n${diagram}\n\n> [!warning]\n> Careful.\n\nSecond paragraph. $E=mc^2$\n\n$$\na^2+b^2=c^2\n$$\n\n[^1]: A source.`);
   // The button keeps the last type, after a reload too, and wraps the current paragraph.
@@ -3131,6 +3133,88 @@ test("Format panel tools are disabled while a recovered draft holds the note", a
   await allowSaves(page);
   await page.locator("#discard-draft").click();
   for (const button of await tools.all()) await expect(button).toBeEnabled();
+});
+
+test("Tab visits the rail, notes, title row, Format panel and then the note", async ({ page }) => {
+  await openSeed(page, "Tab order.");
+  await expect(page.locator("#format-panel")).toBeVisible();
+  await page.locator("#brand").focus();
+  const regions = [];
+  for (let i = 0; i < 80 && regions.at(-1) !== "note"; i++) {
+    await page.keyboard.press("Tab");
+    const region = await page.evaluate(() => {
+      const el = document.activeElement;
+      return el?.closest(".activity-rail") ? "rail" : el?.closest("#sidebar") ? "notes" : el?.closest(".topbar") ? "title"
+        : el?.closest("#format-panel") ? "format" : el?.closest(".workspace") ? "note" : "other";
+    });
+    if (regions.at(-1) !== region) regions.push(region);
+  }
+  expect(regions).toEqual(["rail", "notes", "title", "format", "note"]);
+});
+
+test("the Format panel is one toolbar with named groups and arrow-key movement", async ({ page }) => {
+  await openSeed(page, "Arrow through the tools.");
+  const bar = page.getByRole("toolbar", { name: "Formatting tools" });
+  await expect(bar).toBeVisible();
+  for (const name of ["Text style", "Formula", "Callout", "Note"])
+    await expect(bar.getByRole("group", { name, exact: true })).toBeVisible();
+  await expect(bar.getByRole("group", { name: "Formula" }).getByRole("button")).toHaveCount(2);
+  // One tab stop: Tab from the title row's last control enters at the first tool.
+  await expect(bar.locator('button[tabindex="0"]')).toHaveCount(1);
+  await page.locator("#view-switch [aria-selected=true]").focus();
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#block-type")).toBeFocused();
+  // Up and Down on the style list open it; elsewhere the arrows move between tools.
+  await page.keyboard.press("ArrowRight");
+  await expect(bar.getByRole("button", { name: "Bold", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(bar.getByRole("button", { name: "Italic", exact: true })).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(bar.getByRole("button", { name: "Note history", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#block-type")).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(bar.getByRole("button", { name: "Note history", exact: true })).toBeFocused();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#block-menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#block-menu")).toBeHidden();
+  await expect(page.locator("#block-type")).toBeFocused();
+  // Tab leaves the panel, and Shift+Tab comes back to the tool used last.
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Tab");
+  expect(await page.evaluate(() => Boolean(document.activeElement?.closest("#format-panel")))).toBe(false);
+  await page.keyboard.press("Shift+Tab");
+  await expect(bar.getByRole("button", { name: "Bold", exact: true })).toBeFocused();
+});
+
+test("only one menu or list is open at a time and Escape returns to its button", async ({ page }) => {
+  await openSeed(page, "One popover at a time.");
+  const popup = page.locator("#menu-popup"), styles = page.locator("#block-menu");
+  await menu(page, "file");
+  await expect(popup).toBeVisible();
+  // Moving to the style list by keyboard closes the menu.
+  await page.locator("#block-type").focus();
+  await expect(popup).toBeHidden();
+  await page.keyboard.press("ArrowDown");
+  await expect(styles).toBeVisible();
+  // Opening the callout types closes the style list.
+  await page.locator("#callout-type").click();
+  await expect(popup).toHaveAttribute("aria-label", "Callout type");
+  await expect(styles).toBeHidden();
+  await expect(page.locator("#callout-type")).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(popup).toBeHidden();
+  await expect(page.locator("#callout-type")).toBeFocused();
+  await expect(page.locator("#callout-type")).toHaveAttribute("aria-expanded", "false");
+  await page.locator("#title-menu-button").click();
+  await page.locator("#title-menu-button").click();
+  await expect(popup).toBeHidden();
+  await page.locator('[data-menu="view"]').press("ArrowDown");
+  await expect(popup).toHaveAttribute("aria-label", "View");
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-menu="view"]')).toBeFocused();
 });
 
 test("the view switch holds the header's right end and views stay reachable", async ({ page }) => {

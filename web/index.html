@@ -28,27 +28,6 @@
         <button id="settings-button" class="icon-button" aria-label="Settings" title="Settings · Ctrl/⌘ Shift T" ><span data-icon="settings"></span></button>
         </div>
       </nav>
-      <header class="topbar">
-        <div class="title-left">
-          <button id="panel-toggle" class="icon-button" type="button" aria-label="Notes panel" title="Notes panel · Show or hide" aria-controls="sidebar" aria-expanded="true"><span data-icon="sidebar"></span></button>
-          <span class="title-divider" aria-hidden="true"></span>
-          <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button></nav>
-        </div>
-        <div class="title-block">
-          <span class="app-title" id="app-title"></span>
-          <div class="note-heading" id="document-head" hidden>
-            <span class="save-state" id="save-state" role="status"><span class="save-dot"></span><span id="save-label">Ready when you are</span></span>
-            <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
-            ><button id="document-title" class="document-title" title="Rename note" aria-description="Click to rename this note">Untitled</button
-            ><button id="title-menu-button" class="icon-button title-menu-button" type="button" data-menu="title" aria-haspopup="menu" aria-expanded="false" aria-label="Note actions" title="Note actions"><span data-icon="chevronDown"></span></button
-            ><button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
-          </div>
-        </div>
-        <div class="title-right">
-          <button id="format-toggle" class="view-type" type="button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span><span class="view-tool-label">Format</span></button>
-          <div class="view-switch" id="view-switch" role="tablist" aria-label="Editor view" hidden></div>
-        </div>
-      </header>
       <aside class="sidebar" id="sidebar" aria-label="Notes">
         <section id="recent-panel" class="recent-panel" aria-label="Recently opened notes" hidden>
           <div class="panel-heading"><h2>Recently opened</h2><button class="text-button" id="show-all-notes">All notes</button></div>
@@ -112,15 +91,32 @@
         class="sidebar-scrim"
         aria-label="Close notes"
       ></button>
+      <header class="topbar">
+        <div class="title-left">
+          <button id="panel-toggle" class="icon-button" type="button" aria-label="Notes panel" title="Notes panel · Show or hide" aria-controls="sidebar" aria-expanded="true"><span data-icon="sidebar"></span></button>
+          <span class="title-divider" aria-hidden="true"></span>
+          <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button></nav>
+        </div>
+        <div class="title-block">
+          <span class="app-title" id="app-title"></span>
+          <div class="note-heading" id="document-head" hidden>
+            <span class="save-state" id="save-state" role="status"><span class="save-dot"></span><span id="save-label">Ready when you are</span></span>
+            <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
+            ><button id="document-title" class="document-title" title="Rename note" aria-description="Click to rename this note">Untitled</button
+            ><button id="title-menu-button" class="icon-button title-menu-button" type="button" data-menu="title" aria-haspopup="menu" aria-expanded="false" aria-label="Note actions" title="Note actions"><span data-icon="chevronDown"></span></button
+            ><button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
+          </div>
+        </div>
+        <div class="title-right">
+          <button id="format-toggle" class="view-type" type="button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span><span class="view-tool-label">Format</span></button>
+          <div class="view-switch" id="view-switch" role="tablist" aria-label="Editor view" hidden></div>
+        </div>
+      </header>
       <aside id="format-panel" class="format-panel" aria-label="Text formatting" hidden>
-        <section
-          class="editor-toolbar"
-          id="editor-toolbar"
-          aria-label="Formatting"
-          hidden
-        >
-          <h3 class="format-label">Paragraph style</h3>
-          <button
+        <section class="editor-toolbar" id="editor-toolbar" role="toolbar" aria-label="Formatting tools" aria-orientation="vertical" hidden>
+          <div class="format-group" role="group" aria-labelledby="format-group-1">
+            <h3 class="format-label" id="format-group-1">Paragraph style</h3>
+            <button
             id="block-type"
             class="block-type"
             type="button"
@@ -131,8 +127,11 @@
           >
             <span id="block-type-label">Normal text</span
             ><span data-icon="chevronDown"></span></button
-          ><h3 class="format-label">Text style</h3>
-          <button data-format="bold" title="Bold · Ctrl/⌘ B" aria-label="Bold">
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-2">
+            <h3 class="format-label" id="format-group-2">Text style</h3>
+            <button data-format="bold" title="Bold · Ctrl/⌘ B" aria-label="Bold">
             <b>B</b></button
           ><button
             data-format="italic"
@@ -152,9 +151,15 @@
             aria-label="Inline code"
           >
             <span data-icon="code"></span></button
-          ><h3 class="format-label">Highlight</h3>
-          <button data-format="highlight" data-colour="" class="hl-swatch" title="Highlight" aria-label="Highlight">ab</button><button data-format="highlight" data-colour="🔴" class="hl-swatch hl-red" title="Red highlight" aria-label="Red highlight">ab</button><button data-format="highlight" data-colour="🟠" class="hl-swatch hl-orange" title="Orange highlight" aria-label="Orange highlight">ab</button><button data-format="highlight" data-colour="🟢" class="hl-swatch hl-green" title="Green highlight" aria-label="Green highlight">ab</button><button data-format="highlight" data-colour="🔵" class="hl-swatch hl-blue" title="Blue highlight" aria-label="Blue highlight">ab</button><button data-format="highlight" data-colour="🟣" class="hl-swatch hl-purple" title="Purple highlight" aria-label="Purple highlight">ab</button><h3 class="format-label">Lists and quotes</h3>
-          <button
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-3">
+            <h3 class="format-label" id="format-group-3">Highlight</h3>
+            <button data-format="highlight" data-colour="" class="hl-swatch" title="Highlight" aria-label="Highlight">ab</button><button data-format="highlight" data-colour="🔴" class="hl-swatch hl-red" title="Red highlight" aria-label="Red highlight">ab</button><button data-format="highlight" data-colour="🟠" class="hl-swatch hl-orange" title="Orange highlight" aria-label="Orange highlight">ab</button><button data-format="highlight" data-colour="🟢" class="hl-swatch hl-green" title="Green highlight" aria-label="Green highlight">ab</button><button data-format="highlight" data-colour="🔵" class="hl-swatch hl-blue" title="Blue highlight" aria-label="Blue highlight">ab</button><button data-format="highlight" data-colour="🟣" class="hl-swatch hl-purple" title="Purple highlight" aria-label="Purple highlight">ab</button>
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-4">
+            <h3 class="format-label" id="format-group-4">Lists and quotes</h3>
+            <button
             data-format="bulletList"
             title="Bullet list"
             aria-label="Bullet list"
@@ -174,8 +179,11 @@
             <span data-icon="checkSquare"></span></button
           ><button data-format="blockquote" title="Quote" aria-label="Quote">
             <span data-icon="quote"></span></button
-          ><h3 class="format-label">Insert</h3>
-          <button data-format="link" title="Link" aria-label="Insert link">
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-5">
+            <h3 class="format-label" id="format-group-5">Insert</h3>
+            <button data-format="link" title="Link" aria-label="Insert link">
             <span data-icon="link"></span></button
           ><button
             data-format="wiki"
@@ -187,24 +195,43 @@
             <span data-icon="table"></span></button
           ><button data-format="image" title="Insert image · or paste or drop one" aria-label="Insert image">
             <span data-icon="image"></span></button
-          ><h3 class="format-label">History</h3>
-          <button data-format="undo" title="Undo edit" aria-label="Undo edit">
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-6">
+            <h3 class="format-label" id="format-group-6">History</h3>
+            <button data-format="undo" title="Undo edit" aria-label="Undo edit">
             <span data-icon="undo"></span></button
           ><button data-format="redo" title="Redo edit" aria-label="Redo edit">
             <span data-icon="redo"></span></button
-          ><h3 class="format-label">References</h3>
-          <button data-format="footnote" class="format-labelled" title="Add a footnote at the caret"><span data-icon="footnote"></span><span>Footnote</span></button
-          ><h3 class="format-label">Formula</h3>
-          <button data-format="inlineMath" class="format-labelled" title="Inline formula · or type $…$" aria-label="Inline formula"><span data-icon="sigma"></span><span>Inline</span></button
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-7">
+            <h3 class="format-label" id="format-group-7">References</h3>
+            <button data-format="footnote" class="format-labelled" title="Add a footnote at the caret"><span data-icon="footnote"></span><span>Footnote</span></button
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-8">
+            <h3 class="format-label" id="format-group-8">Formula</h3>
+            <button data-format="inlineMath" class="format-labelled" title="Inline formula · or type $…$" aria-label="Inline formula"><span data-icon="sigma"></span><span>Inline</span></button
           ><button data-format="mathBlock" class="format-labelled" title="Display formula · or type $$ and Enter" aria-label="Display formula"><span data-icon="formulaBlock"></span><span>Block</span></button
-          ><h3 class="format-label">Diagram</h3>
-          <button data-format="mermaid" class="format-labelled" title="Mermaid diagram" aria-label="Mermaid diagram"><span data-icon="diagram"></span><span>Mermaid</span></button
-          ><h3 class="format-label">Callout</h3>
-          <span class="split-button"><button data-format="callout" id="callout-insert" class="format-labelled" title="Callout · or type [!type] at the start of a quote" aria-label="Note callout"><span data-icon="info"></span><span id="callout-label">Note</span></button
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-9">
+            <h3 class="format-label" id="format-group-9">Diagram</h3>
+            <button data-format="mermaid" class="format-labelled" title="Mermaid diagram" aria-label="Mermaid diagram"><span data-icon="diagram"></span><span>Mermaid</span></button
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-10">
+            <h3 class="format-label" id="format-group-10">Callout</h3>
+            <span class="split-button"><button data-format="callout" id="callout-insert" class="format-labelled" title="Callout · or type [!type] at the start of a quote" aria-label="Note callout"><span data-icon="info"></span><span id="callout-label">Note</span></button
           ><button id="callout-type" type="button" data-menu="callout" aria-haspopup="menu" aria-expanded="false" aria-label="Callout type" title="Callout type"><span data-icon="chevronDown"></span></button></span
-          ><h3 class="format-label">Note</h3>
-          <button data-format="find" class="format-labelled" title="Find and replace in this note" aria-label="Find and replace"><span data-icon="replace"></span><span>Find and replace</span></button
+          >
+          </div>
+          <div class="format-group" role="group" aria-labelledby="format-group-11">
+            <h3 class="format-label" id="format-group-11">Note</h3>
+            <button data-format="find" class="format-labelled" title="Find and replace in this note" aria-label="Find and replace"><span data-icon="replace"></span><span>Find and replace</span></button
           ><button data-format="history" class="format-labelled" title="Note history" aria-label="Note history"><span data-icon="history"></span><span>Note history</span></button>
+          </div>
         </section>
       </aside>
       <button id="formatting-scrim" class="formatting-scrim" aria-label="Close text formatting panel" hidden></button>

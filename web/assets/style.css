@@ -2943,3 +2943,5 @@ dialog.danger #modal-submit {
 #format-panel [data-format]:not(.hl-swatch), #callout-type { background: var(--control-fill); }
 #format-panel [data-format]:not(.hl-swatch):not(:disabled):hover, #callout-type:not(:disabled):hover { background: color-mix(in srgb, var(--text) 12%, var(--chrome)); }
 #format-panel [data-format]:not(.hl-swatch)[aria-pressed="true"] { background: var(--selected); color: var(--accent-text); }
+/* Each Format panel group holds its label above its controls. */
+#format-panel .format-group { display: flex; flex: 0 0 100%; flex-wrap: wrap; align-items: center; gap: 4px; }

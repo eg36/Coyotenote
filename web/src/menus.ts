@@ -128,9 +128,11 @@ function openMenu(name: string, focusItem = 0) {
       dot.className = `menu-dot callout-${iconName.slice(4)}`;
       item.append(dot);
       item.classList.toggle("current", iconName.slice(4) === calloutKind());
+      item.setAttribute("role", "menuitemradio");
+      item.setAttribute("aria-checked", String(iconName.slice(4) === calloutKind()));
     } else if (iconName) item.insertAdjacentHTML("beforeend", icon(iconName));
     item.classList.toggle("danger", iconName === "trash");
-    item.setAttribute("role", "menuitem");
+    if (!item.hasAttribute("role")) item.setAttribute("role", "menuitem");
     item.disabled = when ? !when() : false;
     const text = document.createElement("span");
     text.textContent = label;
@@ -191,6 +193,13 @@ function setupMenus() {
   };
   document.addEventListener("mousedown", (event) => {
     if (openName && !(event.target instanceof Element && event.target.closest("#menu-popup, [data-menu]"))) closeMenu();
+  });
+  // Focus moving anywhere but the menu or its button closes it, so only one
+  // menu or list is open at a time.
+  $("menu-popup").addEventListener("focusout", (event) => {
+    const next = event.relatedTarget;
+    if (next instanceof Element && next.closest("#menu-popup, [data-menu]")) return;
+    closeMenu();
   });
   addEventListener("resize", () => closeMenu());
 }
