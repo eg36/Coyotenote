@@ -3147,7 +3147,8 @@ dialog.danger #modal-submit {
     border-radius: var(--island-radius);
   }
   .sidebar, .workspace { overflow: hidden; }
-  .topbar { min-height: 56px; }
+  /* The island border and gap cost height, so the header pads less. */
+  .topbar { min-height: 0; padding-top: 2px; padding-bottom: 2px; }
   .format-panel {
     position: absolute;
     top: calc(var(--topbar-height, 58px) + 2 * var(--island-gap));
