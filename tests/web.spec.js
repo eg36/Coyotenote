@@ -830,7 +830,7 @@ test("restoring a draft Write cannot keep intact opens it in source", async ({
   const id = await openSeed(page, "Plain saved file.");
   await mode(page, "Markdown");
   await failSaves(page);
-  const draft = "Draft text with <u>raw HTML Write cannot keep</u>.";
+  const draft = "Draft text with <video src=x></video> HTML Write cannot keep.";
   await page.locator(".cm-content").fill(draft);
   await expect(page.locator("#error-banner")).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());
@@ -4608,6 +4608,27 @@ test("Write shows embeds as the preview does and saves them exactly", async ({ p
   // The header opens the embedded note.
   await embeds.first().locator(".note-embed-head .wiki-link").click();
   await expect(page.locator("#document-title")).toHaveText(source);
+});
+
+test("Write shows the preview's HTML and saves it exactly", async ({ page }) => {
+  const text = "Press <kbd>Ctrl</kbd> and <u>underline</u> it.<br>\nNew line.\n\n<details>\n<summary>More</summary>\n\nHidden text.\n</details>\n\nAfter.";
+  const id = await openSeed(page, text);
+  await mode(page, "Write");
+  await expect(page.locator("#rich-pane")).toBeVisible();
+  await expect(page.locator("#rich-editor .write-html kbd")).toHaveText("Ctrl");
+  await expect(page.locator("#rich-editor .write-html u")).toHaveText("underline");
+  await expect(page.locator("#rich-editor .write-html-block details summary")).toHaveText("More");
+  // Editing elsewhere keeps the HTML byte for byte.
+  await page.locator(".tiptap > p").last().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Done.");
+  await expect.poll(() => diskBody(page, id)).toBe(text + " Done.");
+  // HTML outside the preview's set still opens in Markdown.
+  const other = await openSeed(page, "A <video src=x></video> clip.");
+  await mode(page, "Write");
+  await expect(page.locator("#toast-text")).toContainText("Write would change the HTML");
+  await expect(page.locator("#source-pane")).toBeVisible();
+  expect(await diskBody(page, other)).toBe("A <video src=x></video> clip.");
 });
 
 test("long note titles take one line in the notes list", async ({ page }) => {

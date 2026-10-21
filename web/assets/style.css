@@ -3241,3 +3241,7 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 #rich-editor .note-embed-body img { max-width: 100%; height: auto; }
 #rich-editor .note-embed-body .embed-title { display: none; }
 #rich-editor .note-embed-head .wiki-link { font-size: 13px; }
+/* HTML in Write shows as the preview renders it, read-only. */
+#rich-editor .write-html { border-radius: 4px; box-shadow: 0 0 0 1px transparent; cursor: default; }
+#rich-editor .write-html:hover, #rich-editor .write-html.ProseMirror-selectednode { box-shadow: 0 0 0 1px var(--line-strong); }
+#rich-editor .write-html-block { display: block; margin: 8px 0; padding: 2px 4px; }

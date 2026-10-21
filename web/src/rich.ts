@@ -7,7 +7,7 @@ interface RichOptions {
   onSelection?(): void;
   onWarning(message: string): void;
   onWiki(raw: string): void;
-  renderEmbed(raw: string): Promise<string>;
+  render(markdown: string): Promise<string>; // what the preview shows for a piece of the note
   onFiles(files: File[]): void;
   fileUrl: FileUrl;
   imageFiles(transfer: DataTransfer | null): File[];
@@ -164,6 +164,85 @@ const NoteEmbed = Node.create({
   },
 });
 
+// HTML the preview keeps shows in Write as it renders there, read-only, and
+// saves back exactly: a tag from the preview's allowlist with its closing
+// tag, a line break, or an HTML block, which runs to the next blank line.
+// Other HTML still keeps the note in Markdown.
+const inlineTags = "u|s|del|ins|mark|small|kbd|sup|sub|q|cite|abbr|dfn|var|samp|time|b|i|strong|em|span";
+const inlineHtmlPattern = new RegExp(`^(?:<(${inlineTags})(?:\\s[^<>]*)?>(?:(?!<\\/?\\1[\\s>])[^\\n]|\\n(?!\\n))*?<\\/\\1\\s*>|<br\\s*\\/?>)`, "i");
+function inlineHtmlToken(src: string) {
+  const match = inlineHtmlPattern.exec(src);
+  if (match) return { type: "htmlInline", raw: match[0], text: match[0] };
+}
+// A block that opens a tag, such as <details>, runs on to the line that
+// closes it, so the Markdown inside stays part of it and saves as written.
+function htmlBlockToken(src: string) {
+  const match = /^ {0,3}(?:<!--|<\/?[A-Za-z][\w-]*(?=[\s/>]|$))[^\n]*(?:\n(?![ \t]*\n)[^\n]*)*/.exec(src);
+  if (!match) return;
+  let raw = match[0];
+  const open = /^ {0,3}<([A-Za-z][\w-]*)/.exec(raw)?.[1];
+  if (open && !/^(?:br|hr|img|input|meta|link|col|area|base|wbr|source|track|embed|param)$/i.test(open)) {
+    const close = new RegExp(`</${open}\\s*>`, "i");
+    if (!close.test(raw)) {
+      const end = close.exec(src.slice(raw.length));
+      if (end) raw = src.slice(0, src.indexOf("\n", raw.length + end.index + end[0].length) < 0 ? src.length : src.indexOf("\n", raw.length + end.index + end[0].length));
+    }
+  }
+  return { type: "htmlBlock", raw, text: raw };
+}
+// Marked asks where a block could interrupt a paragraph with text that
+// starts mid-line, so a block only starts after a line break.
+function htmlBlockStart(text: string) {
+  const match = /\n {0,3}</.exec(text);
+  return match ? match.index + 1 : -1;
+}
+let renderHtml: (raw: string) => Promise<string> = async () => "";
+function htmlView(raw: string, block: boolean) {
+  const dom = document.createElement(block ? "div" : "span");
+  dom.className = block ? "write-html write-html-block" : "write-html";
+  dom.contentEditable = "false";
+  dom.title = "HTML · edit it in the Markdown view";
+  dom.textContent = raw;
+  renderHtml(raw).then((html) => {
+    // The preview wraps inline HTML in a paragraph; Write keeps it in the line.
+    dom.innerHTML = block ? html : html.replace(/^\s*<p>([\s\S]*)<\/p>\s*$/, "$1");
+  }).catch(() => { dom.textContent = raw; });
+  return dom;
+}
+const HtmlInline = Node.create({
+  name: "htmlInline",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  priority: 1100,
+  addAttributes() { return { raw: { default: "" } }; },
+  parseHTML() { return [{ tag: "span[data-html-inline]", getAttrs: (el) => ({ raw: el.getAttribute("data-html-inline") || "" }) }]; },
+  renderHTML({ node }) { return ["span", { "data-html-inline": node.attrs.raw }, node.attrs.raw]; },
+  renderText({ node }) { return node.attrs?.raw || ""; },
+  addNodeView() { return ({ node }) => ({ dom: htmlView(node.attrs.raw, false) }); },
+  markdownTokenName: "htmlInline",
+  markdownTokenizer: { name: "htmlInline", level: "inline", start: "<", tokenize: inlineHtmlToken },
+  parseMarkdown(token) { return { type: "htmlInline", attrs: { raw: token.text } }; },
+  renderMarkdown(node) { return node.attrs?.raw || ""; },
+});
+// Block types come after the paragraph, which stays the editor's default
+// block, so filling an empty spot never creates an HTML block.
+const HtmlBlock = Node.create({
+  name: "htmlBlock",
+  group: "block",
+  atom: true,
+  selectable: true,
+  addAttributes() { return { raw: { default: "" } }; },
+  parseHTML() { return [{ tag: "div[data-html-block]", getAttrs: (el) => ({ raw: el.getAttribute("data-html-block") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { "data-html-block": node.attrs.raw }, node.attrs.raw]; },
+  addNodeView() { return ({ node }) => ({ dom: htmlView(node.attrs.raw, true) }); },
+  markdownTokenName: "htmlBlock",
+  markdownTokenizer: { name: "htmlBlock", level: "block", start: htmlBlockStart, tokenize: htmlBlockToken },
+  parseMarkdown(token) { return { type: "htmlBlock", attrs: { raw: token.text } }; },
+  renderMarkdown(node) { return node.attrs?.raw || ""; },
+});
+
 // Highlight is ==marked text==, matching the preview's rules: exactly two
 // equals signs, touching the text inside. A leading colour emoji such as 🔴
 // is kept as the mark's colour and written back in front of the text.
@@ -293,6 +372,10 @@ const richMarkdown = new Marked({ gfm: true, hooks, extensions: [{
   tokenizer: (text, tokens) => inlineMathToken(text, tokens.at(-1)?.raw.slice(-1)),
 }, {
   name: "mathBlock", level: "block", start: text => /^ {0,3}\$\$/m.exec(text)?.index, tokenizer: (text, tokens) => mathBlockToken(text, tokens),
+}, {
+  name: "htmlBlock", level: "block", start: htmlBlockStart, tokenizer: htmlBlockToken,
+}, {
+  name: "htmlInline", level: "inline", start: text => text.indexOf("<"), tokenizer: inlineHtmlToken,
 }] });
 
 // The inline formulas the preview finds in a paragraph's source.
@@ -407,9 +490,10 @@ export function supportsRich(body: string) {
 
 export function createRich(
   element: HTMLElement,
-  { onChange, onSelection, onWarning, onWiki, renderEmbed: embed, onFiles, fileUrl, imageFiles }: RichOptions,
+  { onChange, onSelection, onWarning, onWiki, render, onFiles, fileUrl, imageFiles }: RichOptions,
 ): RichEditor {
-  renderEmbed = embed;
+  renderEmbed = (raw) => render(`![[${raw}]]`);
+  renderHtml = render;
   let editor: Editor | null = null,
     loading = false,
     last = "",
@@ -457,6 +541,8 @@ export function createRich(
         ...footnoteExtensions(() => parsedSource),
         ImageParagraph,
         NoteEmbed,
+        HtmlBlock,
+        HtmlInline,
         WikiLink,
         Highlight,
         InlineMath,
