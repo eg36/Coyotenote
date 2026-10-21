@@ -358,6 +358,7 @@ function applyEditability() {
   state.rich?.editor?.setEditable(editable, false);
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format], #block-type, #callout-type"))
     button.disabled = !editable;
+  updateToolbar();
 }
 function focusEditor() {
   if (!state.current) return;
@@ -448,11 +449,17 @@ function decorateTags(root: HTMLElement) {
 function updateToolbar() {
   const editor = state.rich?.editor;
   if (!editor) return;
-  for (const button of document.querySelectorAll<HTMLElement>("[data-format]")) {
-    const format = button.dataset.format;
+  const toggles = new Set(["bold", "italic", "strike", "code", "highlight", "bulletList", "orderedList", "taskList", "blockquote", "codeBlock"]);
+  const editable = !state.pendingDraft && !state.busy && editor.isEditable;
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-format]")) {
+    const format = button.dataset.format || "";
     const colour = button.dataset.colour;
-    button.setAttribute("aria-pressed", String(editor.isActive(format || "", colour === undefined ? undefined : { colour })));
+    if (toggles.has(format))
+      button.setAttribute("aria-pressed", String(editor.isActive(format, colour === undefined ? undefined : { colour })));
+    else button.removeAttribute("aria-pressed");
+    button.disabled = !editable || !state.rich!.canCommand(format, colour);
   }
+  document.dispatchEvent(new Event("format-state-change"));
   let block = "p";
   for (let level = 1; level <= 6; level++)
     if (editor.isActive("heading", { level })) block = "h" + level;

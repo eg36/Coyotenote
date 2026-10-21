@@ -56,6 +56,7 @@ export interface RichEditor {
   insertImage(src: string, alt: string): void;
   insertWiki(raw: string): void;
   insertEmbed(raw: string): void;
+  canCommand(name: string, value?: string): boolean;
   command(name: string, value?: string): void;
   destroy(): void;
 }

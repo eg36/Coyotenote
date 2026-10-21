@@ -3063,12 +3063,101 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
+test("Format structure tools preserve selected text, exact neighbors and undo", async ({ page }) => {
+  const original = "Preserve _this_ text.\n\nTurn this into code.\n\nLast paragraph.";
+  const id = await openSeed(page, original);
+  const panel = page.locator("#format-panel"), editor = page.locator(".tiptap");
+  const tool = name => panel.getByRole("button", { name, exact: true });
+  await expect(tool("Indent list item")).toBeDisabled();
+  await expect(tool("Outdent list item")).toBeDisabled();
+  await expect(tool("Undo edit")).toBeDisabled();
+  await expect(tool("Horizontal rule")).not.toHaveAttribute("aria-pressed");
+  await editor.locator("p").nth(1).click();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Shift+End");
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe("Turn this into code.");
+  await tool("Code block").click();
+  await expect(editor.locator("pre code")).toHaveText("Turn this into code.");
+  await expect(tool("Code block")).toHaveAttribute("aria-pressed", "true");
+  const coded = "Preserve _this_ text.\n\n```\nTurn this into code.\n```\n\nLast paragraph.";
+  await expect.poll(() => diskBody(page, id)).toBe(coded);
+  await tool("Undo edit").click();
+  await expect.poll(() => diskBody(page, id)).toBe(original);
+  await tool("Redo edit").click();
+  await expect.poll(() => diskBody(page, id)).toBe(coded);
+  await editor.locator("p").last().click();
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
+  await caretAt(page, "Last paragraph.", 4);
+  await tool("Hard line break").click();
+  await expect.poll(() => diskBody(page, id)).toBe(coded.replace("Last paragraph.", "Last  \n paragraph."));
+  await tool("Undo edit").click();
+  await expect.poll(() => diskBody(page, id)).toBe(coded);
+  await editor.locator("p").last().click();
+  await page.keyboard.press("End");
+  await caretAt(page, "Last paragraph.", "Last paragraph.".length);
+  await tool("Horizontal rule").click();
+  await expect(editor.locator("hr")).toHaveCount(1);
+  await expect.poll(() => diskBody(page, id)).toBe(coded + "\n\n---");
+});
+
+for (const tasks of [false, true]) {
+  test(`Format nests and unnests ${tasks ? "task" : "bullet"} items without losing their text or status`, async ({ page }) => {
+    const list = tasks ? "- [x] Parent\n- [?] Child\n- [ ] Last" : "- Parent\n- Child\n- Last";
+    const original = `Before _exact_.\n\n${list}\n\nAfter.`;
+    const id = await openSeed(page, original);
+    const panel = page.locator("#format-panel"), editor = page.locator(".tiptap");
+    const child = editor.locator("li p", { hasText: /^Child$/ });
+    await child.click();
+    await page.keyboard.press("End");
+    await caretAt(page, "Child", 5);
+    await expect(panel.getByRole("button", { name: "Indent list item", exact: true })).toBeEnabled();
+    await panel.getByRole("button", { name: "Indent list item", exact: true }).click();
+    await expect(editor.locator("li li p", { hasText: /^Child$/ })).toHaveCount(1);
+    await expect.poll(() => diskBody(page, id)).toMatch(tasks ? /\[x\] Parent\n +\- \[\?\] Child/ : /- Parent\n +- Child/);
+    await panel.getByRole("button", { name: "Outdent list item", exact: true }).click();
+    await expect(editor.locator("li li")).toHaveCount(0);
+    await expect.poll(() => diskBody(page, id)).toBe(original);
+    await editor.locator("p").first().click();
+    await expect(panel.getByRole("button", { name: "Indent list item", exact: true })).toBeDisabled();
+  });
+}
+
+test("Format structure controls stay read-only for a pending draft and work by keyboard on a phone", async ({ page }) => {
+  const id = await openSeed(page, "Saved paragraph.");
+  await failSaves(page);
+  await page.locator(".tiptap p").click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Draft");
+  await expect(page.locator("#error-banner")).toBeVisible();
+  page.on("dialog", dialog => dialog.accept());
+  await page.reload();
+  await expect(page.locator("#draft-banner")).toBeVisible();
+  for (const name of ["codeBlock", "hardBreak", "horizontalRule", "indent", "outdent"])
+    await expect(page.locator(`[data-format="${name}"]`)).toBeDisabled();
+  await allowSaves(page);
+  await page.locator("#discard-draft").click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#format-toggle").click();
+  const code = page.locator('#format-panel [data-format="codeBlock"]');
+  await code.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".tiptap pre code")).toHaveText("Saved paragraph.");
+  await code.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('[data-format="horizontalRule"]')).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#format-panel")).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect.poll(() => diskBody(page, id)).toBe("```\nSaved paragraph.\n```");
+});
+
 test("the Format panel adds footnotes, formulas, diagrams and callouts as exact Markdown", async ({ page }) => {
   const id = await openSeed(page, "First paragraph.\n\nSecond paragraph.");
   const pane = page.locator("#format-panel"), tiptap = page.locator(".tiptap");
   const tool = (name) => pane.getByRole("button", { name, exact: true });
   const saved = async (body) => { await page.keyboard.press("Control+s"); await expect.poll(() => diskBody(page, id)).toBe(body); };
-  await expect(pane.locator(".format-label")).toHaveText(["Paragraph style", "Text style", "Highlight", "Lists and quotes", "Insert", "History", "References", "Formula", "Diagram", "Callout", "Note"]);
+  await expect(pane.locator(".format-label")).toHaveText(["Paragraph style", "Text style", "Highlight", "Lists and quotes", "Structure", "Insert", "History", "References", "Formula", "Diagram", "Callout", "Note"]);
   // A footnote takes the next number; its definition waits at the end, focused.
   await tiptap.locator("p").first().click();
   await page.keyboard.press("End");

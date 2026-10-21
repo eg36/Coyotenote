@@ -30,7 +30,13 @@ function setupToolbar() {
   const bar = $("editor-toolbar");
   const all = () => [...bar.querySelectorAll<HTMLButtonElement>("button")];
   const usable = () => all().filter((button) => !button.disabled && button.getClientRects().length > 0);
-  const rove = (target: HTMLButtonElement) => { for (const button of all()) button.tabIndex = button === target ? 0 : -1; };
+  const rove = (target?: HTMLButtonElement) => { for (const button of all()) button.tabIndex = button === target ? 0 : -1; };
+  document.addEventListener("format-state-change", () => {
+    // The panel may still be hidden while a note opens. Keep its logical
+    // tab stop ready; visibility only matters when moving focus with arrows.
+    const enabled = all().filter((button) => !button.disabled);
+    rove(enabled.find((button) => button.tabIndex === 0) || enabled[0]);
+  });
   bar.addEventListener("focusin", (event) => {
     if (event.target instanceof HTMLButtonElement) rove(event.target);
   });

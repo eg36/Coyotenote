@@ -22,11 +22,11 @@ Markdown view before returning to Write.
 | Highlight: yellow/default, red, orange, green, blue, purple | Colour swatches | `==…==`, including colour prefixes | None for access; retain exact markers and fallback boundaries |
 | Bullet; numbered; task list | Buttons | Insert → Checklist; Markdown input; editor list shortcuts | None for creating/toggling the list |
 | Task status; Open/Done toggle | In-document native status picker and checkbox | Type task syntax; picker supports mouse, touch and keyboard | Decide sidebar selection-aware status access |
-| Nest/unnest list items | No | Tab / Shift+Tab in lists | Add discoverable controls |
+| Nest/unnest list items | Indent/outdent buttons under Lists and quotes | Tab / Shift+Tab in lists | None for access; unavailable actions are disabled |
 | Blockquote | Button | Insert → Quote; `> ` input | None for access |
-| Fenced code block | No | Markdown fence input; Mod+Alt+C | Add a code-block control; consider language editing |
-| Horizontal rule | No | Markdown rule input/source | Add an insert control |
-| Hard line break | No | Shift+Enter | Add an insert control if all supported insertions are to be represented |
+| Fenced code block | Code block toggle under Structure | Markdown fence input; Mod+Alt+C | Language editing still uses Markdown |
+| Horizontal rule | Rule button under Structure | Markdown rule input/source | None for insertion access |
+| Hard line break | Line break button under Structure | Shift+Enter | None for insertion access |
 | Split/leave a block or list | No dedicated button | Enter; empty-item Enter; code-block exit keys | Account for these structural editing actions in the interaction design |
 
 ## Insertion and document editing

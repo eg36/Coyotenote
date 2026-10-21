@@ -35,6 +35,11 @@ const paths: Record<string, string> = {
   columns:
     '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/>',
   list: '<path d="M9 6h12M9 12h12M9 18h12M3 6h.01M3 12h.01M3 18h.01"/>',
+  indent: '<path d="M4 5h16M11 10h9m-9 4h9M4 19h16m-16-9 3 2-3 2"/>',
+  outdent: '<path d="M4 5h16M11 10h9m-9 4h9M4 19h16m-13-9-3 2 3 2"/>',
+  codeBlock: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m9 9-3 3 3 3m6-6 3 3-3 3"/>',
+  rule: '<path d="M3 12h18M5 5h14M5 19h14"/>',
+  lineBreak: '<path d="M20 5v7H4m5-5-5 5 5 5"/>',
   ordered:
     '<path d="M10 6h11m-11 6h11m-11 6h11M3 4h1v5m-1 4a2 2 0 1 1 2 2l-2 3h3"/>',
   checkSquare:

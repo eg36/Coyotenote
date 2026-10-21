@@ -478,6 +478,17 @@ export function createRich(
     last = "",
     parsedSource = "",
     currentId = "";
+  function selectedListItem() {
+    const from = editor?.state.selection.$from;
+    if (!from) return "listItem";
+    // A bullet list can sit inside a task, or the reverse. Operate on the
+    // nearest item rather than an outer item that is also active.
+    for (let depth = from.depth; depth > 0; depth--) {
+      const name = from.node(depth).type.name;
+      if (name === "taskItem" || name === "listItem") return name;
+    }
+    return "listItem";
+  }
   function make(body: string) {
     editor?.destroy();
     element.replaceChildren();
@@ -728,13 +739,52 @@ export function createRich(
         .insertContent({ type: "noteEmbed", attrs: { raw } })
         .run();
     },
+    canCommand(name, value) {
+      if (!editor || !editor.isEditable) return false;
+      // can() uses a dry transaction: checking a control never edits the
+      // document, changes the selection or adds a history entry.
+      const chain = editor.can().chain();
+      const selected = editor.state.selection;
+      if (selected instanceof NodeSelection && ["horizontalRule", "hardBreak"].includes(name))
+        chain.command(({ tr }) => { tr.setSelection(Selection.near(tr.doc.resolve(selected.to))); return true; });
+      const listItem = selectedListItem();
+      switch (name) {
+        case "bold": return chain.toggleBold().run();
+        case "italic": return chain.toggleItalic().run();
+        case "strike": return chain.toggleStrike().run();
+        case "highlight":
+          return editor.isActive("highlight", { colour: value || "" })
+            ? chain.unsetMark("highlight").run()
+            : chain.setMark("highlight", { colour: value || "" }).run();
+        case "code": return chain.toggleCode().run();
+        case "codeBlock": return chain.toggleCodeBlock().run();
+        case "bulletList": return chain.toggleBulletList().run();
+        case "orderedList": return chain.toggleOrderedList().run();
+        case "taskList": return chain.toggleTaskList().run();
+        case "blockquote": return chain.toggleBlockquote().run();
+        case "indent": return chain.sinkListItem(listItem).run();
+        case "outdent": return chain.liftListItem(listItem).run();
+        case "horizontalRule": return chain.setHorizontalRule().run();
+        case "hardBreak": return chain.setHardBreak().run();
+        case "table": return chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        case "block":
+          if (value === "p") return chain.setParagraph().run();
+          return Boolean(value && /^h[1-6]$/.test(value) && chain.setHeading({ level: Number(value[1]) as HeadingLevel }).run());
+        case "link":
+          return value ? chain.extendMarkRange("link").setLink({ href: value }).run() : chain.unsetLink().run();
+        case "undo": return chain.undo().run();
+        case "redo": return chain.redo().run();
+        // Dialogs and custom insertion commands keep their existing checks.
+        default: return true;
+      }
+    },
     command(name, value) {
-      if (!editor) return;
+      if (!editor || !editor.isEditable) return;
       const chain = editor.chain().focus();
       // Inserting while a whole block (a diagram or formula) is selected must
       // not replace it: the new content goes at the nearest caret after it.
       const selected = editor.state.selection;
-      if (selected instanceof NodeSelection && ["footnote", "inlineMath", "mathBlock", "mermaid"].includes(name))
+      if (selected instanceof NodeSelection && ["footnote", "inlineMath", "mathBlock", "mermaid", "horizontalRule", "hardBreak"].includes(name))
         chain.command(({ tr }) => { tr.setSelection(Selection.near(tr.doc.resolve(selected.to))); return true; });
       switch (name) {
         case "bold":
@@ -754,6 +804,9 @@ export function createRich(
         case "code":
           chain.toggleCode().run();
           break;
+        case "codeBlock":
+          chain.toggleCodeBlock().run();
+          break;
         case "bulletList":
           chain.toggleBulletList().run();
           break;
@@ -765,6 +818,18 @@ export function createRich(
           break;
         case "blockquote":
           chain.toggleBlockquote().run();
+          break;
+        case "indent":
+          chain.sinkListItem(selectedListItem()).run();
+          break;
+        case "outdent":
+          chain.liftListItem(selectedListItem()).run();
+          break;
+        case "horizontalRule":
+          chain.setHorizontalRule().run();
+          break;
+        case "hardBreak":
+          chain.setHardBreak().run();
           break;
         case "table":
           chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
