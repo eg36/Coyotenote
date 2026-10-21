@@ -1,7 +1,7 @@
-// One settings window: the theme and the writing preferences. Every change
+// One settings window: the appearance and the writing preferences. Every change
 // applies and is kept at once, so the window only needs Done.
 import { showToast, storage } from "./core.js";
-import { closeModal, openModal, themeChooser } from "./dialogs.js";
+import { appearanceChooser, closeModal, openModal } from "./dialogs.js";
 import { applyWritingSettings, lineWidths, textSizes, writingSettings } from "./preferences.js";
 
 function section(title: string, ...content: Node[]) {
@@ -58,8 +58,8 @@ function writingFields() {
   return container;
 }
 
-// settingsDialog opens the window; themes opens its theme list at once.
-function settingsDialog({ themes = false } = {}) {
+// settingsDialog opens the window; appearance focuses its chosen card.
+function settingsDialog({ appearance = false } = {}) {
   const container = document.createElement("div");
   container.className = "settings-layout";
   const done = document.createElement("button");
@@ -67,14 +67,14 @@ function settingsDialog({ themes = false } = {}) {
   done.className = "primary-button settings-done";
   done.textContent = "Done";
   done.onclick = () => closeModal();
-  const theme = themeChooser();
+  const look = appearanceChooser();
   container.append(
-    section("Appearance", theme.element),
+    section("Appearance", look.element),
     section("Writing", writingFields()),
     done,
   );
   openModal("Settings", container, null, {className:"settings", hideFooter:true});
-  if (themes) setTimeout(theme.open, 40);
+  if (appearance) setTimeout(look.focus, 40);
 }
 
 export { settingsDialog };

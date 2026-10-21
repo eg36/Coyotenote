@@ -55,7 +55,7 @@ const shortcuts: Shortcut[] = [
   ["Alt S / Ctrl / ⌘ Shift E", "Search note contents", ["alt+s", "mod+shift+e"], findNotes],
   ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],
   ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views", ["alt+m", "mod+shift+m"], cycleMode],
-  ["Alt T / Ctrl / ⌘ Shift T", "Settings: theme and writing", ["alt+t", "mod+shift+t"], () => settingsDialog()],
+  ["Alt T / Ctrl / ⌘ Shift T", "Settings: appearance and writing", ["alt+t", "mod+shift+t"], () => settingsDialog()],
   ["Ctrl / ⌘ Shift F", "Focus mode", ["mod+shift+f"], toggleFocus],
   ["Alt O", "Show or hide the outline", ["alt+o"], () => toggleOutline()],
   ["Ctrl / ⌘ Shift R", "Rename or move note", ["mod+shift+r"], renameDialog],

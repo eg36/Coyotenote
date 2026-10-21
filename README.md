@@ -17,7 +17,7 @@ own computer only. No account, cloud service or network access.
 - For a computer used by one person: the app is closed to web pages, not to
   other accounts on the same machine
 - Autosave that never overwrites outside changes, with draft recovery
-- 14 themes, keyboard shortcuts and a phone-friendly layout
+- Light, dark and system appearance, keyboard shortcuts and a phone-friendly layout
 
 ## Install
 

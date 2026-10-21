@@ -122,7 +122,7 @@ const commandDefinitions: Command[] = [
   ["Toggle focus mode", "Ctrl Shift F", toggleFocus],
   ["Show or hide outline", "Alt O", () => toggleOutline(), true],
   ["Settings", "Ctrl Shift T", () => settingsDialog()],
-  ["Change the theme", "", () => settingsDialog({ themes: true })],
+  ["Change the appearance", "", () => settingsDialog({ appearance: true })],
   ["Open the trash", "", () => trashDialog().catch(showError)],
   ["Review unsaved drafts", "", draftsDialog, false, () => state.orphans?.length],
   ["Keyboard shortcuts", "F1", helpDialog],

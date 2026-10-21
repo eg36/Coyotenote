@@ -205,17 +205,30 @@ func TestMovesReportSuccessWhenDirectorySyncFails(t *testing.T) {
 func TestThemesMatchMainAndPersist(t *testing.T) {
 	a := testApp(t)
 	state := request(t, a, "GET", "/api/state", nil, 200)
-	if len(state["themes"].([]any)) != 14 {
+	if len(state["themes"].([]any)) != 2 {
 		t.Fatalf("theme count: %v", state["themes"])
 	}
-	for _, theme := range themes {
-		request(t, a, "POST", "/api/settings", mutation{Theme: theme.id}, 200)
+	for _, id := range []string{"light", "dark", "system"} {
+		request(t, a, "POST", "/api/settings", mutation{Theme: id}, 200)
 		got := request(t, a, "GET", "/api/state", nil, 200)
-		if got["theme"] != theme.id {
-			t.Fatalf("theme not persisted: %s", theme.id)
+		if got["theme"] != id {
+			t.Fatalf("theme not persisted: %s", id)
 		}
 	}
 	request(t, a, "POST", "/api/settings", mutation{Theme: "not-a-theme"}, 422)
+	request(t, a, "POST", "/api/settings", mutation{Theme: "nord"}, 422)
+}
+
+func TestRetiredThemesOpenByBrightness(t *testing.T) {
+	a := testApp(t)
+	for saved, want := range map[string]string{"gruvbox-light": "light", "catppuccin-latte": "light", "nord": "dark", "tokyo-night": "dark", "unknown": "dark"} {
+		if err := os.WriteFile(filepath.Join(a.store.Config, "theme"), []byte(saved+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := request(t, a, "GET", "/api/state", nil, 200)["theme"]; got != want {
+			t.Fatalf("%s opened as %v, want %s", saved, got, want)
+		}
+	}
 }
 
 func TestMarkdownRenderingSafety(t *testing.T) {

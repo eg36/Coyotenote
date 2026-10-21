@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory(prefix='labradorite-http-smoke-') as directory:
     process, base = start(directory)
     try:
         state = call(base, '/api/state')
-        assert len(state['themes']) == 14
+        assert [t['id'] for t in state['themes']] == ['dark', 'light']
         assert state['notes'] == []
         token = state['token']
         note = call(base, '/api/note', 'POST', {'id': 'Work/Smoke', 'body': '# A thought\n\n**Keep it.**'}, token)
@@ -64,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix='labradorite-http-smoke-') as directory:
         assert pathlib.Path(directory, 'Work', 'Smoke.md').read_text() == note['body']
         rendered = call(base, '/api/render', 'POST', {'body': '# Heading\n\n**bold**', 'id': note['id']}, token)
         assert '<strong>bold</strong>' in rendered['html']
-        call(base, '/api/settings', 'POST', {'theme': 'tokyo-night'}, token)
+        call(base, '/api/settings', 'POST', {'theme': 'system'}, token)
         call(base, '/api/note', 'DELETE', {'id': note['id'], 'revision': note['revision']}, token)
         note = call(base, '/api/restore', 'POST', {'id': note['id']}, token)
         assert 'Saved for tomorrow.' in note['body']
@@ -83,9 +83,9 @@ with tempfile.TemporaryDirectory(prefix='labradorite-http-smoke-') as directory:
     process, base = start(directory)
     try:
         state = call(base, '/api/state')
-        assert state['theme'] == 'tokyo-night'
+        assert state['theme'] == 'system'
         note = call(base, '/api/note?id=Work%2FSmoke')
         assert note['body'] == '# A thought\n\nSaved for tomorrow.\n'
     finally:
         stop(process)
-print('PASS: HTTP app, 14 themes, Markdown rendering, durable save, trash/restore, conflict and restart recovery')
+print('PASS: HTTP app, appearance, Markdown rendering, durable save, trash/restore, conflict and restart recovery')

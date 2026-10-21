@@ -10,7 +10,7 @@
   can be stamped without a Git tag. Create tags or releases only when asked.
 - The `web` package embeds `web/index.html`, `web/logo.png` and the committed `web/assets/` bundle. Frontend edits
   require `npm run build`, followed by a Go rebuild.
-- Preserve plain Markdown vaults, the original theme IDs and named upstream palettes, atomic writes,
+- Preserve plain Markdown vaults, the `light` and `dark` theme IDs, atomic writes,
   revision conflict checks and recoverable browser drafts.
 - Work is tracked as GitHub issues in eg36/Labradorite. Before starting a
   feature or fix, find its issue or create one with `gh issue create`: a

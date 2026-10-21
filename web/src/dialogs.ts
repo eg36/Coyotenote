@@ -1,5 +1,5 @@
 import { renameNavigation } from "./navigation.js";
-import type { Note, Theme } from "./types.js";
+import type { Note } from "./types.js";
 interface ModalOptions { submit?: string; hideFooter?: boolean; className?: string }
 interface InputOptions extends ModalOptions { required?: boolean; description?: string }
 interface RenameResponse { note: Note; warnings: string[] }
@@ -28,11 +28,16 @@ import { shortcuts } from "./shortcuts.js";
 
 let modalAction: (() => unknown) | null = null;
 let modalBusy = 0;
-let themeOriginal: string | null = null;
+// System follows the operating system's light or dark preference, live.
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+systemDark.addEventListener("change", () => {
+  if (state.theme === "system") applyTheme("system");
+});
 function applyTheme(id: string) {
-  const theme = state.themes.find((t) => t.id === id) || state.themes[0];
+  const palette = id === "system" ? (systemDark.matches ? "dark" : "light") : id;
+  const theme = state.themes.find((t) => t.id === palette) || state.themes[0];
   if (!theme) return;
-  state.theme = theme.id;
+  state.theme = id === "system" ? id : theme.id;
   const root = document.documentElement;
   root.dataset.theme = theme.id;
   root.dataset.scheme = theme.light ? "light" : "dark";
@@ -46,7 +51,7 @@ function applyTheme(id: string) {
 async function chooseTheme(id: string) {
   await api("/api/settings", "POST", { theme: id });
   applyTheme(id);
-  showToast(`Theme: ${state.themes.find((t) => t.id === id)?.name}`);
+  showToast(`Appearance: ${appearances.find(([value]) => value === id)?.[1]}`);
 }
 function openModal(
   title: string,
@@ -83,10 +88,6 @@ function dismissModal() {
   if (!modalBusy) closeModal();
 }
 function closeModal() {
-  if (themeOriginal) {
-    applyTheme(themeOriginal);
-    themeOriginal = null;
-  }
   $("modal").close();
   modalAction = null;
   focusEditor();
@@ -413,192 +414,79 @@ function emptyTrashDialog(count: number) {
     { submit: `Delete ${notes}`, className: "danger" },
   );
 }
-// themeChooser is the settings window's theme section: a field naming the
-// current theme opens the list, where hovering or ↑/↓ previews a theme,
-// Enter or a click keeps it, and Escape or closing returns to the kept one.
-function swatchOf(theme: Theme) {
-  const swatch = document.createElement("span");
-  swatch.className = "theme-swatch";
-  swatch.setAttribute("aria-hidden", "true");
-  for (const color of [theme.colors.accent, theme.colors.pink, theme.colors.cyan, theme.colors.good]) {
-    const dot = document.createElement("i");
-    dot.style.background = color || "";
-    swatch.append(dot);
+// appearanceChooser is the settings window's Appearance section: Light,
+// Dark and System as a radio group of preview cards. Choosing one keeps it.
+const appearances = [["light", "Light"], ["dark", "Dark"], ["system", "System"]] as const;
+function appearancePreview(id: string) {
+  const preview = document.createElement("span");
+  preview.className = "appearance-preview";
+  preview.setAttribute("aria-hidden", "true");
+  for (const half of id === "system" ? ["dark", "light"] : [id]) {
+    const colors = state.themes.find((t) => t.id === half)?.colors || {};
+    const pane = document.createElement("span");
+    pane.className = "appearance-pane";
+    pane.style.setProperty("--pane-chrome", colors.chrome || "");
+    pane.style.setProperty("--pane-surface", colors.surface || "");
+    pane.style.setProperty("--pane-text", colors.text || "");
+    pane.style.setProperty("--pane-line", colors.line || "");
+    const sample = document.createElement("span");
+    sample.className = "appearance-window";
+    sample.textContent = "Aa";
+    pane.append(sample);
+    preview.append(pane);
   }
-  return swatch;
+  preview.insertAdjacentHTML("beforeend", `<span class="appearance-check">${icon("check")}</span>`);
+  return preview;
 }
-function themeChooser() {
-  themeOriginal = state.theme;
-  const container = document.createElement("div");
-  container.className = "theme-chooser";
-  const field = document.createElement("button");
-  field.type = "button";
-  field.className = "theme-field";
-  field.setAttribute("aria-expanded", "false");
-  field.setAttribute("aria-controls", "theme-panel");
-  const panel = document.createElement("div");
-  panel.id = "theme-panel";
-  panel.className = "theme-panel";
-  panel.hidden = true;
-  function showField() {
-    const theme = state.themes.find((t) => t.id === themeOriginal) || state.themes[0];
-    if (!theme) return;
-    const name = document.createElement("strong");
-    name.textContent = theme.name;
-    field.replaceChildren(swatchOf(theme), name);
-    field.insertAdjacentHTML("beforeend", icon("chevronDown"));
-    field.setAttribute("aria-label", `Theme: ${theme.name}`);
-  }
-  function expand(open: boolean) {
-    panel.hidden = !open;
-    field.setAttribute("aria-expanded", String(open));
-    if (open) {
-      search.value = "";
-      render();
-      search.focus();
-      options[active]?.scrollIntoView({ block: "nearest" });
-    } else {
-      if (themeOriginal && state.theme !== themeOriginal) applyTheme(themeOriginal);
-      field.focus();
-    }
-  }
-  field.onclick = () => expand(panel.hidden);
-  const search = document.createElement("input");
-  search.placeholder = "Find a theme…";
-  search.setAttribute("aria-label", "Find a theme");
-  search.setAttribute("role", "combobox");
-  search.setAttribute("aria-expanded", "true");
-  search.setAttribute("aria-autocomplete", "list");
-  search.setAttribute("aria-controls", "theme-list");
-  const list = document.createElement("div");
-  list.id = "theme-list";
-  list.className = "theme-list";
-  list.setAttribute("role", "listbox");
-  list.setAttribute("aria-label", "Themes");
-  const empty = document.createElement("p");
-  empty.className = "theme-empty";
-  empty.setAttribute("role", "status");
-  empty.textContent = "No matching themes";
-  // Light or dark themes: the remembered choice, or the current theme's kind.
-  const kinds = [["light", "Light"], ["dark", "Dark"]] as const;
-  let kind = storage.get("labradorite-theme-filter") || "";
-  if (!kinds.some(([value]) => value === kind))
-    kind = state.themes.find((t) => t.id === state.theme)?.light ? "light" : "dark";
-  const filter = document.createElement("div");
-  filter.className = "theme-filter";
-  filter.setAttribute("role", "group");
-  filter.setAttribute("aria-label", "Show themes");
-  const kindButtons = kinds.map(([value, label]) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    button.dataset.kind = value;
-    button.onclick = () => {
-      kind = value;
-      storage.set("labradorite-theme-filter", value);
-      for (const other of kindButtons) other.setAttribute("aria-pressed", String(other === button));
-      render(true);
-    };
-    button.setAttribute("aria-pressed", String(value === kind));
-    return button;
+function appearanceChooser() {
+  const group = document.createElement("div");
+  group.className = "appearance-options";
+  group.setAttribute("role", "radiogroup");
+  group.setAttribute("aria-label", "Appearance");
+  const cards = appearances.map(([id, label]) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "appearance-option";
+    card.dataset.appearance = id;
+    card.setAttribute("role", "radio");
+    const name = document.createElement("span");
+    name.className = "appearance-name";
+    name.textContent = label;
+    card.append(appearancePreview(id), name);
+    card.onclick = () => choose(card);
+    return card;
   });
-  filter.append(...kindButtons);
-  let active = -1;
-  let options: HTMLButtonElement[] = [];
-  function activate(index: number, preview = true, scroll = true) {
-    active = index;
-    for (const [i, option] of options.entries()) {
-      option.classList.toggle("chosen", i === active);
-      option.setAttribute("aria-selected", String(i === active));
+  function mark() {
+    for (const card of cards) {
+      const checked = card.dataset.appearance === state.theme;
+      card.setAttribute("aria-checked", String(checked));
+      card.tabIndex = checked ? 0 : -1;
     }
-    const option = options[active];
-    if (!option) {
-      search.removeAttribute("aria-activedescendant");
-      return;
-    }
-    search.setAttribute("aria-activedescendant", option.id);
-    if (preview) applyTheme(option.dataset.themeId || "");
-    if (scroll) option.scrollIntoView({ block: "nearest" });
   }
-  function render(preview = false) {
-    list.replaceChildren();
-    options = [];
-    const query = search.value.trim().toLowerCase();
-    const themes = state.themes.filter((t) => t.name.toLowerCase().includes(query) && t.light === (kind === "light"));
-    for (const theme of themes) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "theme-option";
-      button.id = "theme-option-" + theme.id;
-      button.dataset.themeId = theme.id;
-      button.tabIndex = -1;
-      button.setAttribute("role", "option");
-      const swatch = swatchOf(theme);
-      const name = document.createElement("strong");
-      name.textContent = theme.name;
-      const type = document.createElement("small");
-      type.textContent = theme.light ? "Light" : "Dark";
-      button.append(swatch, name, type);
-      const index = options.length;
-      // Only a moving pointer previews, not one the list opened under.
-      button.onmousemove = () => {
-        if (active !== index) activate(index, true, false);
-      };
-      button.onfocus = () => activate(index);
-      button.onclick = async () => {
-        try {
-          await chooseTheme(theme.id);
-          themeOriginal = theme.id;
-          $("modal-error").textContent = "";
-          showField();
-          expand(false);
-        } catch (error) {
-          $("modal-error").textContent = error instanceof Error ? error.message : String(error);
-        }
-      };
-      options.push(button);
-      list.append(button);
+  async function choose(card: HTMLButtonElement) {
+    const id = card.dataset.appearance || "dark";
+    card.focus();
+    if (id === state.theme) return;
+    try {
+      await chooseTheme(id);
+      $("modal-error").textContent = "";
+    } catch (error) {
+      $("modal-error").textContent = error instanceof Error ? error.message : String(error);
     }
-    empty.hidden = options.length > 0;
-    const selected = options.findIndex((option) => option.dataset.themeId === state.theme);
-    activate(options.length ? Math.max(0, selected) : -1, preview);
+    mark();
   }
-  search.oninput = () => render(true);
-  panel.onkeydown = (event) => {
-    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
-    // Enter and Space press a filter button rather than choose a theme.
-    if (filter.contains(event.target as Node) && (event.key === "Enter" || event.key === " ")) return;
-    if (event.key === "Escape") {
-      // Close the list, not the whole settings window.
-      event.preventDefault();
-      event.stopPropagation();
-      expand(false);
-    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      if (options.length) {
-        const step = event.key === "ArrowDown" ? 1 : -1;
-        activate((active + step + options.length) % options.length);
-      }
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      options[active]?.click();
-    }
+  // Arrow keys move through the cards and choose, as in any radio group.
+  group.onkeydown = (event) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const index = cards.indexOf(document.activeElement as HTMLButtonElement);
+    const next = cards[(Math.max(0, index) + step + cards.length) % cards.length];
+    if (next) void choose(next);
   };
-  const searchRow = document.createElement("div");
-  searchRow.className = "theme-search";
-  searchRow.innerHTML = icon("chevronDown");
-  searchRow.prepend(search);
-  const hints = document.createElement("p");
-  hints.className = "theme-key-hints";
-  hints.textContent = "↑↓ preview · Enter choose · Esc close";
-  panel.append(filter, searchRow, list, empty, hints);
-  const label = document.createElement("span");
-  label.className = "field-label";
-  label.setAttribute("aria-hidden", "true");
-  label.textContent = "Theme";
-  container.append(label, field, panel);
-  showField();
-  return { element: container, open: () => expand(true) };
+  group.append(...cards);
+  mark();
+  return { element: group, focus: () => (cards.find((card) => card.tabIndex === 0) || cards[0])?.focus() };
 }
 function linkDialog(wiki = false) {
   if (!state.current) return;
@@ -755,7 +643,7 @@ export {
   openModal,
   renameDialog,
   renameInPlace,
-  themeChooser,
+  appearanceChooser,
   trashDialog,
   undoTrash,
 };

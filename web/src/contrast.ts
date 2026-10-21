@@ -1,6 +1,5 @@
-// Theme palettes stay as published. The roles the app draws text with are
-// moved only as far as WCAG AA (4.5:1) needs on the backgrounds they meet,
-// so soft palettes such as Ayu Light stay readable without being redrawn.
+// Palettes stay as defined. The roles the app draws text with are moved
+// only as far as WCAG AA (4.5:1) needs on the backgrounds they meet.
 type RGB = [number, number, number];
 
 const rgb = (hex: string): RGB => [

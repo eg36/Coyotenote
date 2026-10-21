@@ -20,21 +20,9 @@ Copyright 2018 The Lexend Project Authors. It is distributed under the SIL Open
 Font License 1.1; see `docs/licenses/Lexend.txt`. The font is embedded and served
 locally at `/assets/Lexend.ttf`; no font service is contacted at runtime.
 
-## Theme palettes
+## Go modules
 
-Theme colors are adapted to application UI roles from the original projects:
-
-- Ayu — https://github.com/ayu-theme/ayu-colors
-- Catppuccin — https://catppuccin.com/palette/
-- Nord — https://www.nordtheme.com/docs/colors-and-palettes/
-- Tokyo Night — https://github.com/folke/tokyonight.nvim
-- Dracula — https://github.com/dracula/dracula-theme
-- Gruvbox — https://github.com/morhetz/gruvbox
-
-The app keeps the 12 named palettes' values; its Labradorite Light/Dark use
-neutral surfaces with blue accents. These themes are community adaptations; they
-do not imply endorsement by their original authors. The existing Go module
-dependencies retain their own licenses.
+The existing Go module dependencies retain their own licenses.
 
 ## Math and diagrams
 

@@ -31,11 +31,12 @@ async function searchBox(page) {
   await expect(box).toBeVisible();
   return box;
 }
-// openThemes shows the theme list in Settings, opening the window first.
-async function openThemes(page) {
+// openAppearance opens Settings and returns its Appearance radio group.
+async function openAppearance(page) {
   if (!(await page.locator("#modal").evaluate((d) => d.open))) await page.locator("#settings-button").click();
-  if (await page.locator("#theme-panel").isHidden()) await page.getByRole("button", { name: /^Theme:/ }).click();
-  await expect(page.getByRole("combobox", { name: "Find a theme" })).toBeFocused();
+  const group = page.getByRole("radiogroup", { name: "Appearance" });
+  await expect(group).toBeVisible();
+  return group;
 }
 // mode picks a view from the header's selector, or from the View menu when
 // the header is hidden.
@@ -237,71 +238,60 @@ test("the text style menu previews each style and applies it by mouse or keyboar
   await expect.poll(() => diskBody(page, id)).toMatch(/^A plain line\.\s*$/);
 });
 
-test("opening theme search immediately keeps focus after the dialog settles", async ({ page }) => {
-  await openSeed(page, "Settings focus stays where I put it.");
-  await expect(page.locator("#rich-editor")).toBeVisible();
-  await page.clock.install();
-  // A moment ahead: the page's clock may already be past Node's "now".
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
-  await page.locator("#settings-button").click();
-  await page.getByRole("button", { name: /^Theme:/ }).click();
-  const search = page.getByRole("combobox", { name: "Find a theme" });
-  await expect(search).toBeFocused();
-  await page.clock.runFor(100);
-  await expect(search).toBeFocused();
-  await search.fill("Tokyo");
-  await expect(page.locator(".theme-option")).toHaveCount(1);
-});
-
-test("all fourteen themes, preview cancel and persistence", async ({
-  page,
-}) => {
-  await openSeed(page, "# Theme test\n\nHello.");
-  await openThemes(page);
-  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
-  await page.locator('[data-theme-id="catppuccin-mocha"]').click();
-  await expect(page.locator("#toast-text")).toHaveText("Theme: Catppuccin Mocha");
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-theme",
-    "catppuccin-mocha",
-  );
-  await page.reload();
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-theme",
-    "catppuccin-mocha",
-  );
-  await openThemes(page);
-  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Light", exact: true }).click();
-  await page.locator('[data-theme-id="light"]').hover();
+test("appearance offers Light, Dark and System and keeps the choice", async ({ page }) => {
+  await openSeed(page, "# Appearance\n\nHello.");
+  const group = await openAppearance(page);
+  await expect(group.locator(".appearance-name")).toHaveText(["Light", "Dark", "System"]);
+  await expect(page.locator(".theme-list, #theme-panel")).toHaveCount(0);
+  await group.getByRole("radio", { name: "Light" }).click();
+  await expect(group.getByRole("radio", { name: "Light" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator("#toast-text")).toHaveText("Appearance: Light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("#rich-pane")).toHaveCSS("background-color", "rgb(251, 252, 253)");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  // Arrow keys move through the cards and choose; only the chosen card is tabbable.
+  await openAppearance(page);
+  await group.getByRole("radio", { name: "Light" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(group.getByRole("radio", { name: "Dark" })).toBeFocused();
+  await expect(group.getByRole("radio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
+  await expect(group.locator('[tabindex="0"]')).toHaveCount(1);
+  await expect.poll(async () => (await (await page.request.get("/api/state")).json()).theme).toBe("dark");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  await expect(group.getByRole("radio", { name: "System" })).toHaveAttribute("aria-checked", "true");
+  await expect.poll(async () => (await (await page.request.get("/api/state")).json()).theme).toBe("system");
+  // Escape closes the window and the choice stays.
   await page.keyboard.press("Escape");
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-theme",
-    "catppuccin-mocha",
-  );
-  await openThemes(page);
-  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Light", exact: true }).click();
-  await page.locator('[data-theme-id="light"]').click();
-  await expect(page.locator("#rich-pane")).toHaveCSS(
-    "background-color",
-    "rgb(251, 252, 253)",
-  );
+  await expect(page.locator("#modal")).toBeHidden();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", /^(light|dark)$/);
 });
 
-test("every theme draws text, accents, pills and focus rings at AA contrast", async ({ page }) => {
+test("System follows the operating system's scheme without a reload", async ({ page }) => {
+  await openSeed(page, "# System");
+  await page.emulateMedia({ colorScheme: "light" });
+  const group = await openAppearance(page);
+  await group.getByRole("radio", { name: "System" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("html")).toHaveAttribute("data-scheme", "light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  // A fixed choice stops following the system.
+  await (await openAppearance(page)).getByRole("radio", { name: "Dark" }).click();
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+test("both palettes draw text, accents, pills and focus rings at AA contrast", async ({ page }) => {
   await openSeed(page, "Contrast.");
-  await openThemes(page);
-  // The list shows light or dark themes; walk both.
-  const kinds = page.getByRole("group", { name: "Show themes" });
-  const ids = [];
-  for (const kind of ["Light", "Dark"]) {
-    await kinds.getByRole("button", { name: kind, exact: true }).click();
-    ids.push(...(await page.locator(".theme-option").evaluateAll((options) => options.map((o) => [o.dataset.themeId, o.querySelector("small").textContent]))));
-  }
-  expect(ids).toHaveLength(14);
-  for (const [id, kind] of ids) {
-    if (!(await page.locator(`[data-theme-id="${id}"]`).count())) await kinds.getByRole("button", { name: kind, exact: true }).click();
-    await page.locator(`[data-theme-id="${id}"]`).hover();
+  const group = await openAppearance(page);
+  for (const [id, name] of [["light", "Light"], ["dark", "Dark"]]) {
+    await group.getByRole("radio", { name }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", id);
     const worst = await page.evaluate(() => {
       const css = getComputedStyle(document.documentElement);
@@ -338,32 +328,21 @@ test("every theme draws text, accents, pills and focus rings at AA contrast", as
   await page.keyboard.press("Escape");
 });
 
-test("settings hold the themes and writing preferences over a lightly tinted page", async ({ page }) => {
-  await openSeed(page, "# Themes");
+test("settings hold the appearance and writing preferences over a lightly tinted page", async ({ page }) => {
+  await openSeed(page, "# Appearance");
   await page.locator("#settings-button").click();
   const picker = page.getByRole("dialog", { name: "Settings" });
   await expect(picker).toBeVisible();
   await expect(picker.getByRole("heading", { name: "Appearance" })).toBeVisible();
   await expect(picker.getByLabel("Text size", { exact: true })).toBeVisible();
-  // The theme list stays closed until the theme field is clicked.
-  await expect(picker.locator(".theme-list")).toBeHidden();
-  await expect(picker.getByRole("button", { name: /^Theme: / })).toBeVisible();
-  await openThemes(page);
   expect((await picker.boundingBox()).width).toBeLessThanOrEqual(720);
-  // The same light tint as other dialogs, so theme previews stay visible.
   expect(await picker.evaluate((el) => getComputedStyle(el, "::backdrop").backgroundColor)).toBe("rgba(16, 18, 24, 0.5)");
-  const shown = await picker.locator(".theme-option").count();
-  expect(shown).toBeGreaterThan(1);
-  await expect(picker.locator(".theme-list .theme-swatch i")).toHaveCount(4 * shown);
-  const rows = await picker.locator(".theme-option").evaluateAll((els) => els.map((el) => el.getBoundingClientRect().x));
-  expect(new Set(rows).size).toBe(1);
-  await page.getByLabel("Find a theme").fill("catppuccin");
-  await expect(picker.locator(".theme-option").first()).toBeVisible();
-  expect(await picker.locator(".theme-option").count()).toBeLessThan(shown);
-  // Escape closes the list first, then the window.
-  await page.keyboard.press("Escape");
-  await expect(picker.locator(".theme-list")).toBeHidden();
-  await expect(picker).toBeVisible();
+  // Three cards side by side, each with a preview window; System shows both palettes.
+  const cards = picker.getByRole("radio");
+  const tops = await cards.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().y)));
+  expect(new Set(tops).size).toBe(1);
+  await expect(picker.locator('[data-appearance="system"] .appearance-pane')).toHaveCount(2);
+  await expect(picker.locator(".appearance-window")).toHaveCount(4);
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 375, height: 667 });
   await page.locator("#sidebar-toggle").click();
@@ -372,119 +351,33 @@ test("settings hold the themes and writing preferences over a lightly tinted pag
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(375);
   expect(box.height).toBeLessThanOrEqual(635);
+  for (const card of await cards.all()) {
+    const own = await card.boundingBox();
+    expect(own.x + own.width).toBeLessThanOrEqual(box.x + box.width);
+  }
   await expect(picker.getByRole("button", { name: "Done" })).toBeVisible();
 });
 
-test("the theme list shows light or dark themes, starting with the current theme's kind", async ({ page }) => {
-  await openSeed(page, "# Light and dark");
-  const kept = (await (await page.request.get("/api/state")).json()).theme;
-  await openThemes(page);
-  const list = page.getByRole("listbox", { name: "Themes" });
-  const filter = page.getByRole("group", { name: "Show themes" });
-  await expect(filter.getByRole("button")).toHaveCount(2);
-  // It opens on the current theme's kind, and shows only that kind.
-  const keptKind = await list.locator(`[data-theme-id="${kept}"] small`).textContent();
-  await expect(filter.getByRole("button", { name: keptKind, exact: true })).toHaveAttribute("aria-pressed", "true");
-  const kindsShown = async () => list.getByRole("option").evaluateAll((options) => [...new Set(options.map((o) => o.querySelector("small").textContent))]);
-  expect(await kindsShown()).toEqual([keptKind]);
-  await filter.getByRole("button", { name: "Light", exact: true }).click();
-  expect(await kindsShown()).toEqual(["Light"]);
-  const light = await list.getByRole("option").count();
-  await filter.getByRole("button", { name: "Dark", exact: true }).click();
-  expect(await kindsShown()).toEqual(["Dark"]);
-  expect(light + (await list.getByRole("option").count())).toBe(14);
-  // Search narrows within the kind; arrows preview; Escape restores.
-  const search = page.getByRole("combobox", { name: "Find a theme" });
-  await search.fill("light");
-  await expect(list.getByRole("option")).toHaveCount(0);
-  await search.fill("catppuccin");
-  await expect(list.getByRole("option")).toHaveCount(3);
-  await search.press("ArrowDown");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", /catppuccin/);
-  await search.press("Escape");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", kept);
-  // Enter on the switch changes the kind rather than choosing a theme.
-  await openThemes(page);
-  await filter.getByRole("button", { name: "Light", exact: true }).focus();
+test("the command palette opens Settings on the chosen appearance", async ({ page }) => {
+  await openSeed(page, "# Commands");
+  await page.locator("#commands-button").click();
+  const search = page.getByRole("combobox", { name: "Search notes, headings and commands" });
+  await expect(search).toHaveValue(">");
+  await search.fill(">appearance");
   await page.keyboard.press("Enter");
-  await expect(filter.getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#theme-panel")).toBeVisible();
-  expect((await (await page.request.get("/api/state")).json()).theme).toBe(kept);
-  // The choice is remembered; a remembered "all" from before opens on the theme's kind.
-  await page.reload();
-  await openThemes(page);
-  await expect(filter.getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await page.evaluate(() => localStorage.setItem("labradorite-theme-filter", "all"));
-  await page.reload();
-  await openThemes(page);
-  await expect(filter.getByRole("button", { name: keptKind, exact: true })).toHaveAttribute("aria-pressed", "true");
+  const group = page.getByRole("radiogroup", { name: "Appearance" });
+  await expect(group.getByRole("radio", { checked: true })).toBeFocused();
 });
 
-test("theme keyboard preview wraps, cancels and commits a filtered selection", async ({ page }) => {
-  await openSeed(page, "# Keyboard themes");
-  await openThemes(page);
-  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
-  const search = page.getByRole("combobox", { name: "Find a theme" });
-  await search.fill("Labradorite Dark");
-  await search.press("Enter");
-  // Choosing closes the list and keeps the settings window open.
-  await expect(page.locator("#theme-panel")).toBeHidden();
-  await expect(page.locator("#modal")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.locator("#modal")).not.toBeVisible();
-  await openThemes(page);
-  // Neighbours in the list as shown: light themes first, then dark ones.
-  const ids = await page.getByRole("listbox", { name: "Themes" }).getByRole("option").evaluateAll((options) => options.map((o) => o.dataset.themeId));
-  const at = ids.indexOf("dark");
-  const before = ids[(at - 1 + ids.length) % ids.length], after = ids[(at + 1) % ids.length];
-  await search.press("ArrowUp");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", before);
-  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option", { selected: true })).toHaveAttribute("data-theme-id", before);
-  await expect(search).toHaveAttribute("aria-activedescendant", "theme-option-" + before);
-  // Preview changes the page, but never persists until Enter/click.
-  expect((await (await page.request.get("/api/state")).json()).theme).toBe("dark");
-  await search.press("ArrowDown");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await search.press("ArrowDown");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", after);
-  await search.press("Escape");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await openThemes(page);
-  await search.fill("catppuccin");
-  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(3);
-  const second = await page.getByRole("listbox", { name: "Themes" }).getByRole("option").nth(1).getAttribute("data-theme-id");
-  await search.press("ArrowDown");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", second);
-  await search.press("Enter");
-  // Choosing keeps the theme and leaves the window open for other settings.
-  await expect(page.locator("#modal")).toBeVisible();
-  await expect.poll(async () => (await (await page.request.get("/api/state")).json()).theme).toBe(second);
-  await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.locator("#modal")).not.toBeVisible();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", second);
-  await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", second);
-});
-
-test("empty theme search and failed selection preserve the previous theme", async ({ page }) => {
-  await openSeed(page, "# Theme recovery");
+test("a failed appearance change keeps the previous palette", async ({ page }) => {
+  await openSeed(page, "# Appearance recovery");
   const original = await page.locator("html").getAttribute("data-theme");
-  await openThemes(page);
-  const search = page.getByRole("combobox", { name: "Find a theme" });
-  await search.fill("no such palette");
-  await expect(page.getByRole("listbox", { name: "Themes" }).getByRole("option")).toHaveCount(0);
-  await expect(page.getByText("No matching themes")).toBeVisible();
-  await expect(search).not.toHaveAttribute("aria-activedescendant");
-  await search.press("ArrowDown");
-  await search.press("Enter");
-  await expect(page.locator("#modal")).toBeVisible();
-  await page.getByRole("group", { name: "Show themes" }).getByRole("button", { name: "Dark", exact: true }).click();
-  await search.fill("Nord");
-  await page.route("**/api/settings", (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Settings unavailable" }) }));
-  await search.press("Enter");
-  await expect(page.locator("#modal-error")).toContainText("Settings unavailable");
-  await expect(page.locator("#modal")).toBeVisible();
-  await search.press("Escape");
+  const other = original === "dark" ? "Light" : "Dark";
+  await page.route("**/api/settings", (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"disk said no"}' }));
+  const group = await openAppearance(page);
+  await group.getByRole("radio", { name: other }).click();
+  await expect(page.locator("#modal-error")).not.toBeEmpty();
+  await expect(group.getByRole("radio", { name: other })).toHaveAttribute("aria-checked", "false");
   await expect(page.locator("html")).toHaveAttribute("data-theme", original);
   expect((await (await page.request.get("/api/state")).json()).theme).toBe(original);
 });

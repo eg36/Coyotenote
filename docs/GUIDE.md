@@ -2,7 +2,7 @@
 
 A local-first writing space in your browser, powered by Go. Notes are plain
 Markdown files in a folder you choose. The app offers a WYSIWYG editor, Markdown
-source, rendered preview, split view, body search, focus mode, 14 themes and
+source, rendered preview, split view, body search, focus mode, light/dark/system appearance and
 browser draft recovery.
 
 Labradorite is AI-assisted software. Keep important notes backed up and try it on
@@ -111,7 +111,7 @@ defaults to 18 px, Markdown source to 16 px, and small interface labels and shor
 are at least 12 px.
 
 **Settings** (the button at the bottom of the rail, View → Settings…, Quick
-open or Ctrl/⌘ Shift T) holds the theme and, under Writing, text sizes from
+open or Ctrl/⌘ Shift T) holds the appearance and, under Writing, text sizes from
 14–24 px, Narrow/Standard/Wide line widths for Write and Preview, and spellcheck
 in Write. Markdown text stays 2 px smaller than the chosen size. Every change
 applies at once and is kept; Done closes the window.
@@ -194,15 +194,12 @@ not change the Markdown files or follow the vault to another browser.
   **Alt+Up / Alt+Down** (or View → Previous / Next note) cycles the visible sorted notes; the sidebar arrows move backward and forward
   through visited notes. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
-- **Settings → Appearance → Theme** opens a list of all **14 palettes**, including the four Catppuccin
-  flavors, Ayu, Nord, Tokyo Night, Dracula and Gruvbox. Labradorite Light/Dark use
-  neutral white/charcoal surfaces and blue accents. **Light / Dark** above the
-  search switches between light and dark themes; it opens on the kind of the
-  current theme, and a choice made there is remembered in this browser. Hover, focus or
-  ↑/↓ previews a theme; Enter/click keeps it; closing the window without
-  choosing restores the kept theme. Palettes stay as
-  published; where one of their text colors would fall below WCAG AA contrast (as in
-  Ayu Light or Nord), the app darkens or lightens just that text until it passes.
+- **Settings → Appearance** offers three cards: **Light**, **Dark** and
+  **System**. Labradorite Light/Dark use slate surfaces and blue accents;
+  System follows the operating system's light or dark preference and switches
+  as soon as it changes. Click a card, or use the arrow keys, to choose; the
+  choice is kept at once. Text colours that would fall below WCAG AA contrast
+  are darkened or lightened just enough to pass.
 - **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
   a scrollable formatting toolbar, stacked split panes and compact status hints.
 
@@ -387,7 +384,7 @@ and all TOML front matter, keep the raw Properties editor.
 | Alt+S or Ctrl/⌘+Shift+E | Search note contents |
 | Ctrl/⌘+S | Save immediately |
 | Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Preview → Split |
-| Alt+T or Ctrl/⌘+Shift+T | Settings: theme and writing |
+| Alt+T or Ctrl/⌘+Shift+T | Settings: appearance and writing |
 | Ctrl/⌘+Shift+F | Toggle focus mode |
 | Alt+O | Show or hide the outline |
 | Ctrl/⌘+Shift+R | Rename or move |
@@ -479,8 +476,8 @@ What Labradorite stores in a vault:
 - **`attachments/`**: images added from the editor, linked from notes by path.
 - **`.lock`**, and after an interrupted write `.pending-*` or `.recovery-*`
   files, which are kept for you to inspect.
-- **`theme`**: the chosen theme ID, in the default data folder (or the
-  `-data-dir` folder). Theme IDs never change.
+- **`theme`**: the chosen appearance (`light`, `dark` or `system`), in the
+  default data folder (or the `-data-dir` folder).
 
 Hidden folders are never read as notes, so `.git` or another app's settings
 folder can share the vault. In the browser, drafts, view, sort order and collapsed folders keep their
@@ -524,8 +521,8 @@ changes the request token; a rejected request renews it once from `/api/session`
 and retries, but only while the server still serves the same vault. A tab opened
 for another vault stops saving, keeps its edits for download and asks for a reload.
 
-Theme IDs and names are stable, so saved settings keep working. The 12 named
-upstream palettes keep their original color values.
+The `light` and `dark` theme IDs are stable. A saved palette from an earlier
+version opens as Light or Dark by its brightness.
 
 ## Development and CI
 
@@ -566,7 +563,7 @@ version-locked; CI checks that the committed bundle is current. Bundled dependen
 licenses are included at `/assets/THIRD_PARTY_LICENSES.txt`.
 
 The Linux CI job runs the Go checks, the smoke script (HTTP, persistence, trash,
-themes, conflicts and restart recovery) and a packaging dry run. A browser job
+appearance, conflicts and restart recovery) and a packaging dry run. A browser job
 rebuilds the assets, verifies the committed output and runs Playwright. A release
 archive holds the binary stamped with the release version; there is no hosted
 deployment.

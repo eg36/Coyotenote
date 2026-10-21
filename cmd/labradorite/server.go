@@ -389,8 +389,8 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 	}
 	if route == "GET /api/state" {
 		theme := "dark"
-		if b, e := os.ReadFile(filepath.Join(a.store.Config, "theme")); e == nil && validTheme(strings.TrimSpace(string(b))) {
-			theme = strings.TrimSpace(string(b))
+		if b, e := os.ReadFile(filepath.Join(a.store.Config, "theme")); e == nil {
+			theme = savedTheme(strings.TrimSpace(string(b)))
 		}
 		a.forgetDerived(notes)
 		list := a.views(notes, false)

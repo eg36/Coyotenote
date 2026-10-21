@@ -168,5 +168,5 @@ tag or release still needs explicit approval. See
 
 ## Preserve
 
-Plain Markdown vault format, save/conflict/draft protections, existing themes,
+Plain Markdown vault format, save/conflict/draft protections, the light and dark theme IDs,
 keyboard access, phone workflows, and the published v1.0.0 release.
