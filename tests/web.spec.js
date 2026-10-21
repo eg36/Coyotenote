@@ -471,9 +471,9 @@ test("create in folders, body search, rename, trash and undo", async ({
     "Projects/Search " + Date.now(),
   );
   await (await searchBox(page)).fill("elusive searchable");
-  await expect(page.locator(".note-row")).toHaveCount(1);
+  await expect(page.locator("#note-list .note-row")).toHaveCount(1);
   await (await searchBox(page)).fill("");
-  await expect(page.locator(".note-row").first()).toBeVisible();
+  await expect(page.locator("#note-list .note-row").first()).toBeVisible();
   await page.locator("#document-title").click();
   const renamed = id + " revised";
   await page.getByLabel("Note name").fill(renamed.split("/").pop());
@@ -2792,7 +2792,7 @@ test("pinned notes sit below tags, match normal rows and remember their collapse
   await expect(normalRow.locator(".note-title")).toHaveCSS("font-size", "13px");
   expect(await page.locator("#tag-filter").evaluate((tags) => Boolean(tags.compareDocumentPosition(document.getElementById("pinned-notes")) & Node.DOCUMENT_POSITION_FOLLOWING))).toBeTruthy();
   const pinBox = await pinned.boundingBox();
-  expect(pinBox.y + pinBox.height).toBeLessThanOrEqual((await page.locator(".list-heading").boundingBox()).y);
+  expect(pinBox.y + pinBox.height).toBeLessThanOrEqual((await page.locator("#sidebar .list-heading").boundingBox()).y);
   await pinned.locator("summary").click();
   await expect(pinnedRow).toBeHidden();
   await page.reload();
@@ -2894,7 +2894,7 @@ test("the title row's notes panel toggle shows, hides and remembers the panel", 
     // It opens the header row; the notes toolbar keeps only its own actions.
     const header = await page.locator(".topbar").boundingBox(), box = await toggle.boundingBox();
     expect(box.x - header.x).toBeLessThan(16);
-    await expect(page.locator(".sidebar-actions button")).toHaveCount(3);
+    await expect(page.locator("#sidebar .sidebar-actions button")).toHaveCount(3);
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(await pane()).toBe("0.45");
     await toggle.click();
@@ -3339,6 +3339,8 @@ async function noteBody(page, id) {
   return (await (await page.request.get("/api/note?id=" + encodeURIComponent(id))).json()).body;
 }
 async function openIssues(page) {
+  // The shell answers Alt P once it has started a plugin.
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", /\w/);
   await page.keyboard.press("Alt+p");
   await page.locator('.switcher-row[data-plugin="issues"]').click();
   await expect(page.locator("#app")).toHaveAttribute("data-plugin", "issues");
@@ -3349,10 +3351,10 @@ const issueFile = (title, status, priority, labels, project = "Space", created =
 test("Issues asks for a prefix, then saves each new issue as a Markdown file", async ({ page }) => {
   await openSeed(page, "Start.");
   await openIssues(page);
-  for (const id of ["issues-new-rail", "issues-sidebar-toggle", "issues-search-rail"]) await expect(page.locator("#" + id)).toBeVisible();
+  for (const id of ["issues-sidebar-toggle", "issues-new-rail", "issues-search-rail"]) await expect(page.locator("#" + id)).toBeVisible();
   await expect(page.locator("#new-note")).toBeHidden();
-  await expect(page.locator("#issues-empty")).toContainText("No issues yet");
-  await page.getByRole("button", { name: "New issue", exact: true }).click();
+  await expect(page.locator("#issues-page")).toContainText("Track your work");
+  await page.locator("#issues-page").getByRole("button", { name: "New issue" }).click();
   // The first issue sets up the folder with a prefix of the user's choice.
   const prefix = page.getByLabel("ID prefix");
   await prefix.fill("1x");
@@ -3363,192 +3365,221 @@ test("Issues asks for a prefix, then saves each new issue as a Markdown file", a
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.locator("#modal")).toContainText("This issue becomes SPC-1");
   await page.getByLabel("Title", { exact: true }).fill('Plan: the "shell"');
-  await page.getByLabel("Status", { exact: true }).selectOption("in-progress");
+  await page.getByLabel("State", { exact: true }).selectOption("in-progress");
   await page.getByLabel("Priority", { exact: true }).selectOption("high");
-  await page.getByLabel("Project").fill("Space");
-  await page.getByLabel("Labels").fill("Feature, UX");
+  await page.getByLabel("Project", { exact: true }).fill("Space");
+  await page.getByLabel("Labels", { exact: true }).fill("Feature, UX");
   await page.getByLabel("Description").fill("Build it.");
   await page.getByRole("button", { name: "Create issue" }).click();
   await expect(page.locator("#modal")).not.toBeVisible();
-  const created = page.locator('.issue-row[data-issue="issues/SPC-1"]');
-  await expect(created).toBeFocused();
-  await expect(created).toContainText('Plan: the "shell"');
+  // The new issue opens on its page, and the tree lists it under its project.
+  const article = page.getByRole("article", { name: "Issue SPC-1" });
+  await expect(article.locator(".issue-page-title")).toHaveText('Plan: the "shell"');
+  await expect(article.locator('[data-menu="issue-status"]')).toBeFocused();
+  await expect(page.locator('#issues-tree [data-issue="issues/SPC-1"]')).toHaveAttribute("aria-current", "page");
+  await expect(page.locator('#issues-tree .folder-group[data-folder="Space"]')).toContainText("Space");
   const today = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
   expect(await noteBody(page, "issues/SPC-1")).toBe(`---\ntitle: "Plan: the \\"shell\\""\nstatus: in-progress\npriority: high\nlabels: [Feature, UX]\nproject: Space\ncreated: ${today}\n---\n\nBuild it.\n`);
   // The settings note now offers the new project and labels, and only those lines changed.
-  const settings = await noteBody(page, "issues/Issues");
-  expect(settings).toContain("prefix: SPC\nprojects: [Space]\nlabels: [Feature, UX]\n---\n\nSettings for Issues");
+  expect(await noteBody(page, "issues/Issues")).toContain("prefix: SPC\nprojects: [Space]\nlabels: [Feature, UX]\n---\n\nSettings for Issues");
   // IDs number on from the highest existing one.
   await seed(page, "issues/SPC-7", issueFile("Seventh", "todo", "low", []));
   await page.keyboard.press("Alt+n");
   await expect(page.locator("#modal")).toContainText("This issue becomes SPC-8");
   await page.getByLabel("Title", { exact: true }).fill("Eighth");
   await page.getByRole("button", { name: "Create issue" }).click();
-  await expect(page.locator('.issue-row[data-issue="issues/SPC-8"]')).toBeVisible();
+  await expect(page.getByRole("article", { name: "Issue SPC-8" })).toBeVisible();
   // Issue files stay out of the Notes list.
   await page.keyboard.press("Alt+p");
   await page.keyboard.press("1");
   await expect(page.locator('#note-list [data-note="issues/SPC-1"]')).toHaveCount(0);
 });
 
-test("the Issues sidebar and filter bar narrow the list grouped by status", async ({ page }) => {
+test("Issues reads as a notebook: projects in a tree, Now, Next and Later as a page", async ({ page }) => {
   await seed(page, "issues/T-1", issueFile("Ship shell", "done", "high", ["Feature"]));
   await seed(page, "issues/T-2", issueFile("List view", "in-progress", "urgent", ["Feature", "UX"]));
   await seed(page, "issues/T-3", issueFile("Board", "todo", "medium", ["UX"], "Board work"));
   await seed(page, "issues/T-4", issueFile("Canvas spike", "backlog", "none", []));
-  await seed(page, "issues/Issues", "---\nprefix: T\nprojects: [Space, Board work]\nlabels: [Feature, UX]\n---\n");
+  await seed(page, "issues/T-5", "---\ntitle: Loose end\nstatus: todo\n---\n");
   await openSeed(page, "Start.");
   await openIssues(page);
-  const rows = page.locator(".issue-row");
-  // Done is hidden by default; groups follow status order.
-  await expect(rows).toHaveCount(3);
-  await expect(page.locator(".issue-group-name")).toHaveText(["In progress", "Todo", "Backlog"]);
-  await expect(page.locator("#issues-count")).toHaveText("3 issues");
-  await expect(page.locator('.issue-row[data-issue="issues/T-2"] [role="img"]').first()).toHaveAttribute("aria-label", "Priority: urgent");
-  const nav = (name) => page.locator(".issues-nav-row", { hasText: name });
-  await expect(nav("All issues")).toContainText("4");
-  await nav("Done").click();
-  await expect(rows).toHaveCount(1);
-  await expect(page.locator("#issues-chips")).toContainText("View: Done");
-  await page.getByRole("button", { name: "Remove filter: View: Done" }).click();
-  await expect(rows).toHaveCount(3);
-  await nav("Board work").click();
-  await expect(rows).toHaveCount(1);
-  await expect(page.locator("#issues-title")).toHaveText("Board work");
-  await page.getByRole("button", { name: "Remove filter: Project: Board work" }).click();
-  await nav("UX").click();
-  await expect(rows).toHaveCount(2);
-  await page.getByRole("button", { name: "Remove filter: Label: UX" }).click();
-  await page.getByRole("button", { name: "Remove filter: Status is not Done" }).click();
-  await expect(rows).toHaveCount(4);
-  await page.locator("#issues-search").fill("spike");
-  await expect(rows).toHaveCount(1);
-  await page.locator("#issues-search").fill("zzz");
-  await expect(page.locator("#issues-empty")).toContainText("No issues match");
-  await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(rows).toHaveCount(3);
-  // The arrows move through the rows; Enter opens the issue and "Open in Notes" its file.
-  await rows.first().focus();
+  const tree = page.locator("#issues-tree");
+  // Open issues sit under their project, Now before Next before Later; Done is folded.
+  await expect(tree.locator(".folder-group")).toHaveText([/Board work\s*1/, /Space\s*2/, /No project\s*1/, /Done\s*1/]);
+  await expect(tree.locator('.folder-group[data-folder="Space"] ~ .issue-tree-row').first()).toContainText("Now");
+  await expect(tree.locator(".issue-tree-row")).toHaveCount(4);
+  await expect(tree.locator('[data-issue="issues/T-1"]')).toHaveCount(0);
+  await expect(page.locator("#issues-count")).toHaveText("4");
+  // The page shows what has attention, with words for state and priority.
+  const doc = page.locator(".issues-doc");
+  await expect(doc.locator(".issues-doc-heading")).toHaveText([/Now\s*1/, /Next\s*2/, /Later\s*1/, /Done\s*1/]);
+  await expect(doc.locator('.issue-line[data-issue="issues/T-2"]')).toContainText("Urgent");
+  await expect(doc.locator('.issue-line[data-issue="issues/T-2"]')).toContainText("#UX");
+  // Folders fold and unfold, and remember it.
+  await tree.locator('.folder-group[data-folder="Board work"]').click();
+  await expect(tree.locator('[data-issue="issues/T-3"]')).toHaveCount(0);
+  await page.reload();
+  await openIssues(page);
+  await expect(tree.locator('.folder-group[data-folder="Space"]')).toBeVisible();
+  await expect(tree.locator('[data-issue="issues/T-3"]')).toHaveCount(0);
+  await expect(tree.locator('.folder-group[data-folder="Board work"]')).toHaveAttribute("aria-expanded", "false");
+  // Finding narrows the tree and the page, and unfolds what matches.
+  await page.getByRole("button", { name: "Find issues", exact: true }).first().click();
+  await page.locator("#issues-search").fill("board");
+  await expect(tree.locator(".issue-tree-row")).toHaveCount(1);
+  await expect(doc.locator(".issue-line")).toHaveCount(1);
+  await page.locator("#issues-search").press("Escape");
+  await expect(page.locator("#issues-search-field")).toBeHidden();
+  // The arrows move through the tree; Left goes to the project, Right unfolds.
+  await tree.locator('.folder-group[data-folder="Space"]').focus();
   await page.keyboard.press("ArrowDown");
-  await expect(rows.nth(1)).toBeFocused();
-  await expect(rows.nth(1)).toHaveAttribute("aria-selected", "true");
-  await page.keyboard.press("End");
-  await expect(rows.last()).toBeFocused();
+  await expect(tree.locator('[data-issue="issues/T-2"]')).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(tree.locator('.folder-group[data-folder="Space"]')).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(tree.locator('.folder-group[data-folder="Board work"]')).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(tree.locator('[data-issue="issues/T-3"]')).toBeVisible();
+  // Enter opens the issue's page; Escape returns to its row and the overview.
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("complementary", { name: "Issue T-4" })).toBeVisible();
+  const article = page.getByRole("article", { name: "Issue T-3" });
+  await expect(article).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(article).toBeHidden();
+  await expect(tree.locator('[data-issue="issues/T-3"]')).toBeFocused();
+  await expect(doc).toBeVisible();
+  // "Open in Notes" opens the file, and switching back keeps the open issue.
+  await tree.locator('[data-issue="issues/T-4"]').click();
   await page.getByRole("button", { name: "Open in Notes" }).click();
   await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
   await expect(page.locator("#document-title")).toHaveText("T-4");
-  // Switching back keeps the Issues filters and the chosen row.
   await openIssues(page);
-  await expect(page.locator('.issue-row[aria-selected="true"]')).toHaveAttribute("data-issue", "issues/T-4");
+  await expect(page.getByRole("article", { name: "Issue T-4" })).toBeVisible();
 });
 
-test("the issue panel edits one property at a time, ticks tasks and lists linked notes", async ({ page }) => {
-  const original = `---\ntitle: "Panel work"\nstatus: todo   # keep this comment\npriority: low\nlabels: [Feature]\nproject: Space\ncreated: 2026-10-20\n---\n\nSee [[Plain]] first.\n\n## Done when\n\n- [ ] First step\n- [x] Second step\n\n## Notes\n\n- [ ] not a done-when task\n`;
+test("the issue page edits one property at a time, ticks tasks and lists linked notes", async ({ page }) => {
+  const original = `---\ntitle: "Page work"\nstatus: todo   # keep this comment\npriority: low\nlabels: [Feature]\nproject: Space\ncreated: 2026-10-20\n---\n\nSee [[Plain]] first.\n\n## Done when\n\n- [ ] First step\n- [x] Second step\n\n## Notes\n\n- [ ] not a done-when task\n`;
   await seed(page, "issues/P-1", original);
   await seed(page, "Plain", "Plain note.");
   await seed(page, "Mentions", "Tracking [[issues/P-1]].");
-  await seed(page, "issues/Issues", "---\nprefix: P\nprojects: [Space, Later]\nlabels: [Feature, UX]\n---\n");
+  await seed(page, "issues/Issues", "---\nprefix: P\nprojects: [Space, Later work]\nlabels: [Feature, UX]\n---\n");
   await openSeed(page, "Start.");
   await openIssues(page);
-  const row = page.locator('.issue-row[data-issue="issues/P-1"]');
+  const row = page.locator('#issues-tree [data-issue="issues/P-1"]');
   await row.click();
-  const panel = page.getByRole("complementary", { name: "Issue P-1" });
-  await expect(panel).toBeVisible();
-  await expect(panel.locator(".issue-panel-title")).toHaveText("Panel work");
-  await expect(panel.locator(".issue-description")).toContainText("See Plain first.");
-  await expect(panel.locator(".issue-description")).not.toContainText("First step");
-  await expect(panel.locator(".issue-panel-footer")).toContainText("Stored as issues/P-1.md");
-  // Status by keyboard: the menu opens on the current choice.
-  const status = panel.locator('[data-menu="issue-status"]');
-  await expect(status).toBeFocused();
+  const article = page.getByRole("article", { name: "Issue P-1" });
+  await expect(article.locator(".issue-page-title")).toHaveText("Page work");
+  await expect(article.locator(".issue-description")).toContainText("See Plain first.");
+  await expect(article.locator(".issue-description")).not.toContainText("First step");
+  await expect(page.locator(".issue-page-footer")).toContainText("Stored as issues/P-1.md");
+  // State by keyboard: the menu opens on the current choice.
+  const state = article.locator('[data-menu="issue-status"]');
+  await expect(state).toBeFocused();
+  await expect(state).toContainText("Next");
   await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("menuitemradio", { name: "Todo" })).toBeFocused();
-  await expect(page.getByRole("menuitemradio", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("menuitemradio", { name: "Next" })).toBeFocused();
+  await expect(page.getByRole("menuitemradio", { name: "Next" })).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("Enter");
-  await expect(status).toContainText("In progress");
+  await expect(state).toContainText("Now");
+  await expect(state).toBeFocused();
   await expect.poll(() => noteBody(page, "issues/P-1")).toBe(original.replace("status: todo ", "status: in-progress "));
   // Priority and project by mouse; only their values change.
-  await panel.locator('[data-menu="issue-priority"]').click();
+  await article.locator('[data-menu="issue-priority"]').click();
   await page.getByRole("menuitemradio", { name: "Urgent" }).click();
-  await panel.locator('[data-menu="issue-project"]').click();
-  await page.getByRole("menuitemradio", { name: "Later" }).click();
-  await expect(panel.locator('[data-menu="issue-project"]')).toContainText("Later");
+  await article.locator('[data-menu="issue-project"]').click();
+  await page.getByRole("menuitemradio", { name: "Later work" }).click();
+  await expect(article.locator('[data-menu="issue-project"]')).toContainText("Later work");
   // Labels are a choice of several, and a new one can be added.
-  await panel.locator('[data-menu="issue-labels"]').click();
+  await article.locator('[data-menu="issue-labels"]').click();
   await expect(page.getByRole("menuitemcheckbox", { name: "Feature" })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("menuitemcheckbox", { name: "UX" }).click();
-  await panel.locator('[data-menu="issue-labels"]').click();
+  await article.locator('[data-menu="issue-labels"]').click();
   await page.getByRole("menuitem", { name: "New label…" }).click();
   await page.getByLabel("Label", { exact: true }).fill("Design");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(panel.locator('[data-menu="issue-labels"]')).toContainText("Design");
+  await expect(article.locator('[data-menu="issue-labels"]')).toContainText("#Design");
+  // The title renames in place.
+  await article.locator(".issue-title-button").click();
+  await page.getByLabel("Issue title").fill("Page work, renamed");
+  await page.keyboard.press("Enter");
+  await expect(article.locator(".issue-page-title")).toHaveText("Page work, renamed");
   // A done-when box saves the file; tasks elsewhere stay out of the list.
-  await expect(panel.locator(".issue-tasks").getByRole("checkbox")).toHaveCount(2);
-  await panel.getByRole("checkbox", { name: "First step" }).check();
+  await expect(article.locator(".issue-tasks").getByRole("checkbox")).toHaveCount(2);
+  await article.getByRole("checkbox", { name: "First step" }).check();
   await expect.poll(() => noteBody(page, "issues/P-1")).toBe(original
+    .replace('title: "Page work"', 'title: "Page work, renamed"')
     .replace("status: todo ", "status: in-progress ").replace("priority: low", "priority: urgent")
-    .replace("project: Space", "project: Later").replace("labels: [Feature]", "labels: [Feature, UX, Design]")
+    .replace("project: Space", "project: Later work").replace("labels: [Feature]", "labels: [Feature, UX, Design]")
     .replace("- [ ] First step", "- [x] First step"));
-  // The list follows the edits.
-  await expect(row.locator('[role="img"]').first()).toHaveAttribute("aria-label", "Priority: urgent");
+  // The tree follows the edits.
+  await expect(page.locator('#issues-tree .folder-group[data-folder="Later work"]')).toBeVisible();
+  await expect(page.locator('#issues-tree [data-issue="issues/P-1"] .issue-state')).toHaveText("Now");
   // Linked notes list both directions and open in Notes.
-  await expect(panel.locator(".issue-link")).toHaveText([/Plain\s*Links to/, /Mentions\s*Linked from/]);
-  await panel.locator(".issue-link", { hasText: "Mentions" }).click();
+  await expect(article.locator(".issue-link")).toHaveText([/Plain\s*Links to/, /Mentions\s*Linked from/]);
+  await article.locator(".issue-link", { hasText: "Mentions" }).click();
   await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
   await expect(page.locator("#document-title")).toHaveText("Mentions");
-  // Back in Issues, Escape closes the panel and returns to the row.
+  // Back in Issues, the close button returns to the tree row.
   await openIssues(page);
-  await row.click();
-  await expect(panel).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(panel).toBeHidden();
-  await expect(row).toBeFocused();
-  await row.press("Enter");
-  await panel.getByRole("button", { name: "Close issue" }).click();
+  await page.getByRole("button", { name: "Close issue" }).click();
   await expect(row).toBeFocused();
 });
 
-test("a link to an issue opens it in the Issues panel", async ({ page }) => {
-  await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
+test("the Issues tree panel lines up with the Notes panel", async ({ page }) => {
+  await seed(page, "issues/A-1", issueFile("Aligned", "todo", "none", []));
   await openSeed(page, "Start.");
-  await page.keyboard.press("Alt+p");
-  await page.keyboard.press("2");
-  await expect(page.locator(".issue-row")).toHaveCount(1);
-  await page.keyboard.press("Alt+p");
-  await page.keyboard.press("1");
-  // The palette's switch command and a direct open land on the panel.
+  const measure = (panel, toolbar, folder) => page.evaluate(([panel, toolbar, folder]) => {
+    const box = (s) => document.querySelector(s).getBoundingClientRect();
+    const style = getComputedStyle(document.querySelector(panel));
+    const row = document.querySelector(folder);
+    return { left: Math.round(box(panel).left), width: Math.round(box(panel).width), padding: style.padding, toolbar: Math.round(box(toolbar).top),
+      button: Math.round(box(toolbar + " .icon-button").height), folderFont: getComputedStyle(row).fontSize, folderHeight: Math.round(row.getBoundingClientRect().height) };
+  }, [panel, toolbar, folder]);
+  const notes = await measure("#sidebar", "#sidebar .sidebar-actions", "#note-list .folder-group");
+  await openIssues(page);
+  await expect(page.locator(".issues-tree-panel h1")).toHaveCount(0);
+  const issues = await measure(".issues-tree-panel", ".issues-tree-panel .sidebar-actions", "#issues-tree .folder-group");
+  expect(issues).toEqual(notes);
+});
+
+test("a link to an issue opens it in Issues", async ({ page }) => {
+  await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
+  await openSeed(page, "See [[issues/L-1]].", "Pointer");
   await page.keyboard.press("ControlOrMeta+k");
   await page.keyboard.type(">switch to issues");
   await page.keyboard.press("Enter");
-  await page.locator('.issue-row[data-issue="issues/L-1"]').press("Enter");
-  await expect(page.getByRole("complementary", { name: "Issue L-1" })).toBeVisible();
+  await page.locator('#issues-tree [data-issue="issues/L-1"]').press("Enter");
+  await expect(page.getByRole("article", { name: "Issue L-1" })).toBeVisible();
 });
 
 test("Issues reads at AA in Light and Dark", async ({ page }) => {
   await seed(page, "issues/C-1", issueFile("Contrast", "in-progress", "urgent", ["Feature", "Bug"]));
+  await seed(page, "issues/C-2", issueFile("Waiting", "todo", "high", ["UX"]));
   await openSeed(page, "Start.");
   const group = await openAppearance(page);
+  const check = (scope) => page.evaluate((scope) => {
+    const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
+    const rgba = (color) => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data; return [r, g, b, a / 255]; };
+    const over = (top, base) => top.slice(0, 3).map((v, i) => v * top[3] + base[i] * (1 - top[3]));
+    const backdrop = (el) => { const layers = []; for (let n = el; n; n = n.parentElement) layers.push(rgba(getComputedStyle(n).backgroundColor)); return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]); };
+    const lum = (c) => c.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    return [...document.querySelectorAll(scope + " *")]
+      .filter((el) => el.checkVisibility() && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+      .map((el) => { const bg = backdrop(el); return [el.className + " " + el.textContent.trim().slice(0, 16), ratio(over(rgba(getComputedStyle(el).color), bg), bg)]; })
+      .filter(([, value]) => value < 4.5).map(([what, value]) => `${what} ${value.toFixed(2)}`);
+  }, scope);
   for (const name of ["Light", "Dark"]) {
     await group.getByRole("radio", { name }).click();
     await page.keyboard.press("Escape");
     await openIssues(page);
     await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)));
-    const failures = await page.evaluate(() => {
-      const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
-      const rgba = (color) => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data; return [r, g, b, a / 255]; };
-      const over = (top, base) => top.slice(0, 3).map((v, i) => v * top[3] + base[i] * (1 - top[3]));
-      const backdrop = (el) => { const layers = []; for (let n = el; n; n = n.parentElement) layers.push(rgba(getComputedStyle(n).backgroundColor)); return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]); };
-      const lum = (c) => c.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
-      const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-      return [...document.querySelectorAll("#issues-app *")]
-        .filter((el) => el.checkVisibility() && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
-        .map((el) => { const bg = backdrop(el); return [el.className + " " + el.textContent.trim().slice(0, 16), ratio(over(rgba(getComputedStyle(el).color), bg), bg)]; })
-        .filter(([, value]) => value < 4.5).map(([what, value]) => `${what} ${value.toFixed(2)}`);
-    });
-    expect(failures, name).toEqual([]);
+    expect(await check("#issues-app"), name + " overview").toEqual([]);
+    await page.locator('#issues-tree [data-issue="issues/C-1"]').click();
+    await expect(page.getByRole("article", { name: "Issue C-1" })).toBeVisible();
+    expect(await check("#issues-app"), name + " page").toEqual([]);
     await page.keyboard.press("Alt+p");
     await page.keyboard.press("1");
     await openAppearance(page);
@@ -4313,7 +4344,7 @@ test("the notes panel starts level with the header and shares the rail's icon si
     await expect(page.locator("#today-note")).toBeVisible();
     await page.evaluate(() => new Promise(requestAnimationFrame));
     expect(Math.abs((await top("#sidebar")) - (await top(".topbar"))), url).toBeLessThan(1);
-    const sizes = await page.locator(".sidebar-actions svg, .activity-rail > button svg").evaluateAll((icons) => icons.map((i) => Math.round(i.getBoundingClientRect().width)).filter((w) => w > 0));
+    const sizes = await page.locator("#sidebar .sidebar-actions svg, .activity-rail > button svg").evaluateAll((icons) => icons.map((i) => Math.round(i.getBoundingClientRect().width)).filter((w) => w > 0));
     expect(new Set(sizes)).toEqual(new Set([19]));
   }
 });

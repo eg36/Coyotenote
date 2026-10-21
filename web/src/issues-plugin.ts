@@ -1,11 +1,12 @@
-// Issues, a plugin for tracking work. Its list reads the issue notes in the
-// vault's issues/ folder (see issues-data.ts), grouped by status, with a
-// sidebar of views, projects and labels.
-import { $, showError, showToast } from "./core.js";
+// Issues, a plugin for tracking work, laid out as an issue notebook: a tree
+// of projects beside the open issue's page. Without an open issue, the page
+// reads as a document of what is on Now, Next and Later. Issues are notes in
+// the vault's issues/ folder (see issues-data.ts).
+import { $, showError, showToast, state, storage } from "./core.js";
 import { icon } from "./icons.js";
 import { openModal } from "./dialogs.js";
 import { registerPlugin, type PluginCommand, type SpaceContext } from "./plugins.js";
-import { refreshPanel, setupPanel, showIssuePanel } from "./issues-panel.js";
+import { closeIssuePage, refreshIssuePage, setupIssuePage, showIssuePage, shownIssue } from "./issues-page.js";
 import {
   createIssue,
   createSettings,
@@ -23,248 +24,174 @@ import {
   type Status,
 } from "./issues-data.js";
 
-type View = "all" | "active" | "backlog" | "done";
-const views: [View, string, (issue: Issue) => boolean][] = [
-  ["all", "All issues", () => true],
-  ["active", "Active", (issue) => issue.status === "todo" || issue.status === "in-progress"],
-  ["backlog", "Backlog", (issue) => issue.status === "backlog"],
-  ["done", "Done", (issue) => issue.status === "done"],
-];
 let issues: Issue[] = [];
 let settings: IssueSettings = { prefix: "", projects: [], labels: [] };
 let context: SpaceContext | null = null;
-let focused = "";
-const filter = { view: "all" as View, project: "", label: "", query: "", hideDone: true };
+let query = "";
 const root = () => $("issues-app");
 const searchBox = () => $("issues-search") as HTMLInputElement;
 const finished = (issue: Issue) => issue.status === "done" || issue.status === "cancelled";
+const doneFolder = "\u0000done";
+const noProject = "";
+const order = (status: Status) => statuses.findIndex(([id]) => id === status);
+const rank = (priority: Priority) => priorities.findIndex(([id]) => id === priority);
+const byAttention = (a: Issue, b: Issue) => order(a.status) - order(b.status) || rank(a.priority) - rank(b.priority) || b.number - a.number;
 
-// Theme colour names for labels and projects. Known labels keep their usual
-// colour; others get one from their name, so a label keeps it everywhere.
+// Theme colour names for projects and labels: a name always gets the same one.
 const palette = ["blue", "pink", "cyan", "good", "warn", "danger"];
-const known: Record<string, string> = { feature: "blue", ux: "pink", frontend: "cyan", backend: "warn", improvement: "good", accessibility: "good", bug: "danger" };
 function colourOf(name: string) {
-  const preset = known[name.toLowerCase()];
-  if (preset) return `var(--${preset})`;
   let hash = 0;
   for (const char of name.toLowerCase()) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return `var(--${palette[hash % palette.length]})`;
 }
-
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, className = "", text = "") {
   const el = document.createElement(tag);
   if (className) el.className = className;
   if (text) el.textContent = text;
   return el;
 }
-
-// statusIcon draws a status as a circle: dashed for backlog, outlined for
-// todo, half filled in progress, filled with a check when done, crossed when
-// cancelled. Its label carries the name, so colour is never the only cue.
-function statusIcon(status: Status) {
-  const span = element("span", "issue-status status-" + status);
-  span.setAttribute("role", "img");
-  span.setAttribute("aria-label", "Status: " + statusName(status));
-  const shapes: Record<Status, string> = {
-    backlog: '<circle cx="8" cy="8" r="6" stroke-dasharray="2.6 2.6"/>',
-    todo: '<circle cx="8" cy="8" r="6"/>',
-    "in-progress": '<circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor"/>',
-    done: '<circle cx="8" cy="8" r="6.5" fill="currentColor"/><path d="m5.2 8.2 1.9 1.9 3.7-3.9" stroke="var(--surface)"/>',
-    cancelled: '<circle cx="8" cy="8" r="6"/><path d="m5.8 5.8 4.4 4.4m0-4.4-4.4 4.4"/>',
-  };
-  span.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">${shapes[status]}</svg>`;
+function marker(project: string) {
+  const span = element("span", "issues-project-marker");
+  span.style.background = project ? colourOf(project) : "var(--line-strong)";
   return span;
 }
-// priorityBars shows none to three bars; urgent shows three in the danger colour.
-function priorityBars(priority: Priority) {
-  const span = element("span", "issue-priority priority-" + priority);
-  span.setAttribute("role", "img");
-  span.setAttribute("aria-label", "Priority: " + priorityName(priority).toLowerCase());
-  const on = { none: 0, low: 1, medium: 2, high: 3, urgent: 3 }[priority];
-  span.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true">' +
-    [5, 9, 13].map((height, i) => `<rect x="${1 + i * 6}" y="${14 - height}" width="4" height="${height}" rx="1" class="${i < on ? "on" : "off"}"/>`).join("") + "</svg>";
-  return span;
-}
-function labelChip(name: string) {
-  const chip = element("span", "issue-label");
-  const dot = element("span", "issue-dot");
-  dot.style.background = colourOf(name);
-  chip.append(dot, name);
-  return chip;
-}
-function shortDate(date: string) {
-  const parsed = new Date(date + (date.length === 10 ? "T12:00:00" : ""));
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function matches(issue: Issue) {
-  const view = views.find(([id]) => id === filter.view)!;
-  const query = filter.query.toLowerCase();
-  return view[2](issue) &&
-    (!filter.project || issue.project === filter.project) &&
-    (!filter.label || issue.labels.some((label) => label.toLowerCase() === filter.label.toLowerCase())) &&
-    (!query || issue.title.toLowerCase().includes(query) || issue.key.toLowerCase().includes(query)) &&
-    !(filter.hideDone && filter.view !== "done" && finished(issue));
-}
-const projects = () => [...new Set([...settings.projects, ...issues.map((issue) => issue.project).filter(Boolean)])].sort();
+const projects = () => [...new Set([...settings.projects, ...issues.map((issue) => issue.project).filter(Boolean)])].sort((a, b) => a.localeCompare(b));
 const labels = () => {
   const seen = new Map<string, string>();
   for (const label of [...settings.labels, ...issues.flatMap((issue) => issue.labels)]) if (!seen.has(label.toLowerCase())) seen.set(label.toLowerCase(), label);
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 };
+const matches = (issue: Issue) => !query || issue.title.toLowerCase().includes(query.toLowerCase()) || issue.key.toLowerCase().includes(query.toLowerCase());
 
-function navRow(label: string, count: number, current: boolean, choose: () => void, marker?: HTMLElement) {
-  const row = element("button", "issues-nav-row");
+// Folded tree folders are remembered per vault; Done starts folded.
+const foldKey = () => "labradorite-issues-folded:" + state.vaultId;
+function folded() {
+  try {
+    const saved = JSON.parse(storage.get(foldKey()) || "null");
+    return new Set<string>(Array.isArray(saved) ? saved : [doneFolder]);
+  } catch {
+    return new Set([doneFolder]);
+  }
+}
+function setFolded(folder: string, fold: boolean) {
+  const set = folded();
+  if (fold) set.add(folder);
+  else set.delete(folder);
+  storage.set(foldKey(), JSON.stringify([...set]));
+}
+
+function treeRow(issue: Issue) {
+  const row = element("button", "note-row issue-tree-row");
   row.type = "button";
-  row.setAttribute("aria-pressed", String(current));
-  const name = element("span", "issues-nav-name", label);
-  const number = element("span", "issues-nav-count", String(count));
-  if (marker) row.append(marker);
-  row.append(name, number);
+  row.dataset.issue = issue.file;
+  row.title = issue.title;
+  const current = shownIssue()?.file === issue.file;
+  row.classList.toggle("selected", current);
+  row.setAttribute("aria-current", current ? "page" : "false");
+  const head = element("span", "note-row-head");
+  head.append(element("span", "issue-state state-" + issue.status, statusName(issue.status)), element("span", "note-title", issue.title), element("span", "note-date", issue.key));
+  row.append(head);
+  row.onclick = () => openIssue(issue);
+  return row;
+}
+function folderRow(folder: string, name: string, count: number, open: boolean) {
+  const row = element("button", "folder-group");
+  row.type = "button";
+  row.dataset.folder = folder;
+  row.setAttribute("aria-expanded", String(open));
+  row.innerHTML = icon("chevronDown");
+  row.append(folder === doneFolder ? element("span", "issue-done-mark", "✓") : marker(folder), element("span", "", name), element("small", "", String(count)));
   row.onclick = () => {
-    choose();
-    render();
+    setFolded(folder, open);
+    renderTree();
+    $("issues-tree").querySelector<HTMLElement>(`.folder-group[data-folder="${CSS.escape(folder)}"]`)?.focus();
   };
   return row;
 }
-function navSection(title: string, rows: HTMLElement[]) {
-  const section = element("section", "issues-nav-section");
-  const heading = element("h2", "issues-nav-heading", title);
-  heading.id = "issues-nav-" + title.toLowerCase();
-  const group = element("div", "issues-nav-rows");
-  group.setAttribute("role", "group");
-  group.setAttribute("aria-labelledby", heading.id);
-  group.append(...rows);
-  section.append(heading, group);
-  return section;
-}
-function renderSidebar() {
-  const nav = $("issues-nav");
-  const sections = [navSection("Views", views.map(([id, name, test]) =>
-    navRow(name, issues.filter(test).length, filter.view === id, () => { filter.view = id; })))];
-  const projectNames = projects();
-  if (projectNames.length)
-    sections.push(navSection("Projects", projectNames.map((project) => {
-      const marker = element("span", "issues-project-marker");
-      marker.style.background = colourOf(project);
-      return navRow(project, issues.filter((issue) => issue.project === project && !finished(issue)).length, filter.project === project,
-        () => { filter.project = filter.project === project ? "" : project; }, marker);
-    })));
-  const labelNames = labels();
-  if (labelNames.length)
-    sections.push(navSection("Labels", labelNames.map((label) => {
-      const dot = element("span", "issue-dot");
-      dot.style.background = colourOf(label);
-      return navRow(label, issues.filter((issue) => issue.labels.some((l) => l.toLowerCase() === label.toLowerCase()) && !finished(issue)).length,
-        filter.label.toLowerCase() === label.toLowerCase(), () => { filter.label = filter.label === label ? "" : label; }, dot);
-    })));
-  nav.replaceChildren(...sections);
-}
-
-function chip(text: string, remove: () => void) {
-  const item = element("span", "issues-chip", text);
-  const button = element("button", "issues-chip-remove");
-  button.type = "button";
-  button.setAttribute("aria-label", "Remove filter: " + text);
-  button.innerHTML = icon("close");
-  button.onclick = () => {
-    remove();
-    render();
-    $("issues-search").focus();
-  };
-  item.append(button);
-  return item;
-}
-function renderFilters(shown: number) {
-  const chips: HTMLElement[] = [];
-  if (filter.view !== "all") chips.push(chip("View: " + views.find(([id]) => id === filter.view)![1], () => { filter.view = "all"; }));
-  if (filter.project) chips.push(chip("Project: " + filter.project, () => { filter.project = ""; }));
-  if (filter.label) chips.push(chip("Label: " + filter.label, () => { filter.label = ""; }));
-  if (filter.hideDone && filter.view !== "done") chips.push(chip("Status is not Done", () => { filter.hideDone = false; }));
-  $("issues-chips").replaceChildren(...chips);
-  $("issues-count").textContent = `${shown} ${shown === 1 ? "issue" : "issues"}`;
-  $("issues-title").textContent = filter.project || views.find(([id]) => id === filter.view)![1];
-  const marker = $("issues-title-marker");
-  marker.hidden = !filter.project;
-  if (filter.project) marker.style.background = colourOf(filter.project);
-}
-
-function row(issue: Issue) {
-  const item = element("div", "issue-row");
-  item.setAttribute("role", "option");
-  item.dataset.issue = issue.file;
-  item.tabIndex = issue.file === focused ? 0 : -1;
-  item.setAttribute("aria-selected", String(issue.file === focused));
-  const key = element("span", "issue-key", issue.key);
-  const title = element("span", "issue-title", issue.title);
-  const chips = element("span", "issue-labels");
-  chips.append(...issue.labels.map(labelChip));
-  const date = element("span", "issue-date", shortDate(issue.created));
-  item.append(priorityBars(issue.priority), key, statusIcon(issue.status), title, chips, date);
-  item.onclick = () => {
-    setFocus(issue.file);
-    openIssue(issue);
-  };
-  return item;
-}
-function renderList() {
-  const list = $("issues-list");
-  const hadFocus = list.contains(document.activeElement);
-  const shown = issues.filter(matches).sort((a, b) =>
-    priorities.findIndex(([id]) => id === a.priority) - priorities.findIndex(([id]) => id === b.priority) || b.number - a.number);
-  renderFilters(shown.length);
-  if (!shown.some((issue) => issue.file === focused)) focused = shown[0]?.file || "";
-  const groups: HTMLElement[] = [];
-  for (const [status, name] of statuses) {
-    const inGroup = shown.filter((issue) => issue.status === status);
-    if (!inGroup.length) continue;
-    const group = element("div", "issue-group");
-    group.setAttribute("role", "group");
-    const header = element("div", "issue-group-header");
-    header.id = "issue-group-" + status;
-    group.setAttribute("aria-labelledby", header.id);
-    const add = element("button", "issue-group-add");
-    add.type = "button";
-    add.setAttribute("aria-label", `New issue in ${name}`);
-    add.innerHTML = icon("plus");
-    add.onclick = () => newIssue(status);
-    header.append(statusIcon(status), element("span", "issue-group-name", name), element("span", "issue-group-count", String(inGroup.length)), add);
-    group.append(header, ...inGroup.map(row));
-    groups.push(group);
+function renderTree() {
+  const tree = $("issues-tree");
+  const hadFocus = tree.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.issue || "" : null;
+  const fold = query ? new Set<string>() : folded();
+  const shown = issues.filter(matches);
+  const nodes: HTMLElement[] = [];
+  const open = shown.filter((issue) => !finished(issue));
+  for (const project of [...projects(), noProject]) {
+    const inside = open.filter((issue) => issue.project === project).sort(byAttention);
+    if (!inside.length) continue;
+    nodes.push(folderRow(project, project || "No project", inside.length, !fold.has(project)));
+    if (!fold.has(project)) nodes.push(...inside.map(treeRow));
   }
-  list.replaceChildren(...groups);
-  // A refresh keeps keyboard focus on the same issue.
-  if (hadFocus) list.querySelector<HTMLElement>('.issue-row[tabindex="0"]')?.focus();
-  const empty = $("issues-empty");
-  empty.hidden = shown.length > 0;
-  $("issues-empty-text").textContent = issues.length ? "No issues match these filters." : "No issues yet. Each issue is a Markdown file in the issues folder.";
-  $("issues-empty-clear").hidden = !issues.length;
+  const done = shown.filter(finished).sort((a, b) => b.modified.localeCompare(a.modified));
+  if (done.length) {
+    nodes.push(folderRow(doneFolder, "Done", done.length, !fold.has(doneFolder)));
+    if (!fold.has(doneFolder)) nodes.push(...done.map(treeRow));
+  }
+  if (!nodes.length) nodes.push(element("p", "list-empty", issues.length ? "No issues match." : "No issues yet."));
+  tree.replaceChildren(...nodes);
+  $("issues-count").textContent = String(open.length);
+  if (hadFocus !== null) (tree.querySelector<HTMLElement>(`[data-issue="${CSS.escape(hadFocus)}"]`) || tree.querySelector<HTMLElement>("button"))?.focus();
+}
+
+// The document lists what has attention: Now, Next and Later, with Done
+// and Dropped folded at the end.
+function issueLine(issue: Issue) {
+  const line = element("button", "issue-line");
+  line.type = "button";
+  line.dataset.issue = issue.file;
+  const meta = element("span", "issue-line-meta");
+  meta.append(element("span", "", issue.key));
+  if (issue.project) meta.append(element("span", "", issue.project));
+  if (issue.priority !== "none") meta.append(element("span", "issue-priority-word priority-" + issue.priority, priorityName(issue.priority)));
+  for (const label of issue.labels) meta.append(element("span", "issue-tag", "#" + label));
+  line.append(element("span", "issue-line-title", issue.title), meta);
+  line.onclick = () => openIssue(issue);
+  return line;
+}
+function renderDocument() {
+  if (shownIssue()) return;
+  const page = $("issues-page");
+  if (!issues.length) {
+    const intro = element("div", "issues-intro");
+    const button = element("button", "primary-button", "New issue");
+    button.type = "button";
+    button.onclick = () => newIssue();
+    intro.append(element("h1", "", "Track your work"), element("p", "", "Each issue is a Markdown note in the issues folder, with its state, priority, labels and project at the top. Start with the first one."), button);
+    page.replaceChildren(intro);
+    return;
+  }
+  const doc = element("div", "issues-doc");
+  const shown = issues.filter(matches);
+  for (const [status, name] of statuses) {
+    const inState = shown.filter((issue) => issue.status === status).sort(byAttention);
+    if (!inState.length && status !== "in-progress" && status !== "todo") continue;
+    const folds = status === "done" || status === "cancelled";
+    const section = element(folds ? "details" : "section", "issues-doc-section state-" + status);
+    const heading = element(folds ? "summary" : "h2", "issues-doc-heading");
+    heading.append(element("span", "", name), element("span", "issues-doc-count", String(inState.length)));
+    const list = element("div", "issues-doc-list");
+    list.append(...inState.map(issueLine));
+    if (!inState.length) list.append(element("p", "issues-doc-empty", status === "in-progress" ? "Nothing has your attention now." : "Nothing is lined up next."));
+    section.append(heading, list);
+    doc.append(section);
+  }
+  page.replaceChildren(doc);
 }
 function render() {
-  renderSidebar();
-  renderList();
-}
-function setFocus(file: string, move = false) {
-  focused = file;
-  for (const item of $("issues-list").querySelectorAll<HTMLElement>(".issue-row")) {
-    const current = item.dataset.issue === file;
-    item.tabIndex = current ? 0 : -1;
-    item.setAttribute("aria-selected", String(current));
-    if (current && move) item.focus();
-  }
-}
-// An issue opens in the panel beside the list, which takes focus.
-function openIssue(issue: Issue) {
-  showIssuePanel(issue);
-  $("issue-panel").querySelector<HTMLElement>(".issue-property-value")?.focus();
+  renderTree();
+  renderDocument();
 }
 
+function openIssue(issue: Issue) {
+  showIssuePage(issue);
+  renderTree();
+  $("issues-page").querySelector<HTMLElement>(".issue-chip")?.focus();
+}
 async function reload() {
   const data = await loadIssues();
   issues = data.issues;
   settings = data.settings;
+  refreshIssuePage(issues);
   render();
-  refreshPanel(issues);
 }
 
 function field(labelText: string, control: HTMLElement) {
@@ -297,9 +224,13 @@ function prefixDialog(then: () => void) {
   input.maxLength = 10;
   const vault = ($("brand").title.split("·")[1] || "").trim();
   input.value = (vault.replace(/[^A-Za-z]/g, "").slice(0, 3) || "ISS").toUpperCase();
-  input.oninput = () => { input.value = input.value.toUpperCase(); };
-  const hint = element("p", "dialog-description", "Issue IDs start with this prefix, such as " + (input.value || "ISS") + "-1. Use 1 to 10 letters or digits, starting with a letter.");
-  input.addEventListener("input", () => { hint.textContent = `Issue IDs start with this prefix, such as ${input.value || "ISS"}-1. Use 1 to 10 letters or digits, starting with a letter.`; });
+  const hint = element("p", "dialog-description");
+  const explain = () => { hint.textContent = `Issue IDs start with this prefix, such as ${input.value || "ISS"}-1. Use 1 to 10 letters or digits, starting with a letter.`; };
+  input.oninput = () => {
+    input.value = input.value.toUpperCase();
+    explain();
+  };
+  explain();
   container.append(field("ID prefix", input), hint);
   openModal("Set up Issues", container, async () => {
     const prefix = input.value.trim().toUpperCase();
@@ -323,24 +254,23 @@ function issueDialog(status: Status) {
   title.autocomplete = "off";
   title.required = true;
   title.maxLength = 200;
-  const statusSelect = select("issue-status-input", statuses.map(([id, name]) => [id, name]), status);
+  const stateSelect = select("issue-status-input", statuses.map(([id, name]) => [id, name]), status);
   const prioritySelect = select("issue-priority-input", priorities.map(([id, name]) => [id, name]), "none");
   const project = element("input");
   project.id = "issue-project-input";
   project.autocomplete = "off";
   project.setAttribute("list", "issue-project-options");
-  project.value = filter.project;
+  project.value = shownIssue()?.project || "";
   const labelInput = element("input");
   labelInput.id = "issue-labels-input";
   labelInput.autocomplete = "off";
   labelInput.placeholder = "Feature, UX";
   labelInput.setAttribute("list", "issue-label-options");
-  labelInput.value = filter.label;
   const description = element("textarea");
   description.id = "issue-description-input";
   description.rows = 4;
   const row2 = element("div", "issue-form-row");
-  row2.append(field("Status", statusSelect), field("Priority", prioritySelect));
+  row2.append(field("State", stateSelect), field("Priority", prioritySelect));
   const row3 = element("div", "issue-form-row");
   row3.append(field("Project", project), field("Labels", labelInput));
   const next = element("p", "dialog-description", `This issue becomes ${nextKey(settings.prefix, issues)}, saved as a Markdown note in the issues folder.`);
@@ -349,102 +279,118 @@ function issueDialog(status: Status) {
   openModal("New issue", container, async () => {
     const name = title.value.trim();
     if (!name) throw new Error("Give the issue a title.");
-    const chosen = [...new Set(labelInput.value.split(",").map((label) => label.trim()).filter(Boolean))];
+    const chosen = [...new Set(labelInput.value.split(",").map((label) => label.replace(/[\[\]]/g, "").trim()).filter(Boolean))];
+    const projectName = project.value.replace(/[,\[\]]/g, "").trim();
     const key = await createIssue(settings.prefix, issues, {
       title: name,
-      status: statusSelect.value as Status,
+      status: stateSelect.value as Status,
       priority: prioritySelect.value as Priority,
       labels: chosen,
-      project: project.value.trim(),
+      project: projectName,
       description: description.value,
     });
     // New projects and labels are offered next time.
-    const newProjects = project.value.trim() && !settings.projects.includes(project.value.trim()) ? [...settings.projects, project.value.trim()] : null;
-    const newLabels = chosen.filter((label) => !settings.labels.some((l) => l.toLowerCase() === label.toLowerCase()));
-    if (newProjects) await updateSettings(settings, "projects", newProjects);
-    if (newLabels.length) {
+    if (projectName && !settings.projects.includes(projectName)) {
+      await updateSettings(settings, "projects", [...settings.projects, projectName]);
       await reload();
-      await updateSettings(settings, "labels", [...settings.labels, ...newLabels]);
     }
+    const newLabels = chosen.filter((label) => !settings.labels.some((l) => l.toLowerCase() === label.toLowerCase()));
+    if (newLabels.length) await updateSettings(settings, "labels", [...settings.labels, ...newLabels]);
     await reload();
-    focused = "issues/" + key;
-    render();
+    const created = issues.find((issue) => issue.file === "issues/" + key);
     showToast(`Created ${key}`);
-    // The dialog closes after this returns; then the new issue takes focus.
-    setTimeout(() => setFocus(focused, true), 0);
+    // The dialog closes after this returns; then the new issue opens.
+    if (created) setTimeout(() => openIssue(created), 0);
   }, { submit: "Create issue" });
 }
 
 function setup() {
-  const app = root();
-  app.innerHTML = `
-    <aside class="issues-sidebar" id="issues-sidebar" aria-label="Issues">
-      <div class="issues-sidebar-header"><h1>Issues</h1>
-        <button type="button" class="icon-button" id="issues-search-button" aria-label="Search issues" title="Search issues">${icon("search")}</button></div>
-      <nav id="issues-nav" aria-label="Issue views"></nav>
+  root().innerHTML = `
+    <aside class="issues-tree-panel" id="issues-sidebar" aria-label="Issues">
+      <div class="sidebar-actions" role="toolbar" aria-label="Issues">
+        <button type="button" class="icon-button" id="issues-new" aria-label="New issue" title="New issue · Alt N"><span data-icon="plus">${icon("plus")}</span></button>
+        <button type="button" class="icon-button" id="issues-search-button" aria-label="Find issues" title="Find issues" aria-expanded="false" aria-controls="issues-search-field"><span data-icon="search">${icon("search")}</span></button>
+        <button type="button" class="icon-button" id="issues-overview" aria-label="Now, Next and Later" title="Now, Next and Later"><span data-icon="list">${icon("list")}</span></button>
+      </div>
+      <div class="issues-search-field" id="issues-search-field" hidden>
+        <input type="search" id="issues-search" placeholder="Find by title or ID" aria-label="Find issues by title or ID" autocomplete="off">
+      </div>
+      <div class="list-heading"><span class="list-title"><span>Projects</span> <span id="issues-count" class="issues-count">0</span></span></div>
+      <nav class="note-list issues-tree" id="issues-tree" aria-label="Issues by project"></nav>
     </aside>
-    <section class="issues-main" aria-labelledby="issues-title">
-      <header class="issues-header">
-        <span class="issues-project-marker large" id="issues-title-marker" hidden></span>
-        <h2 id="issues-title">All issues</h2>
-        <span class="issues-spacer"></span>
-        <button type="button" class="primary-button" id="issues-new">${icon("plus")}<span>New issue</span></button>
-      </header>
-      <div class="issues-filters">
-        <div class="issues-chips" id="issues-chips"></div>
-        <input type="search" id="issues-search" placeholder="Filter by title or ID" aria-label="Filter issues by title or ID" autocomplete="off">
-        <span class="issues-count" id="issues-count" role="status"></span>
-      </div>
-      <div class="issues-list" id="issues-list" role="listbox" aria-label="Issues"></div>
-      <div class="issues-empty" id="issues-empty" hidden>
-        <p id="issues-empty-text"></p>
-        <button type="button" id="issues-empty-clear">Clear filters</button>
-      </div>
-    </section>
-    <aside class="issue-panel" id="issue-panel" hidden></aside>`;
-  setupPanel({
-    issues: () => issues,
+    <main class="issues-page" id="issues-page" aria-label="Issue"></main>`;
+  $("issues-new").onclick = () => newIssue();
+  $("issues-search-button").onclick = () => toggleSearch();
+  $("issues-overview").onclick = () => {
+    closeIssuePage();
+    render();
+  };
+  searchBox().oninput = () => {
+    query = searchBox().value.trim();
+    render();
+  };
+  searchBox().onkeydown = (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleSearch(false);
+  };
+  // The arrows move through the tree; Left and Right fold and unfold.
+  $("issues-tree").addEventListener("keydown", (event) => {
+    const items = [...$("issues-tree").querySelectorAll<HTMLElement>("button")];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    if (at < 0) return;
+    const item = items[at];
+    let target: HTMLElement | undefined;
+    if (event.key === "ArrowDown") target = items[at + 1];
+    else if (event.key === "ArrowUp") target = items[at - 1];
+    else if (event.key === "Home") target = items[0];
+    else if (event.key === "End") target = items.at(-1);
+    else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      const open = event.key === "ArrowRight";
+      if (item.classList.contains("folder-group")) {
+        if ((item.getAttribute("aria-expanded") === "true") !== open) item.click();
+      } else if (!open) target = items.slice(0, at).reverse().find((el) => el.classList.contains("folder-group"));
+    } else return;
+    event.preventDefault();
+    target?.focus();
+  });
+  setupIssuePage({
     projects,
     labels,
+    colourOf,
     changed(issue) {
       issues = issues.map((item) => (item.file === issue.file ? issue : item));
-      render();
+      renderTree();
     },
-    close: () => setFocus(focused, true),
+    closed(file) {
+      render();
+      ($("issues-tree").querySelector<HTMLElement>(`[data-issue="${CSS.escape(file)}"]`) || $("issues-new")).focus();
+    },
     openNote: (id) => context?.open("notes", id),
-    statusIcon,
-    priorityBars,
-    labelChip,
-    colourOf,
-  });
-  $("issues-new").onclick = () => newIssue();
-  $("issues-search-button").onclick = () => $("issues-search").focus();
-  searchBox().oninput = () => {
-    filter.query = searchBox().value.trim();
-    render();
-  };
-  $("issues-empty-clear").onclick = () => {
-    Object.assign(filter, { view: "all", project: "", label: "", query: "", hideDone: true });
-    searchBox().value = "";
-    render();
-  };
-  $("issues-list").addEventListener("keydown", (event) => {
-    const rows = [...$("issues-list").querySelectorAll<HTMLElement>(".issue-row")];
-    const at = rows.findIndex((item) => item.dataset.issue === focused);
-    const moves: Record<string, number> = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: rows.length - 1 };
-    if (event.key in moves) {
-      event.preventDefault();
-      const target = rows[Math.max(0, Math.min(rows.length - 1, moves[event.key]))];
-      if (target) setFocus(target.dataset.issue || "", true);
-    } else if (event.key === "Enter") {
-      const issue = issues.find((item) => item.file === focused);
-      if (issue) {
-        event.preventDefault();
-        openIssue(issue);
-      }
-    }
   });
 }
+function toggleSearch(show?: boolean) {
+  const box = $("issues-search-field");
+  const open = show ?? box.hidden;
+  box.hidden = !open;
+  $("issues-search-button").setAttribute("aria-expanded", String(open));
+  if (open) searchBox().focus();
+  else {
+    searchBox().value = "";
+    query = "";
+    render();
+    $("issues-search-button").focus();
+  }
+}
+
+// While Issues shows, files changed outside it show too.
+let reloadTimer: ReturnType<typeof setTimeout> | undefined;
+document.addEventListener("notes-refreshed", () => {
+  if (root().hidden) return;
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(() => reload().catch(() => {}), 50);
+});
 
 function railButton(id: string, iconName: string, label: string, run: () => void) {
   const button = element("button", "icon-button");
@@ -459,41 +405,34 @@ function railButton(id: string, iconName: string, label: string, run: () => void
   return button;
 }
 function toggleSidebar() {
-  const open = root().classList.toggle("issues-sidebar-hidden");
-  $("issues-sidebar-toggle").setAttribute("aria-expanded", String(!open));
+  const hidden = root().classList.toggle("issues-sidebar-hidden");
+  $("issues-sidebar-toggle").setAttribute("aria-expanded", String(!hidden));
 }
-function focusSearch() {
+function findIssues() {
   if (root().classList.contains("issues-sidebar-hidden")) toggleSidebar();
-  $("issues-search").focus();
+  toggleSearch(true);
 }
-
-// While Issues shows, files changed outside it show too.
-let reloadTimer: ReturnType<typeof setTimeout> | undefined;
-document.addEventListener("notes-refreshed", () => {
-  if (root().hidden) return;
-  clearTimeout(reloadTimer);
-  reloadTimer = setTimeout(() => reload().catch(() => {}), 50);
-});
 
 function registerIssuesPlugin() {
   setup();
   const rail = [
+    railButton("issues-sidebar-toggle", "issues", "Issues · Show or hide the projects", toggleSidebar),
     railButton("issues-new-rail", "plus", "New issue · Alt N", () => newIssue()),
-    railButton("issues-sidebar-toggle", "sidebar", "Issues sidebar · Show or hide", toggleSidebar),
-    railButton("issues-search-rail", "search", "Search issues", focusSearch),
+    railButton("issues-search-rail", "search", "Find issues", findIssues),
   ];
-  rail[1].setAttribute("aria-expanded", "true");
-  rail[1].setAttribute("aria-controls", "issues-sidebar");
+  rail[0].setAttribute("aria-expanded", "true");
+  rail[0].setAttribute("aria-controls", "issues-sidebar");
   const commands: PluginCommand[] = [
     { label: "New issue", keys: "Alt N", run: () => newIssue() },
-    { label: "Search issues", run: focusSearch },
-    { label: "Show or hide the issues sidebar", run: toggleSidebar },
+    { label: "Find issues", run: findIssues },
+    { label: "Show Now, Next and Later", run: () => { closeIssuePage(); render(); } },
+    { label: "Show or hide the issue projects", run: toggleSidebar },
   ];
   registerPlugin({
     contract: 1,
     id: "issues",
     name: "Issues",
-    description: "Track work as Markdown files",
+    description: "Track work as Markdown notes",
     icon: "issues",
     colour: "--plugin-issues",
     folder: "issues",
@@ -508,20 +447,18 @@ function registerIssuesPlugin() {
     unmount() {
       root().hidden = true;
     },
-    // A link to an issue file opens it in the panel.
+    // A link to an issue file opens its page.
     openLink(target) {
-      const issue = issues.find((item) => item.file === target);
-      if (issue) {
-        setFocus(issue.file);
-        openIssue(issue);
-      } else reload().then(() => {
-        const found = issues.find((item) => item.file === target);
-        if (found) { setFocus(found.file); openIssue(found); }
-      }).catch(showError);
+      const open = () => {
+        const issue = issues.find((item) => item.file === target);
+        if (issue) openIssue(issue);
+      };
+      if (issues.some((item) => item.file === target)) open();
+      else reload().then(open).catch(showError);
       return true;
     },
     focus() {
-      const target = $("issues-list").querySelector<HTMLElement>('.issue-row[tabindex="0"]') || $("issues-new");
+      const target = $("issues-tree").querySelector<HTMLElement>(".note-row.selected") || $("issues-tree").querySelector<HTMLElement>("button") || $("issues-new");
       target.focus();
     },
     shortcut(chord) {

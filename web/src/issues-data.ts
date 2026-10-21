@@ -9,13 +9,15 @@ import { parseProperties } from "./properties.js";
 
 type Status = "backlog" | "todo" | "in-progress" | "done" | "cancelled";
 type Priority = "none" | "low" | "medium" | "high" | "urgent";
-// Statuses in the order the list groups them and the board shows them.
+// States in the order Issues shows them, with the words it shows: what has
+// attention now, what comes next, what waits until later. The files keep
+// the plain status values.
 const statuses: [Status, string][] = [
-  ["in-progress", "In progress"],
-  ["todo", "Todo"],
-  ["backlog", "Backlog"],
+  ["in-progress", "Now"],
+  ["todo", "Next"],
+  ["backlog", "Later"],
   ["done", "Done"],
-  ["cancelled", "Cancelled"],
+  ["cancelled", "Dropped"],
 ];
 const priorities: [Priority, string][] = [
   ["urgent", "Urgent"],
@@ -24,7 +26,7 @@ const priorities: [Priority, string][] = [
   ["low", "Low"],
   ["none", "No priority"],
 ];
-const statusName = (status: Status) => statuses.find(([id]) => id === status)?.[1] || "Backlog";
+const statusName = (status: Status) => statuses.find(([id]) => id === status)?.[1] || "Later";
 const priorityName = (priority: Priority) => priorities.find(([id]) => id === priority)?.[1] || "No priority";
 
 interface IssueFile { id: string; title: string; body: string; revision: string; modified: string; backlinks: string[] }
