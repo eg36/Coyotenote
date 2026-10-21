@@ -1,5 +1,5 @@
 import { renameNavigation } from "./navigation.js";
-import { openWith, ownerOf } from "./plugins.js";
+import { activePlugin, openWith, ownerOf } from "./plugins.js";
 import type { Note } from "./types.js";
 interface ModalOptions { submit?: string; hideFooter?: boolean; className?: string }
 interface InputOptions extends ModalOptions { required?: boolean; description?: string }
@@ -590,7 +590,12 @@ function backlinksDialog() {
 function helpDialog() {
   const container = document.createElement("div");
   container.className = "help-grid";
-  for (const [key, description] of shortcuts) {
+  // Notes owns the table's other rows; another plugin lists its own.
+  const plugin = activePlugin();
+  const rows: [string, string][] = plugin && plugin.id !== "notes"
+    ? [...shortcuts.filter((row) => row[4]?.shell).map(([key, description]): [string, string] => [key, description]), ...(plugin.shortcutHelp?.() || [])]
+    : shortcuts.map(([key, description]): [string, string] => [key, description]);
+  for (const [key, description] of rows) {
     const k = document.createElement("kbd");
     k.textContent = key;
     const label = document.createElement("span");

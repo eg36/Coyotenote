@@ -27,6 +27,7 @@ interface LabradoritePlugin {
   focus(): void; // move focus to its main area
   openLink?(target: string): boolean; // open a link into this plugin
   shortcut?(chord: string): boolean; // run a key chord while active; true if handled
+  shortcutHelp?(): [keys: string, description: string][]; // its shortcuts, for F1
   settings?(): HTMLElement; // its own section in Settings
 }
 

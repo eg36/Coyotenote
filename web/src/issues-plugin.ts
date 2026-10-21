@@ -800,6 +800,13 @@ function registerIssuesPlugin() {
       const target = $("issues-tree").querySelector<HTMLElement>(".note-row.selected, .folder-group.current") || $("issues-tree").querySelector<HTMLElement>("button") || $("issues-new");
       target.focus();
     },
+    shortcutHelp: () => [
+      ["Alt N", "New issue"],
+      ["↑ ↓ ← →", "Move between projects, issues and cards"],
+      ["M", "Move the focused card to another state"],
+      ["Enter", "Open the focused issue"],
+      ["Escape", "Close the issue page"],
+    ],
     shortcut(chord) {
       if (chord !== "alt+n") return false;
       newIssue();

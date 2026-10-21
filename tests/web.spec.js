@@ -3682,6 +3682,91 @@ test("links to issue files open in Issues and carry its picture", async ({ page 
   await expect(page.locator("#document-title")).toHaveText("LS-1");
 });
 
+// audit lists visible controls without an accessible name, images without
+// alt text and IDs used more than once.
+async function audit(page) {
+  return page.evaluate(() => {
+    const problems = [];
+    const named = (el) => {
+      const by = el.getAttribute("aria-labelledby");
+      if (by && by.split(/\s+/).some((id) => document.getElementById(id)?.textContent.trim())) return true;
+      if ((el.getAttribute("aria-label") || el.getAttribute("title") || "").trim()) return true;
+      if (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent.trim()) return true;
+      if (el.closest("label")?.textContent.trim()) return true;
+      if ([...el.querySelectorAll("img[alt]")].some((img) => img.alt.trim())) return true;
+      return el.matches("input, select, textarea") ? false : Boolean(el.textContent.trim());
+    };
+    const controls = "button, a[href], input:not([type=hidden]), select, textarea, [role=button], [role=link], [role=menuitem], [role=menuitemradio], [role=menuitemcheckbox], [role=option], [role=switch], [role=tab], [role=checkbox], [tabindex='0']";
+    for (const el of document.querySelectorAll(controls))
+      if (el.checkVisibility() && !el.closest("[inert]") && !named(el)) problems.push("unnamed " + el.outerHTML.slice(0, 90));
+    for (const img of document.querySelectorAll("img"))
+      if (img.checkVisibility() && !img.hasAttribute("alt")) problems.push("no alt " + img.outerHTML.slice(0, 90));
+    const ids = new Map();
+    for (const el of document.querySelectorAll("[id]")) ids.set(el.id, (ids.get(el.id) || 0) + 1);
+    for (const [id, count] of ids) if (count > 1) problems.push(`id ${id} ×${count}`);
+    return problems;
+  });
+}
+
+test("every Labradorite Space surface names its controls and keeps IDs unique", async ({ page }) => {
+  await seed(page, "issues/Space/Project", "---\nprefix: LS\n---\n");
+  await seed(page, "issues/Space/LS-1", "---\ntitle: Audit me\nstatus: in-progress\npriority: high\nlabels: [UX]\n---\n\nSee [[Plain]].\n\n## Done when\n\n- [ ] Names\n");
+  await openSeed(page, "Audit [[issues/Space/LS-1]].", "Plain");
+  // The audit itself notices a nameless control and a repeated ID.
+  await page.evaluate(() => document.body.insertAdjacentHTML("beforeend", '<button id="audit-probe"></button><span id="audit-probe"></span>'));
+  expect(await audit(page)).toEqual([expect.stringContaining("unnamed <button"), "id audit-probe ×2"]);
+  await page.evaluate(() => document.querySelectorAll("#audit-probe").forEach((el) => el.remove()));
+  const surfaces = [];
+  const check = async (name) => surfaces.push([name, await audit(page)]);
+  await check("Notes");
+  await page.keyboard.press("Alt+p");
+  await check("switcher");
+  await page.keyboard.press("Escape");
+  await page.locator("#settings-button").click();
+  await check("settings");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Alt+l");
+  await expect(page.getByRole("dialog", { name: "Library" })).toBeVisible();
+  await check("library");
+  await page.keyboard.press("Escape");
+  await openIssues(page);
+  await expect(page.locator(".issue-card")).toHaveCount(1);
+  await check("issues board");
+  await page.getByRole("button", { name: "Show as a board" }).click();
+  await check("issues outline");
+  await page.locator('#issues-tree [data-issue="issues/Space/LS-1"]').click();
+  await expect(page.locator(".issue-link")).toHaveCount(1);
+  await check("issue page");
+  await page.keyboard.press("F1");
+  await expect(page.locator("#modal")).toContainText("Move the focused card to another state");
+  await expect(page.locator("#modal")).not.toContainText("Rename or move note");
+  await check("issues help");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Show as a board" }).click();
+  expect(surfaces.filter(([, problems]) => problems.length)).toEqual([]);
+  // Keyboard focus shows on the new kinds of control.
+  const ring = (selector) => page.locator(selector).first().evaluate((el) => {
+    const style = getComputedStyle(el);
+    return style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0 || style.boxShadow !== "none";
+  });
+  for (const selector of [".issue-card-open", "#issues-tree .note-row", "#issues-tree .folder-group"]) {
+    await page.locator(selector).first().focus();
+    await page.keyboard.press("Shift");
+    expect(await ring(selector), selector).toBe(true);
+  }
+  await page.locator(".issue-card-open").first().press("Enter");
+  await page.locator(".issue-chip").first().focus();
+  await page.keyboard.press("Shift");
+  expect(await ring(".issue-chip"), "chip").toBe(true);
+  await page.keyboard.press("Alt+p");
+  expect(await ring(".switcher-row:focus"), "switcher row").toBe(true);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Alt+l");
+  await expect(page.locator(".library-row").first()).toBeVisible();
+  await page.keyboard.press("Tab");
+  expect(await ring(".library-row:focus"), "library row").toBe(true);
+});
+
 test("a link to an issue opens it in Issues", async ({ page }) => {
   await seed(page, "issues/L-1", "---\ntitle: Linked\nstatus: todo\n---\n");
   await openSeed(page, "See [[issues/L-1]].", "Pointer");
