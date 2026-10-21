@@ -219,6 +219,34 @@ func TestThemesMatchMainAndPersist(t *testing.T) {
 	request(t, a, "POST", "/api/settings", mutation{Theme: "nord"}, 422)
 }
 
+func TestPluginsDefaultOnAndPersist(t *testing.T) {
+	a := testApp(t)
+	state := request(t, a, "GET", "/api/state", nil, 200)
+	if got := state["plugins"].(map[string]any); got["notes"] != true || len(got) != len(builtinPlugins) {
+		t.Fatalf("default plugins: %v", got)
+	}
+	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"notes": false}}, 200)
+	if got := request(t, a, "GET", "/api/state", nil, 200)["plugins"].(map[string]any); got["notes"] != false {
+		t.Fatalf("plugin choice not persisted: %v", got)
+	}
+	// Changing the theme keeps the plugin choice, and the other way round.
+	request(t, a, "POST", "/api/settings", mutation{Theme: "light"}, 200)
+	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"notes": true}}, 200)
+	state = request(t, a, "GET", "/api/state", nil, 200)
+	if state["theme"] != "light" || state["plugins"].(map[string]any)["notes"] != true {
+		t.Fatalf("settings mixed up: %v %v", state["theme"], state["plugins"])
+	}
+	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"chess": true}}, 422)
+	request(t, a, "POST", "/api/settings", mutation{}, 422)
+	// A damaged or unknown saved choice falls back to the defaults.
+	if err := os.WriteFile(filepath.Join(a.store.Config, "plugins"), []byte(`{"notes":false,"chess":true`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := request(t, a, "GET", "/api/state", nil, 200)["plugins"].(map[string]any); got["notes"] != true || got["chess"] != nil {
+		t.Fatalf("damaged plugins file: %v", got)
+	}
+}
+
 func TestRetiredThemesOpenByBrightness(t *testing.T) {
 	a := testApp(t)
 	for saved, want := range map[string]string{"gruvbox-light": "light", "catppuccin-latte": "light", "nord": "dark", "tokyo-night": "dark", "unknown": "dark"} {

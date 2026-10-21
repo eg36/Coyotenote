@@ -30,6 +30,7 @@ export interface StateResponse extends Session {
   snippets: Record<string, string>;
   themes: Theme[];
   theme: string;
+  plugins: Record<string, boolean>;
   vault: string;
   formerVaultIds: string[];
   stamp: string;

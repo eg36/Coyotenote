@@ -46,17 +46,18 @@ function toggleFocus() {
   state.source?.refresh();
 }
 // One table drives both the key handler and the help dialog. Chords name
-// "mod" for Ctrl or ⌘; rows without chords are handled by the editors.
-interface ShortcutOptions { keepDefault?: boolean }
+// "mod" for Ctrl or ⌘; rows without chords are handled by the editors. Shell
+// shortcuts always work; the others belong to Notes and work while it is open.
+interface ShortcutOptions { keepDefault?: boolean; shell?: boolean }
 type Shortcut = [label: string, description: string, chords?: string[], run?: (chord: string) => unknown, options?: ShortcutOptions];
 const shortcuts: Shortcut[] = [
   ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
   ["Alt J", "Open today's note", ["alt+j"], () => dailyNote().catch(showError)],
-  ["Alt K / Ctrl / ⌘ K", "Quick open a note, heading or command", ["alt+k", "mod+k"], () => paletteDialog()],
+  ["Alt K / Ctrl / ⌘ K", "Quick open a note, heading or command", ["alt+k", "mod+k"], () => paletteDialog(), { shell: true }],
   ["Alt S / Ctrl / ⌘ Shift E", "Search note contents", ["alt+s", "mod+shift+e"], findNotes],
   ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],
   ["Alt M / Ctrl / ⌘ Shift M", "Cycle writing views", ["alt+m", "mod+shift+m"], cycleMode],
-  ["Alt T / Ctrl / ⌘ Shift T", "Settings: appearance and writing", ["alt+t", "mod+shift+t"], () => settingsDialog()],
+  ["Alt T / Ctrl / ⌘ Shift T", "Settings: appearance and writing", ["alt+t", "mod+shift+t"], () => settingsDialog(), { shell: true }],
   ["Ctrl / ⌘ Shift F", "Focus mode", ["mod+shift+f"], toggleFocus],
   ["Alt O", "Show or hide the outline", ["alt+o"], () => toggleOutline()],
   ["Ctrl / ⌘ Shift R", "Rename or move note", ["mod+shift+r"], renameDialog],
@@ -67,7 +68,7 @@ const shortcuts: Shortcut[] = [
   ["Ctrl / ⌘ Alt 0–6", "Normal text / heading level in Write"],
   ["Ctrl / ⌘ Z", "Undo an edit"],
   ["Ctrl / ⌘ Shift Z", "Redo an edit"],
-  ["F1", "Keyboard shortcuts", ["f1"], helpDialog],
+  ["F1", "Keyboard shortcuts", ["f1"], helpDialog, { shell: true }],
   ["Escape", "Close a dialog or the notes drawer", ["escape"],
     () => {
       if (window.innerWidth < 800) setSidebar(false);

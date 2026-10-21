@@ -3152,6 +3152,20 @@ test("Tab visits the rail, notes, title row, Format panel, the note and then the
   expect(regions).toEqual(["rail", "notes", "title", "format", "note", "status"]);
 });
 
+test("the shell opens Notes as its plugin and remembers it for the vault", async ({ page }) => {
+  await openSeed(page, "Shell.");
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
+  const remembered = () => page.evaluate(() =>
+    Object.entries(localStorage).filter(([key]) => key.startsWith("labradorite-plugin:")).map(([, value]) => value));
+  await expect.poll(remembered).toEqual(["notes"]);
+  // Notes' rail items show while it is active, and its palette commands list.
+  for (const id of ["sidebar-toggle", "sidebar-search", "recent-notes", "new-note", "trash-button"])
+    await expect(page.locator("#" + id)).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.type(">rename");
+  await expect(page.locator(".palette-option").first()).toContainText("Rename or move note");
+});
+
 test("Format panel and title row text reaches 4.5:1 as drawn in Light and Dark", async ({ page }) => {
   await openSeed(page, "Drawn contrast.");
   await expect(page.locator("#format-panel")).toBeVisible();

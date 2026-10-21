@@ -97,6 +97,8 @@ type mutation struct {
 	Revision string `json:"revision"`
 	Name     string `json:"name"`
 	Theme    string `json:"theme"`
+	// Plugins turns plugins on or off by ID; IDs it leaves out keep their state.
+	Plugins map[string]bool `json:"plugins"`
 }
 
 type apiError struct {
@@ -422,7 +424,7 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		if report.Recoveries > 0 {
 			warnings = append(warnings, fmt.Sprintf("%d recovery copies retained in the vault", report.Recoveries))
 		}
-		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
+		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "plugins": a.enabledPlugins(), "pluginOrder": builtinPlugins, "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
 	if route == "GET /api/note" || route == "GET /api/export" {
@@ -631,13 +633,29 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, 200, restored)
 		return nil
 	case "POST /api/settings":
-		if !validTheme(in.Theme) {
+		// A request changes the theme, the enabled plugins or both.
+		if in.Theme == "" && in.Plugins == nil || in.Theme != "" && !validTheme(in.Theme) {
 			return &apiError{status: 422, message: "unknown theme"}
 		}
-		if err = vault.AtomicWrite(a.store.Config, "theme", []byte(in.Theme)); err != nil {
-			return err
+		if !knownPlugins(in.Plugins) {
+			return &apiError{status: 422, message: "unknown plugin"}
 		}
-		writeJSON(w, 200, map[string]string{"theme": in.Theme})
+		if in.Theme != "" {
+			if err = vault.AtomicWrite(a.store.Config, "theme", []byte(in.Theme)); err != nil {
+				return err
+			}
+		}
+		plugins := a.enabledPlugins()
+		if in.Plugins != nil {
+			for id, on := range in.Plugins {
+				plugins[id] = on
+			}
+			saved, _ := json.Marshal(plugins)
+			if err = vault.AtomicWrite(a.store.Config, "plugins", saved); err != nil {
+				return err
+			}
+		}
+		writeJSON(w, 200, map[string]any{"theme": in.Theme, "plugins": plugins})
 		return nil
 	case "POST /api/resolve":
 		if len(in.Body) > 4096 {

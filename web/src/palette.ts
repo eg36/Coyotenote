@@ -2,42 +2,18 @@ interface Match { score: number; at: number[] }
 type PaletteResult = { label: string; detail: string; match: Match; current?: boolean } & (
   { kind: "note"; id: string } | { kind: "heading" | "command"; run: () => unknown }
 );
-type Command = [label: string, keys: string, run: () => unknown, needsNote?: boolean, when?: () => unknown];
 
 // The quick switcher: jump to a note, a heading of the open note or a command
 // by typing a few letters of it.
 import { icon } from "./icons.js";
 import { $, showError, state } from "./core.js";
-import { draftsDialog } from "./drafts.js";
-import { chooseImages } from "./attachments.js";
-import { historyDialog } from "./history.js";
-import { splitFrontMatter } from "./frontmatter.js";
 import { shortDate } from "./list.js";
-import {
-  createNote,
-  editProperties,
-  findInNote,
-  openNote,
-  refresh,
-  save,
-  setMode,
-  exportNote,
-} from "./editor.js";
-import {
-  backlinksDialog,
-  closeModal,
-  deleteDialog,
-  helpDialog,
-  newNoteDialog,
-  openModal,
-  renameDialog,
-  trashDialog,
-} from "./dialogs.js";
-import { headings, jumpToHeading, toggleOutline } from "./outline.js";
-import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
-import { dailyNote } from "./daily.js";
-import { showRecent, togglePin } from "./navigation.js";
+import { createNote, openNote, refresh } from "./editor.js";
+import { closeModal, helpDialog, openModal } from "./dialogs.js";
+import { headings, jumpToHeading } from "./outline.js";
+import { findNotes } from "./shortcuts.js";
 import { settingsDialog } from "./settings.js";
+import { activePlugin, isActive, type PluginCommand } from "./plugins.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
 // match: word starts and runs of consecutive letters count for more, and
@@ -88,53 +64,17 @@ function marked(element: HTMLElement, text: string, at: number[]) {
   flush(hits.has(text.length - 1));
 }
 
-// addProperties starts front matter with a tags field, ready to fill in.
-function addProperties() {
-  editProperties("tags: ");
-  if (state.mode === "write") {
-    const box = document.querySelector<HTMLInputElement>(".properties-rows input") || $("properties-text");
-    box.focus();
-    box.setSelectionRange(box.value.length, box.value.length);
-  }
-}
-
-// Commands name what they do; those needing an open note hide without one.
-const commandDefinitions: Command[] = [
-  ["New note", "Ctrl N", newNoteDialog],
-  ["Search all notes", "Ctrl Shift E", findNotes],
-  ["Recently opened notes", "", showRecent],
-  ["Pin or unpin this note", "", togglePin, true],
-  ["Open today's note", "Alt J", () => dailyNote().catch(showError)],
-  ["Rename or move note", "Ctrl Shift R", renameDialog, true],
-  ["Move note to trash", "Ctrl Shift D", deleteDialog, true],
-  ["Save now", "Ctrl S", () => save().catch(showError), true],
-  ["Find and replace in this note", "", () => findInNote().catch(showError), true],
-  ["Show notes linking here", "", backlinksDialog, true],
-  ["Insert image", "", chooseImages, true],
-  ["Add properties (front matter)", "", addProperties, true, () => !splitFrontMatter(state.body)],
-  ["Show note history", "", () => historyDialog().catch(showError), true],
-  ["Download note as Markdown", "", () => exportNote(), true],
-  ["Write view", "", () => setMode("write").catch(showError), true],
-  ["Markdown view", "", () => setMode("source").catch(showError), true],
-  ["Preview view", "", () => setMode("preview").catch(showError), true],
-  ["Split view", "", () => setMode("split").catch(showError), true],
-  ["Previous note", "Alt ↑", () => navigate(-1)],
-  ["Next note", "Alt ↓", () => navigate(1)],
-  ["Toggle focus mode", "Ctrl Shift F", toggleFocus],
-  ["Show or hide outline", "Alt O", () => toggleOutline(), true],
-  ["Settings", "Ctrl Shift T", () => settingsDialog()],
-  ["Change the appearance", "", () => settingsDialog({ appearance: true })],
-  ["Open the trash", "", () => trashDialog().catch(showError)],
-  ["Review unsaved drafts", "", draftsDialog, false, () => state.orphans?.length],
-  ["Keyboard shortcuts", "F1", helpDialog],
+// The shell's own commands come first; the active plugin adds its own.
+const shellCommands: PluginCommand[] = [
+  { label: "Settings", keys: "Ctrl Shift T", run: () => settingsDialog() },
+  { label: "Change the appearance", run: () => settingsDialog({ appearance: true }) },
+  { label: "Keyboard shortcuts", keys: "F1", run: helpDialog },
 ];
-const commands = commandDefinitions.map(([label, keys, run, needsNote = false, when]) => ({
-  label,
-  keys: /Mac|iPhone|iPad/.test(navigator.platform)
-    ? keys.replace(/^Ctrl /, "⌘")
-    : keys,
-  run,
-  when: () => (!needsNote || state.current) && (!when || when()),
+const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+const commands = () => [...shellCommands, ...(activePlugin()?.commands() || [])].map((command) => ({
+  ...command,
+  keys: mac ? (command.keys || "").replace(/^Ctrl /, "⌘") : command.keys || "",
+  when: () => !command.when || command.when(),
 }));
 
 function paletteDialog(prefix = "") {
@@ -167,8 +107,10 @@ function paletteDialog(prefix = "") {
     const mode = raw.startsWith(">") ? "command" : raw.startsWith("#") ? "heading" : "all";
     const query = mode === "all" ? raw.trim() : raw.slice(1).trim();
     const found: PaletteResult[] = [];
+    // Notes and headings come from Notes, so only while it is the active plugin.
+    const notes = isActive("notes");
     if (mode === "heading") {
-      const list = headings(state.current ? state.body : "");
+      const list = headings(notes && state.current ? state.body : "");
       for (const [index, heading] of list.entries()) {
         const match = fuzzyMatch(query, heading.text);
         if (match)
@@ -182,11 +124,11 @@ function paletteDialog(prefix = "") {
       }
       return query ? found.sort((a, b) => b.match.score - a.match.score) : found;
     }
-    if (mode === "all") {
-      const notes = [...state.notes].sort(
+    if (mode === "all" && notes) {
+      const recent = [...state.notes].sort(
         (a, b) => (Date.parse(b.modified) || 0) - (Date.parse(a.modified) || 0),
       );
-      for (const note of notes) {
+      for (const note of recent) {
         const match = fuzzyMatch(query, note.title);
         if (match)
           found.push({
@@ -199,7 +141,7 @@ function paletteDialog(prefix = "") {
           });
       }
     }
-    for (const command of commands) {
+    for (const command of commands()) {
       if (!command.when()) continue;
       const match = fuzzyMatch(query, command.label);
       if (match && (mode === "command" || query))
@@ -207,7 +149,7 @@ function paletteDialog(prefix = "") {
     }
     if (!query) return found.slice(0, 60);
     const ranked = found.sort((a, b) => b.match.score - a.match.score).slice(0, 60);
-    if (mode === "all") {
+    if (mode === "all" && notes) {
       // What was typed can always become a search or a new note.
       ranked.push({
         kind: "command",

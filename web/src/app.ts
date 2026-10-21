@@ -60,6 +60,8 @@ import { paletteDialog } from "./palette.js";
 import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
+import { isActive, startPlugins } from "./plugins.js";
+import { registerNotesPlugin } from "./notes-plugin.js";
 import { insertCallout, setupFormatting } from "./formatting.js";
 import { historyDialog } from "./history.js";
 import { addImages, chooseImages, imageFiles } from "./attachments.js";
@@ -121,6 +123,7 @@ async function initialize() {
   setupMenus();
   setupRailOrder();
   setupFormatting();
+  registerNotesPlugin();
   const data = await refresh();
   if (!data) return;
   adoptFormerVault(data.formerVaultIds);
@@ -136,6 +139,7 @@ async function initialize() {
   }
   else emptyNotebook();
   restoreSidebar();
+  startPlugins(data.plugins, requested ? "notes" : "");
   if (new URL(location.href).searchParams.has("new")) newNoteDialog();
 }
 $("new-note").onclick = newNoteDialog;
@@ -390,7 +394,7 @@ document.addEventListener("keydown", (event) => {
     .filter(Boolean)
     .join("+");
   const shortcut = shortcutChords.get(chord);
-  if (!shortcut) return;
+  if (!shortcut || !shortcut.options.shell && !isActive("notes")) return;
   if (!shortcut.options.keepDefault) event.preventDefault();
   shortcut.run?.(chord);
 });
