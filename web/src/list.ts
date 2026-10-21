@@ -6,6 +6,7 @@ import { openNote, refresh } from "./editor.js";
 import { moveNote } from "./dialogs.js";
 import { hasPins, setPinsOpen, showAllNotes } from "./navigation.js";
 import { setSidebar } from "./sidebar.js";
+import { inPluginFolder } from "./plugins.js";
 
 // excerpt cleans a note's opening text for short previews, leaving out a leading
 // heading that only repeats the note's title.
@@ -40,8 +41,12 @@ const noteCollator = new Intl.Collator(undefined, {
 // hasTag reports whether note carries tag, ignoring letter case.
 const hasTag = (note: Note, tag: string) =>
   note.tags?.some((t) => t.toLowerCase() === tag.toLowerCase());
+// notebookNotes are the notes Notes lists: all but enabled plugins' files.
+function notebookNotes() {
+  return state.notes.filter((note) => !inPluginFolder(note.id));
+}
 function visibleNotes() {
-  const notes = state.notes.filter(
+  const notes = notebookNotes().filter(
     (note) =>
       (!state.filteredIds || state.filteredIds.has(note.id)) &&
       (!state.tag || hasTag(note, state.tag)) &&
@@ -106,7 +111,7 @@ function setCollapsed(folder: string, collapsed: boolean) {
 }
 // The sidebar's fold button collapses every folder, or expands them all
 // when they already are; its icon and label say which it will do.
-const folderNames = () => [...new Set(state.notes.map((n) => n.id.split("/").slice(0, -1).join("/")))];
+const folderNames = () => [...new Set(notebookNotes().map((n) => n.id.split("/").slice(0, -1).join("/")))];
 function allCollapsed() {
   const folders = collapsedFolders();
   const names = folderNames();
@@ -136,7 +141,7 @@ const noteType = "application/x-coyote-note";
 // filter for the list. It hides while the vault has no tags.
 function renderTags() {
   const counts = new Map<string, { tag: string; n: number }>();
-  for (const note of state.notes)
+  for (const note of notebookNotes())
     for (const tag of note.tags || []) {
       const key = tag.toLowerCase();
       counts.set(key, { tag: counts.get(key)?.tag || tag, n: (counts.get(key)?.n || 0) + 1 });
@@ -155,7 +160,7 @@ function renderTags() {
   if (filter.dataset.signature !== signature) {
     filter.dataset.signature = signature;
     list.replaceChildren();
-    for (const [tag, n] of [["", state.notes.length] as [string, number], ...options]) {
+    for (const [tag, n] of [["", notebookNotes().length] as [string, number], ...options]) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "tag-option";
@@ -174,7 +179,7 @@ function renderTags() {
     button.setAttribute("aria-pressed", String((button.dataset.tag || "").toLowerCase() === selected));
   // The reset count also changes when untagged notes are created/deleted.
   const resetCount = list.firstElementChild?.querySelector(".tag-count");
-  if (resetCount) resetCount.textContent = state.notes.length.toLocaleString();
+  if (resetCount) resetCount.textContent = notebookNotes().length.toLocaleString();
   $("tag-filter-label").textContent = state.tag ? `#${(counts.get(selected)?.tag || state.tag)}` : "All tags";
   filter.classList.toggle("active", Boolean(state.tag));
 }

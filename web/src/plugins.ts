@@ -3,6 +3,7 @@
 // settings and the command palette. Every plugin is optional.
 import { api } from "./api.js";
 import { showError, state, storage } from "./core.js";
+import { refresh } from "./editor.js";
 
 interface PluginCommand { label: string; keys?: string; run: () => unknown; when?: () => unknown }
 // SpaceContext is what the shell offers a plugin while it is mounted.
@@ -107,8 +108,34 @@ async function setPluginEnabled(id: string, on: boolean) {
   else show();
 }
 function enablePlugin(id: string, on: boolean) {
-  return setPluginEnabled(id, on).catch(showError);
+  // The notes list changes with the plugin folders it leaves out.
+  return setPluginEnabled(id, on).then(() => refresh()).catch(showError);
+}
+
+// Notes leaves out the files in enabled plugins' folders, unless the user
+// asked to see them; links to them still resolve.
+const showFoldersKey = "labradorite-show-plugin-folders";
+function showPluginFolders() {
+  return storage.get(showFoldersKey) === "true";
+}
+function setShowPluginFolders(on: boolean) {
+  storage.set(showFoldersKey, String(on));
+}
+function inPluginFolder(id: string) {
+  if (showPluginFolders()) return false;
+  return Object.values(state.pluginFolders || {}).some((folder) => id.startsWith(folder + "/"));
 }
 
 export type { LabradoritePlugin, PluginCommand, SpaceContext };
-export { activePlugin, enablePlugin, isActive, plugins, registerPlugin, startPlugins, switchPlugin };
+export {
+  activePlugin,
+  enablePlugin,
+  inPluginFolder,
+  isActive,
+  plugins,
+  registerPlugin,
+  setShowPluginFolders,
+  showPluginFolders,
+  startPlugins,
+  switchPlugin,
+};

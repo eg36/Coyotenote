@@ -2,7 +2,8 @@
 // plugins. Every change applies and is kept at once, so the window only needs
 // Done.
 import { showToast, storage } from "./core.js";
-import { enablePlugin, plugins } from "./plugins.js";
+import { enablePlugin, plugins, setShowPluginFolders, showPluginFolders } from "./plugins.js";
+import { renderList } from "./list.js";
 import { appearanceChooser, closeModal, openModal } from "./dialogs.js";
 import { applyWritingSettings, lineWidths, textSizes, writingSettings } from "./preferences.js";
 
@@ -90,10 +91,26 @@ function pluginFields() {
     toggle.append(check, text);
     container.append(toggle);
   }
+  const folders = document.createElement("label");
+  folders.className = "setting-toggle";
+  const show = document.createElement("input");
+  show.type = "checkbox";
+  show.id = "show-plugin-folders";
+  show.checked = showPluginFolders();
+  show.onchange = () => {
+    setShowPluginFolders(show.checked);
+    renderList();
+  };
+  const label = document.createElement("span");
+  label.textContent = "Show plugin folders in Notes";
+  const hint = document.createElement("small");
+  hint.textContent = "Lists files such as issues/ among your notes.";
+  label.append(hint);
+  folders.append(show, label);
   const note = document.createElement("p");
   note.className = "dialog-description";
-  note.textContent = "Every plugin is optional. Turning one off keeps its files in the vault.";
-  container.append(note);
+  note.textContent = "Every plugin is optional. Turning one off keeps its files in the vault, where Notes lists them.";
+  container.append(folders, note);
   return container;
 }
 

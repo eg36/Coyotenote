@@ -237,6 +237,15 @@ func TestPluginsDefaultOnAndPersist(t *testing.T) {
 		t.Fatalf("settings mixed up: %v %v", state["theme"], state["plugins"])
 	}
 	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"chess": true}}, 422)
+	// Enabled plugins report their folders; a disabled one gives its folder back to Notes.
+	if got := request(t, a, "GET", "/api/state", nil, 200)["pluginFolders"].(map[string]any); got["issues"] != "issues" || got["notes"] != nil {
+		t.Fatalf("plugin folders: %v", got)
+	}
+	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"issues": false}}, 200)
+	if got := request(t, a, "GET", "/api/state", nil, 200)["pluginFolders"].(map[string]any); len(got) != 0 {
+		t.Fatalf("disabled plugin folder: %v", got)
+	}
+	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"issues": true}}, 200)
 	request(t, a, "POST", "/api/settings", mutation{}, 422)
 	// A damaged or unknown saved choice falls back to the defaults.
 	if err := os.WriteFile(filepath.Join(a.store.Config, "plugins"), []byte(`{"notes":false,"chess":true`), 0o600); err != nil {

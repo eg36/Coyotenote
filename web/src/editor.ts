@@ -111,6 +111,7 @@ async function refresh({ query = state.search } = {}) {
   state.token = data.token;
   state.vaultId = data.vaultId;
   state.themes = data.themes;
+  state.pluginFolders = data.pluginFolders;
   state.version = data.version;
   const versionLink = $("app-version");
   versionLink.textContent = data.version;

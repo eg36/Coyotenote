@@ -31,6 +31,7 @@ export interface StateResponse extends Session {
   themes: Theme[];
   theme: string;
   plugins: Record<string, boolean>;
+  pluginFolders: Record<string, string>;
   vault: string;
   formerVaultIds: string[];
   stamp: string;
@@ -114,6 +115,8 @@ export interface AppState {
   folder: string | null;
   stamp?: string;
   version?: string;
+  // The vault folders of enabled plugins other than Notes, by plugin ID.
+  pluginFolders?: Record<string, string>;
   snippets?: Record<string, string>;
   searched?: string;
   orphans?: Draft[];

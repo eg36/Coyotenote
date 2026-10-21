@@ -9,7 +9,24 @@ import (
 // builtinPlugins lists the plugins the shell can host, in switcher order.
 // Every plugin is optional; one the settings do not mention is enabled, so
 // vaults saved before a plugin existed open with it.
-var builtinPlugins = []string{"notes"}
+var builtinPlugins = []string{"notes", "issues"}
+
+// pluginFolders names the fixed vault folder each plugin keeps its files in.
+// Notes owns the rest of the vault. A folder appears when its first file is
+// saved, so vaults without it open as before.
+var pluginFolders = map[string]string{"issues": "issues"}
+
+// enabledFolders maps each enabled plugin to its folder, so Notes can leave
+// those files out of its list while their plugin shows them.
+func (a *webApp) enabledFolders() map[string]string {
+	folders := map[string]string{}
+	for id, on := range a.enabledPlugins() {
+		if folder := pluginFolders[id]; on && folder != "" {
+			folders[id] = folder
+		}
+	}
+	return folders
+}
 
 // enabledPlugins reads which plugins the user turned on or off.
 func (a *webApp) enabledPlugins() map[string]bool {

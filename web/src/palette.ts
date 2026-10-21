@@ -13,7 +13,7 @@ import { closeModal, helpDialog, openModal } from "./dialogs.js";
 import { headings, jumpToHeading } from "./outline.js";
 import { findNotes } from "./shortcuts.js";
 import { settingsDialog } from "./settings.js";
-import { activePlugin, isActive, plugins, switchPlugin, type PluginCommand } from "./plugins.js";
+import { activePlugin, inPluginFolder, isActive, plugins, switchPlugin, type PluginCommand } from "./plugins.js";
 import { openSwitcher } from "./switcher.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
@@ -140,6 +140,7 @@ function paletteDialog(prefix = "") {
         (a, b) => (Date.parse(b.modified) || 0) - (Date.parse(a.modified) || 0),
       );
       for (const note of recent) {
+        if (inPluginFolder(note.id)) continue;
         const match = fuzzyMatch(query, note.title);
         if (match)
           found.push({

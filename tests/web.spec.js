@@ -3279,6 +3279,36 @@ test("turning Notes off leaves the shell's empty state, and turning it on return
   await expect(page.locator("#new-note")).toBeVisible();
 });
 
+test("Notes leaves enabled plugins' folders out of its list but still follows links", async ({ page }) => {
+  await seed(page, "issues/T-1", "---\ntitle: Tracked\n---\nAn issue file.");
+  await openSeed(page, "See [[issues/T-1]].", "Plain");
+  const row = page.locator('#note-list [data-note="issues/T-1"]');
+  await expect(page.locator('#note-list [data-note="Plain"]')).toBeVisible();
+  await expect(row).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.type("T-1");
+  await expect(page.locator(".palette-option", { hasText: "issues/T-1" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  // A link still opens the file in Notes.
+  await mode(page, "Preview");
+  await page.locator("#preview a", { hasText: "issues/T-1" }).click();
+  await expect(page.locator("#document-title")).toHaveText("T-1");
+  // The setting lists plugin folders again.
+  await page.locator("#settings-button").click();
+  await page.locator("#show-plugin-folders").check();
+  await page.keyboard.press("Escape");
+  await expect(row).toHaveCount(1);
+  await page.locator("#settings-button").click();
+  await page.locator("#show-plugin-folders").uncheck();
+  await page.keyboard.press("Escape");
+  await expect(row).toHaveCount(0);
+  // Turning the plugin off gives its files back to Notes.
+  const { token } = await (await page.request.get("/api/state")).json();
+  await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { issues: false } } });
+  await page.reload();
+  await expect(row).toHaveCount(1);
+});
+
 test("the switcher fits a phone and reads at AA in Light and Dark", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openSeed(page, "Phone switcher.");
