@@ -19,6 +19,7 @@ function setSidebar(open: boolean, persist = true, dismissSearch = true) {
   if (!open && dismissSearch && $("app").classList.contains("search-in-note"))
     document.dispatchEvent(new Event("search-closed"));
   if (persist) storage.set(preferenceKey(), String(open));
+  document.dispatchEvent(new CustomEvent("sidebar-change", { detail: open }));
 }
 function restoreSidebar() {
   const stored = storage.get(preferenceKey());

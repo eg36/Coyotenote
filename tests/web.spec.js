@@ -3710,6 +3710,39 @@ test("turning Issues off removes it from the switcher and gives its files to Not
   await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
 });
 
+test("the Format drawer keeps every tool reachable at phone widths and shares the screen with the notes drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 760 });
+  await openSeed(page, "Phone formatting.");
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 760 });
+    await page.locator("#format-toggle").click();
+    const panel = page.locator("#format-panel");
+    await expect(panel).toBeVisible();
+    // Every tool scrolls into view, is touch-sized and nothing overflows sideways.
+    const tools = panel.locator("button:visible");
+    expect(await tools.count()).toBeGreaterThan(25);
+    for (const tool of await tools.all()) {
+      await tool.scrollIntoViewIfNeeded();
+      await expect(tool).toBeInViewport();
+      const box = await tool.boundingBox();
+      expect(Math.min(box.width, box.height), await tool.getAttribute("aria-label")).toBeGreaterThanOrEqual(36);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    // Opening the notes drawer closes the Format drawer, and the other way round.
+    await page.locator("#sidebar-toggle").click();
+    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toBeHidden();
+    await page.locator("#format-toggle").click();
+    await expect(panel).toBeVisible();
+    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
+    // Escape closes it and returns to the toggle.
+    await page.locator("#block-type").focus();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(page.locator("#format-toggle")).toBeFocused();
+  }
+});
+
 test("the switcher fits a phone and reads at AA in Light and Dark", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await openSeed(page, "Phone switcher.");

@@ -1,6 +1,7 @@
 // A left-hand inspector keeps formatting out of the document header.
 import { $, state, storage } from "./core.js";
 import { calloutTypes } from "./callout-types.js";
+import { setSidebar } from "./sidebar.js";
 
 // The callout button makes the type last chosen from its menu, kept in this
 // browser; the menu lists every type.
@@ -60,9 +61,12 @@ function setupFormatting() {
     $("format-toggle").setAttribute("aria-expanded", String(visible));
     $("app").classList.toggle("formatting-open", visible);
   }
+  // On a phone only one drawer is open: Format or the notes.
+  const phone = matchMedia("(max-width: 799px)");
   const setOpen = (value: boolean) => {
     open = value;
     if (value) $("app").classList.remove("focus-mode");
+    if (value && phone.matches && $("app").classList.contains("sidebar-open")) setSidebar(false);
     storage.set(key(), String(value));
     update();
   };
@@ -71,6 +75,9 @@ function setupFormatting() {
   $("formatting-scrim").onclick = close;
   $("format-panel").addEventListener("keydown", event => {
     if (event.key === "Escape") { event.preventDefault(); close(); }
+  });
+  document.addEventListener("sidebar-change", (event) => {
+    if ((event as CustomEvent<boolean>).detail && phone.matches && open) setOpen(false);
   });
   document.addEventListener("editor-mode-change", update);
   document.addEventListener("note-selection-change", update);
