@@ -25,7 +25,8 @@
 - Issues are written impersonally (what happens now, what to build, then
   `Done when:` as `- [ ]` checkboxes). Linear (team Labradorite, LBT) mirrors
   them: assign each issue to the user, put it in the matching project
-  (Labradorite 1.5 or Labradorite 2.0), and label it with one Type (Feature,
+  (Labradorite 1.5, Labradorite 2.0 or Labradorite Space 2026.1.0, which
+  replaces 2.0 for new work), and label it with one Type (Feature,
   Improvement, Bug, Docs, Maintenance, Tech debt, Research), its areas
   (Frontend, Backend, Web, UX, API, Infra…) and, when relevant, an Impact
   (Reliability, Security, Performance, Accessibility). Labels sync both ways.

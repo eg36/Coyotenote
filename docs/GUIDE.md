@@ -581,14 +581,15 @@ deployment.
 
 ### Stable releases and test downloads
 
-Only exact stable tags such as `v2.0.0` trigger public publishing. The gate also
+Only exact stable tags such as `v2026.1.0` trigger public publishing. The gate also
 rejects prerelease or malformed versions, requires a commit on main and a matching
 release-notes file, and runs CI before publishing. Existing published releases
 are never replaced. Tags and publication require explicit approval.
 
 Milestones 1.6–1.9 are internal work toward the next planned stable release,
-2.0.0. Ordinary development builds use `2.0.0+dev`. A test version such as
-`1.6.0-beta.1` can be stamped into a binary without creating a Git tag or Release.
+Labradorite Space 2026.1.0 (2.0.0 will not be released). Ordinary development
+builds use `2026.1.0+dev`. A test version such as `2026.1.0-beta.1` can be
+stamped into a binary without creating a Git tag or Release.
 Prerelease tags do not publish through the Release workflow.
 
 ### Test-build downloads and Windows

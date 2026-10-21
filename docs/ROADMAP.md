@@ -1,13 +1,34 @@
-# After 1.5.0: the road to 2.0
+# After 1.5.0: the road to Labradorite Space
 
-Working ideas from the 2026-10-20 conversation. Build and refine with the user;
-this document does not authorize a release tag.
+Working ideas from the 2026-10-20 and 2026-10-21 conversations. Build and refine
+with the user; this document does not authorize a release tag.
 
 Release [v1.5.0](https://github.com/eg36/Labradorite/releases/tag/v1.5.0) was
 published on 2026-10-20 after explicit approval; preparation is recorded in
-[#13](https://github.com/eg36/Labradorite/issues/13). Review builds now use
-`2.0.0+dev`. No additional public release is authorized by this document.
+[#13](https://github.com/eg36/Labradorite/issues/13). The next public release is
+**Labradorite Space 2026.1.0**; 2.0.0 will not be released. Review builds use
+`2026.1.0+dev`. No additional public release is authorized by this document.
 GitHub issues are the source of truth and Linear team Labradorite mirrors them.
+
+## Labradorite Space
+
+Labradorite becomes a shell that hosts plugins. The shell owns the rail, the
+plugin switcher, settings, themes and the command palette; each plugin brings
+its own interface. Every plugin is optional, Notes included, and stores its data
+as plain files in the vault, so a vault stays readable without the app. Vaults
+without plugin folders open as before. Plugins are built in; third-party plugins
+are out of scope.
+
+- **2026.1.0**: the plugin shell
+  ([#46](https://github.com/eg36/Labradorite/issues/46)), Notes with the open
+  interface, accessibility and documentation work below, and Issues (one
+  Markdown file with front matter per issue, list and board views, an issue
+  panel).
+- **2026.2.0**: Canvas, a whiteboard whose shapes can link notes and issues. A
+  short engine spike comes first and its decision is recorded in an issue.
+- **Later (target 2027.1)**: further plugins, such as calculation sheets.
+- Like before, intermediate milestones are internal and never tagged; versions
+  keep the `vMAJOR.MINOR.PATCH` tag form, such as `v2026.1.0`.
 
 ## Agreed direction
 
@@ -24,7 +45,7 @@ GitHub issues are the source of truth and Linear team Labradorite mirrors them.
 - Truncated note titles must reveal their complete title in a themed tooltip,
   including keyboard focus. Keep rename discoverable.
 - Rebuild and restart the review server after each visible batch and tell the
-  user to reload http://127.0.0.1:4280. Preview upcoming work as 2.0.0+dev.
+  user to reload http://127.0.0.1:4280. Preview upcoming work as 2026.1.0+dev.
 
 ## Implemented choices
 
@@ -111,11 +132,11 @@ Builds stay stamped `1.5.0+dev`. Each item is its own focused commit with tests.
 - User-led polish and fixes across all of the above, full regression runs,
   guide and release notes; release only on the user's word.
 
-## After 1.5.0: internal 1.6–1.9 toward the 2.0.0 release
+## After 1.5.0: internal 1.6–1.9 toward 2026.1.0
 
-Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged; 2.0.0 is
-the next public release after 1.5.0.
-After the 1.5.0 release, development builds will be stamped `2.0.0+dev`.
+Like 1.1–1.4, milestones 1.6 to 1.9 are internal and never tagged. They were
+planned toward 2.0.0; that release is replaced by Labradorite Space 2026.1.0,
+and their work carries into it. Development builds are stamped `2026.1.0+dev`.
 
 Start platform coverage early in 1.6, before completing the 1.6–1.9 feature list.
 [#16](https://github.com/eg36/Labradorite/issues/16) tracks Linux amd64/arm64
@@ -150,7 +171,7 @@ tag or release still needs explicit approval. See
 - Full technical documentation: architecture, data flow, vault format and
   safety rules, frontend and server internals, testing and release process.
 
-## 2.0.0 and later
+## Notes plugin work planned for the 2026.x releases (formerly 2.0.0)
 
 - Write support for embeds and HTML, so fewer notes fall back to Markdown
   view.

@@ -19,7 +19,7 @@ function runStep(script, tag, { notes = true, sha = "on-main", releaseExists = f
     mkdirSync(bin);
     mkdirSync(join(root, ".github/release-notes"), { recursive: true });
     mkdirSync(join(root, "dist"));
-    if (notes) for (const version of ["v0.0.0", "v1.5.0", "v2.0.0", "v10.24.300"])
+    if (notes) for (const version of ["v0.0.0", "v1.5.0", "v2.0.0", "v2026.1.0", "v10.24.300"])
       writeFileSync(join(root, ".github/release-notes", version + ".md"), "Release notes.\n");
     writeFileSync(join(root, "dist/labradorite_fixture.tar.gz"), "Archive fixture.\n");
     writeFileSync(join(bin, "git"), `#!/bin/sh
@@ -50,13 +50,13 @@ test("only numeric stable tags trigger public releases", () => {
   // literal dots. Verify the filter as well as the stricter gate below.
   assert.deepEqual(patterns, ["v[0-9]+.[0-9]+.[0-9]+"]);
   const matches = new RegExp("^" + patterns[0].replaceAll(".", "\\.") + "$");
-  for (const tag of ["v0.0.0", "v1.5.0", "v2.0.0", "v10.24.300"]) assert.match(tag, matches);
+  for (const tag of ["v0.0.0", "v1.5.0", "v2.0.0", "v2026.1.0", "v10.24.300"]) assert.match(tag, matches);
   for (const tag of ["v1.6.0-beta.1", "v2.0.0-alpha.1", "v2.0.0-rc.1", "v2.0.0+build.1", "vnext", "v2.0", "v2.0.0/other"])
     assert.doesNotMatch(tag, matches);
 });
 
 test("the actual gate accepts stable versions with ancestry and notes", () => {
-  for (const tag of ["v0.0.0", "v1.5.0", "v2.0.0", "v10.24.300"]) {
+  for (const tag of ["v0.0.0", "v1.5.0", "v2.0.0", "v2026.1.0", "v10.24.300"]) {
     const result = runStep(gate, tag);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.ancestorChecked, true);
