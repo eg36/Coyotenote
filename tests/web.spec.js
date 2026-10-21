@@ -183,6 +183,25 @@ test("document menus and note actions stay above the left formatting panel", asy
   await expect(popup).toBeHidden();
 });
 
+test("the note menu renames, moves, exports and opens commands", async ({ page }) => {
+  const id = await openSeed(page, "Menu actions.", `Menu ${Date.now()}`);
+  // Rename edits the title in place.
+  await noteAction(page, "Rename");
+  await expect(page.getByRole("textbox", { name: "Note name" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#document-title")).toHaveText(id);
+  // Move to folder opens the rename-or-move dialog.
+  await noteAction(page, "Move to folder…");
+  await expect(page.getByRole("dialog", { name: "Rename note" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Export downloads the note's Markdown.
+  const [download] = await Promise.all([page.waitForEvent("download"), noteAction(page, "Export as Markdown")]);
+  expect(download.suggestedFilename()).toBe(`${id}.md`);
+  // All commands opens the palette on its command list.
+  await noteAction(page, "All commands");
+  await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toHaveValue(">");
+});
+
 test("rich formatting and Markdown survive source, split and preview modes", async ({
   page,
 }) => {
