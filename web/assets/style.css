@@ -1958,8 +1958,8 @@ dialog.settings {
   width: min(720px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
   margin-top: min(12dvh, 96px);
-  /* The theme list floats over the window and the page below it. */
-  overflow: visible;
+  /* Short screens scroll the window, so Done stays reachable. */
+  overflow-y: auto;
 }
 .settings .modal-error:empty {
   display: none;
