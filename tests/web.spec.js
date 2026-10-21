@@ -1054,12 +1054,13 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
   await mode(page, "Markdown");
   const workspace = page.locator(".workspace");
   const frame = page.locator("#editor-frame");
+  // Beside the workspace: the 52 px rail and two 4 px island gaps; its border is 2 px.
   for (const width of [1440, 900, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.locator("#sidebar-toggle").click();
     await expect(page.locator("#sidebar")).toBeHidden();
-    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 57);
-    expect((await frame.boundingBox()).width).toBeCloseTo(width - 56, 0);
+    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 60);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width - 62, 0);
     await expect(page.locator("#source-pane")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.locator("#sidebar-toggle").click();
@@ -1067,8 +1068,8 @@ test("collapsed sidebar and focus mode keep the workspace full width", async ({ 
     await menu(page, "view");
     await page.getByRole("menuitem", { name: "Focus mode" }).click();
     await expect(page.locator("#sidebar")).toBeHidden();
-    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 57);
-    expect((await frame.boundingBox()).width).toBeCloseTo(width - 56, 0);
+    expect((await workspace.boundingBox()).width).toBeGreaterThanOrEqual(width - 60);
+    expect((await frame.boundingBox()).width).toBeCloseTo(width - 62, 0);
     await page.keyboard.press("Control+Shift+f");
   }
   // Keep the correct column after switching from a collapsed desktop to mobile.
@@ -3017,9 +3018,12 @@ test("editor toolbar stays anchored when note titles change", async ({ page }) =
     expect(title.y + title.height).toBeLessThanOrEqual(menuRow.y);
     const titleBlock = await page.locator(".title-block").boundingBox();
     expect(Math.abs(titleBlock.x + titleBlock.width / 2 - menuRow.x - menuRow.width / 2)).toBeLessThan(2);
+    // The header widens when the notes panel folds away; the title stays over the menus.
     await page.locator("#collapse-sidebar").click();
-    const collapsed = await page.locator(".header-tools").boundingBox();
-    expect(Math.abs(collapsed.x - initial.x)).toBeLessThan(1);
+    await expect(page.locator("#sidebar")).toBeHidden();
+    const collapsedTitle = await page.locator(".title-block").boundingBox();
+    const collapsedMenus = await page.locator("#menu-bar").boundingBox();
+    expect(Math.abs(collapsedTitle.x + collapsedTitle.width / 2 - collapsedMenus.x - collapsedMenus.width / 2)).toBeLessThan(2);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
@@ -3157,9 +3161,8 @@ test("the editor view selector sits at the header's left end and views stay reac
   for (const width of [1999, 1440, 900, 700, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     const box = await view.boundingBox(), header = await page.locator(".topbar").boundingBox();
-    const rail = await page.locator(".activity-rail").boundingBox();
-    // Left end of the header, just right of the logo, and inside the bar.
-    expect(box.x - rail.x - rail.width).toBeLessThan(16);
+    // Left end of the header and inside the bar.
+    expect(box.x - header.x).toBeLessThan(16);
     expect(box.y).toBeGreaterThanOrEqual(header.y);
     expect(box.y + box.height).toBeLessThanOrEqual(header.y + header.height);
     // The centered title, menus and note actions never overlap it.
@@ -3746,14 +3749,14 @@ test("tooltips sit 7px below the control they describe", async ({ page }) => {
   expect(Math.abs(tipBox.y - box.y - box.height - 7)).toBeLessThan(0.6);
 });
 
-test("the rail's first icon lines up with the notes toolbar at home and in a note", async ({ page }) => {
-  const middle = async (selector) => { const box = await page.locator(selector).boundingBox(); return box.y + box.height / 2; };
+test("the notes panel starts level with the header and shares the rail's icon size", async ({ page }) => {
+  const top = async (selector) => (await page.locator(selector).boundingBox()).y;
   const id = await openSeed(page, "Aligned.");
   for (const url of ["/", "/?note=" + encodeURIComponent(id)]) {
     await page.goto(url);
     await expect(page.locator("#today-note")).toBeVisible();
     await page.evaluate(() => new Promise(requestAnimationFrame));
-    expect(Math.abs((await middle("#sidebar-toggle")) - (await middle("#today-note"))), url).toBeLessThan(1);
+    expect(Math.abs((await top("#sidebar")) - (await top(".topbar"))), url).toBeLessThan(1);
     const sizes = await page.locator(".sidebar-actions svg, .activity-rail > button svg").evaluateAll((icons) => icons.map((i) => Math.round(i.getBoundingClientRect().width)).filter((w) => w > 0));
     expect(new Set(sizes)).toEqual(new Set([19]));
   }

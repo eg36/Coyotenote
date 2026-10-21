@@ -35,6 +35,7 @@ function applyTheme(id: string) {
   state.theme = theme.id;
   const root = document.documentElement;
   root.dataset.theme = theme.id;
+  root.dataset.scheme = theme.light ? "light" : "dark";
   root.style.colorScheme = theme.light ? "light" : "dark";
   for (const [role, color] of Object.entries(theme.colors))
     root.style.setProperty("--" + role, color);
