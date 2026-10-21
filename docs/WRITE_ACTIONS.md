@@ -3,8 +3,9 @@
 Inventory for [#14](https://github.com/eg36/Labradorite/issues/14), updated for
 Labradorite Space through the Write embed editor in `62760f0`. The Format
 panel additions from [#40](https://github.com/eg36/Labradorite/issues/40) are
-implemented. Rows marked as remaining describe work still outside the current
-controls; this inventory does not claim that #14 is complete.
+implemented. Rows marked as remaining record actions outside the current
+controls. Further sidebar expansion was canceled in #14; these entries are
+an inventory, not an active implementation plan.
 
 “Sidebar” means the Text formatting panel opened with Format. “Command” means
 the quick-open command palette. Mod means Ctrl on Windows/Linux and Command on
