@@ -3022,11 +3022,6 @@ dialog.danger #modal-submit {
 summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--muted); }
 .issues-doc-count { font-size: 13px; font-weight: 400; color: var(--muted); }
 .issues-doc-list { display: flex; flex-direction: column; }
-.issue-line { display: grid; grid-template-columns: minmax(0, 1fr) 168px 168px; align-items: center; gap: 20px; width: calc(100% + 24px); padding: 10px 12px; margin: 0 -12px; border: 0; border-radius: 8px; background: none; color: var(--text); text-align: left; }
-.issue-line-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.issue-line:hover { background: var(--hover); }
-.issue-line-title { font-size: 15px; line-height: 1.4; }
-.issue-line-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
 .issues-doc-empty { margin: 0; padding: 6px 0; color: var(--muted); font-size: 14px; }
 .issues-intro { max-width: 520px; margin: 0 auto; padding: 96px 32px; text-align: center; }
 .issues-intro h1 { margin: 0 0 12px; font-size: 26px; font-weight: 600; }
@@ -3122,9 +3117,6 @@ summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--mute
 .issue-facets small { margin-left: 4px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .issue-facet { flex: none; width: 10px; height: 10px; margin: 0 1px; border: 1.5px solid var(--line-strong); border-radius: 2px; transform: rotate(45deg); }
 .issue-facet.done { border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--cyan)); }
-.issue-line-links { display: flex; justify-content: flex-end; gap: 6px; min-width: 0; font-size: 12px; }
-.issue-line-link { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-text); }
-.issue-line-more { color: var(--muted); }
 .issues-banner { display: flex; align-items: center; gap: 16px; margin: 0 0 24px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--chrome); font-size: 14px; }
 .issues-banner span { flex: 1; }
 .folder-group.current { background: var(--selected); color: var(--text); }
@@ -3133,9 +3125,7 @@ summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--mute
 .issues-board-top h1 { flex: 1; margin: 0; font-size: 24px; font-weight: 700; }
 .issues-board { flex: 1; }
 .issue-card .issue-facets { margin-top: 2px; }
-@media (max-width: 1100px) { .issue-line { grid-template-columns: minmax(0, 1fr) 150px; } .issue-line-links { display: none; } }
-@media (max-width: 799px) { .issues-doc-top { flex-wrap: wrap; } .issue-line { grid-template-columns: minmax(0, 1fr); } }
-.issue-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+@media (max-width: 799px) { .issues-doc-top { flex-wrap: wrap; } }
 /* The Done folder's check is a sign, not the fold chevron. */
 .folder-group .issue-done-mark svg { transform: none; }
 /* The Library: every vault file, grouped by what opens it. */
@@ -3245,3 +3235,60 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 #rich-editor .write-html { border-radius: 4px; box-shadow: 0 0 0 1px transparent; cursor: default; }
 #rich-editor .write-html:hover, #rich-editor .write-html.ProseMirror-selectednode { box-shadow: 0 0 0 1px var(--line-strong); }
 #rich-editor .write-html-block { display: block; margin: 8px 0; padding: 2px 4px; }
+
+/* Outline rows are slim cards: the project's tint and facet, the title with
+   its ID, then priority, labels, steps and links along the right. */
+.issues-doc-section .issues-doc-heading { font-size: 15px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+.issues-doc-list { gap: 8px; }
+.issue-line { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; width: 100%; padding: 12px 18px 12px 14px; border: 0; border-radius: 10px 0 10px 10px; text-align: left; color: var(--text);
+  background: color-mix(in srgb, var(--project) 5%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 26%, var(--line)), 0 1px 2px rgb(0 0 0 / .14);
+  transition: box-shadow .18s cubic-bezier(.16, 1, .3, 1); }
+.issue-line::before { content: ""; position: absolute; top: 0; right: 0; width: 12px; height: 12px; pointer-events: none; clip-path: polygon(0 0, 100% 0, 100% 100%);
+  background: linear-gradient(225deg, color-mix(in srgb, var(--project) 70%, white) 0%, color-mix(in srgb, var(--project) 80%, var(--cyan)) 45%, color-mix(in srgb, var(--project) 55%, transparent) 100%); }
+.issue-line:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 55%, var(--line)), 0 1px 2px rgb(0 0 0 / .14); }
+.issue-line.state-in-progress { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--line)), 0 1px 2px rgb(0 0 0 / .14); }
+.issue-line.state-done, .issue-line.state-cancelled { opacity: .72; }
+.issue-line-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.issue-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.issue-line-meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.issue-line-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 280px; }
+.issue-line-end { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 120px; }
+@media (max-width: 900px) { .issue-line { grid-template-columns: auto minmax(0, 1fr) auto; } .issue-line-tags { display: none; } }
+
+/* The overview of all projects. */
+.issues-overview { max-width: 1120px; margin: 0 auto; padding: 32px 32px 48px; box-sizing: border-box; }
+.issues-overview .issues-doc-top { margin-bottom: 20px; }
+.issues-overview-section { margin-top: 28px; }
+.issues-overview-section > .issues-column-heading { margin: 0 0 14px; }
+.issues-now-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.issues-project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.issue-project-card { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; border: 0; border-radius: 14px 0 14px 14px; text-align: left; color: var(--text);
+  background: color-mix(in srgb, var(--project) 6%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 30%, var(--line)), 0 1px 2px rgb(0 0 0 / .16), 0 12px 28px -18px rgb(0 0 0 / .6);
+  transition: box-shadow .18s cubic-bezier(.16, 1, .3, 1); }
+.issue-project-card::before { content: ""; position: absolute; top: 0; right: 0; width: 22px; height: 22px; pointer-events: none; clip-path: polygon(0 0, 100% 0, 100% 100%);
+  background: linear-gradient(225deg, color-mix(in srgb, var(--project) 70%, white) 0%, color-mix(in srgb, var(--project) 80%, var(--cyan)) 45%, color-mix(in srgb, var(--project) 55%, transparent) 100%); }
+.issue-project-card:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 60%, var(--line)), 0 1px 2px rgb(0 0 0 / .16), 0 12px 28px -18px rgb(0 0 0 / .6); }
+.issue-project-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 12px; }
+.issue-project-name { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 18px; font-weight: 700; }
+.issue-project-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue-project-name .issues-project-marker { width: 10px; height: 10px; }
+.issue-project-prefix { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); background: color-mix(in srgb, var(--text) 7%, transparent); }
+.issue-project-middle { display: flex; align-items: center; gap: 16px; }
+.issue-project-middle .issues-ring { width: 72px; height: 72px; }
+.issue-project-middle .issues-ring svg { width: 72px; height: 72px; }
+.issue-project-middle .issues-ring-label strong { font-size: 16px; }
+.issue-project-middle .issues-ring-label small { font-size: 10px; }
+.issue-state-bar { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.issue-state-track { display: flex; gap: 3px; height: 8px; }
+.issue-state-part { min-width: 6px; border-radius: 3px; background: var(--line-strong); }
+.issue-state-part.state-in-progress { background: var(--accent); }
+.issue-state-part.state-todo { background: color-mix(in srgb, var(--accent) 45%, var(--line-strong)); }
+.issue-state-part.state-done { background: color-mix(in srgb, var(--good) 70%, var(--line)); }
+.issue-state-words { font-size: 12px; color: var(--muted); }
+.issue-project-next { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--project) 18%, var(--line)); }
+.issue-project-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 13px; }
+.issue-project-line .issue-state { width: 38px; flex: none; }
+.issue-project-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue-project-middle .issues-ring-label small { display: none; }

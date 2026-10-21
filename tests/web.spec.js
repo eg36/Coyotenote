@@ -772,7 +772,7 @@ test("unsupported Markdown is kept in source, without normalization", async ({
   page,
 }) => {
   const body =
-    "---\ntitle: untouched\n---\n\nText with <u>raw HTML</u>.\n";
+    "---\ntitle: untouched\n---\n\nText with <video src=x></video> raw HTML.\n";
   const id = await openSeed(page, body);
   await mode(page, "Write");
   await expect(page.locator("#source-pane")).toBeVisible();
@@ -3410,20 +3410,23 @@ test("Issues maps each project as an outline with its Done-when steps", async ({
   await seed(page, "issues/L-5", "---\ntitle: Loose end\nstatus: todo\nproject: Later\n---\n");
   await openSeed(page, "Start.");
   await openIssues(page);
-  // The outline is the other view beside the default board.
-  await page.locator(".issues-board-head").getByRole("button", { name: "Outline" }).click();
   const tree = page.locator("#issues-tree");
   // Open issues sit under their project, Now before Next before Later; Done is folded.
   await expect(tree.locator(".folder-group")).toHaveText([/Board work\s*1/, /Space\s*2/, /Not in a folder\s*1/, /Done\s*1/]);
   await expect(tree.locator('.folder-group[data-folder="Space"] ~ .issue-tree-row').first()).toContainText("Now");
   await expect(tree.locator('[data-issue="issues/Space/T-1"]')).toHaveCount(0);
-  // All projects: what has attention everywhere, and an offer to file loose issues.
+  // All projects: what has attention now, a card per project, and an offer to file loose issues.
+  const overview = page.locator(".issues-overview");
+  await expect(overview.locator("h1")).toHaveText("All projects");
+  await expect(overview.locator(".issues-now-strip .issue-card")).toHaveCount(1);
+  await expect(overview.locator(".issue-project-card")).toHaveCount(2);
+  await expect(overview.locator('.issue-project-card[data-project="Space"] .issue-state-bar')).toHaveAttribute("aria-label", "1 Now · 1 Later · 1 Done");
+  await expect(overview.locator('.issue-project-card[data-project="Space"] .issue-project-prefix')).toHaveText("T");
+  await expect(overview.locator(".issues-banner")).toContainText("1 issue is not in a project folder yet");
+  // A project card opens the project; its outline is beside the default board.
+  await overview.locator('.issue-project-card[data-project="Space"]').click();
+  await page.locator(".issues-board-head").getByRole("button", { name: "Outline" }).click();
   const doc = page.locator(".issues-doc");
-  await expect(doc.locator("h1")).toHaveText("All projects");
-  await expect(doc.locator(".issues-doc-heading")).toHaveText([/Now\s*1/, /Next\s*2/, /Later\s*1/, /Done\s*1/]);
-  await expect(doc.locator(".issues-banner")).toContainText("1 issue is not in a project folder yet");
-  // A project's row opens its outline: steps ring, facts and facets.
-  await tree.locator('.folder-group[data-folder="Space"]').click();
   await expect(doc.locator("h1")).toHaveText("Space");
   await expect(doc.locator(".issues-doc-facts")).toContainText("2 open issues · 2 of 3 Done-when steps · prefix T · issues/Space/");
   await expect(doc.locator(".issues-ring")).toHaveAttribute("aria-label", "2 of 3 steps done");
@@ -3588,7 +3591,8 @@ test("the board moves issues between Now, Next, Later and Done by drag or by key
   await seed(page, "issues/Space/B-3", inFolder("Underway", "in-progress", "none", []));
   await openSeed(page, "Start.");
   await openIssues(page);
-  // The board is the default view.
+  // A project opens on its board.
+  await page.locator('#issues-tree .folder-group[data-folder="Space"]').click();
   await expect(page.getByRole("button", { name: "Show as a board" })).toHaveAttribute("aria-pressed", "true");
   const column = (name) => page.getByRole("list", { name: new RegExp("^" + name) });
   await expect(page.locator(".issues-column-heading")).toHaveText([/Now\s*1/, /Next\s*1/, /Later\s*1/, /Done\s*0/]);
@@ -3803,10 +3807,10 @@ test("Issues reads at AA in Light and Dark", async ({ page }) => {
     await page.locator('#issues-tree [data-issue="issues/C-1"]').click();
     await expect(page.getByRole("article", { name: "Issue C-1" })).toBeVisible();
     expect(await check("#issues-app"), name + " page").toEqual([]);
-    // The overview above was the default board; the outline reads too.
+    // The board of every issue reads too.
     await page.getByRole("button", { name: "Show as a board" }).click();
-    await expect(page.locator(".issues-doc")).toBeVisible();
-    expect(await check("#issues-app"), name + " outline").toEqual([]);
+    await expect(page.locator(".issues-board")).toBeVisible();
+    expect(await check("#issues-app"), name + " board").toEqual([]);
     await page.getByRole("button", { name: "Show as a board" }).click();
     await page.keyboard.press("Alt+p");
     await page.keyboard.press("1");

@@ -46,6 +46,11 @@ let view = allProjects;
 // The page shows as an outline, or as a board of state columns.
 const boardKey = "labradorite-issues-board";
 let board = storage.get(boardKey) !== "false";
+// All projects opens on an overview of the projects; its board of every
+// issue is a choice of its own.
+const allBoardKey = "labradorite-issues-all-board";
+let allBoard = storage.get(allBoardKey) === "true";
+const showsBoard = () => (view === allProjects ? allBoard : board);
 const root = () => $("issues-app");
 const searchBox = () => $("issues-search") as HTMLInputElement;
 const finished = (issue: Issue) => issue.status === "done" || issue.status === "cancelled";
@@ -191,27 +196,45 @@ function facets(issue: Issue) {
   wrap.append(element("small", "", `${done} of ${all.length}`));
   return wrap;
 }
-function meta(issue: Issue, withProject: boolean) {
-  const line = element("span", "issue-line-meta");
-  line.append(element("span", "", issue.key));
-  if (withProject && issue.project) line.append(element("span", "", issue.project));
-  if (issue.priority !== "none") line.append(element("span", "issue-priority-word priority-" + issue.priority, priorityName(issue.priority)));
-  for (const label of issue.labels) line.append(element("span", "issue-tag", "#" + label));
-  return line;
+// Cards and outline rows share their badge, label pills and link count.
+function priorityBadge(issue: Issue) {
+  return issue.priority === "none" ? null : element("span", "issue-badge priority-" + issue.priority, priorityName(issue.priority));
 }
+function labelPills(issue: Issue) {
+  return issue.labels.map((label) => {
+    const pill = element("span", "issue-pill");
+    const dot = element("span", "issue-pill-dot");
+    dot.style.background = colourOf(label);
+    pill.append(dot, label);
+    return pill;
+  });
+}
+function linkCount(issue: Issue) {
+  const notes = linkedNotes(issue).length;
+  if (!notes) return null;
+  const linked = element("span", "issue-card-links");
+  linked.innerHTML = icon("noteLink");
+  linked.append(String(notes));
+  linked.title = `${notes} linked ${notes === 1 ? "note" : "notes"}`;
+  return linked;
+}
+// An outline row is a slim card: the project's tint and facet, the title
+// with its ID, then priority, labels, steps and links along the right.
 function outlineRow(issue: Issue, withProject: boolean) {
-  const row = element("button", "issue-line");
+  const row = element("button", "issue-line state-" + issue.status);
   row.type = "button";
   row.dataset.issue = issue.file;
+  row.style.setProperty("--project", issue.project ? colourOf(issue.project) : "var(--accent)");
   const text = element("span", "issue-line-text");
-  text.append(element("span", "issue-line-title", issue.title), meta(issue, withProject));
-  const notes = linkedNotes(issue);
-  const links = element("span", "issue-line-links");
-  if (notes.length) {
-    links.append(element("span", "issue-line-link", (notes[0].split("/").pop() || notes[0])));
-    if (notes.length > 1) links.append(element("span", "issue-line-more", `+${notes.length - 1}`));
-  }
-  row.append(text, facets(issue), links);
+  const sub = element("span", "issue-line-meta", withProject && issue.project ? `${issue.key} · ${issue.project}` : issue.key);
+  text.append(element("span", "issue-line-title", issue.title), sub);
+  const tags = element("span", "issue-line-tags");
+  tags.append(...[priorityBadge(issue), ...labelPills(issue)].filter((node): node is HTMLElement => node !== null));
+  const end = element("span", "issue-line-end");
+  end.append(facets(issue));
+  const links = linkCount(issue);
+  if (links) end.append(links);
+  row.append(marker(issue.project), text, tags, end);
   row.onclick = () => openIssue(issue);
   return row;
 }
@@ -240,9 +263,10 @@ function section(status: Status, name: string, inState: Issue[], withProject: bo
 }
 function pageActions() {
   const actions = element("div", "issues-page-actions");
-  const toggle = element("button", "issue-page-action", board ? "Outline" : "Board");
+  const other = view === allProjects ? (allBoard ? "Projects" : "Board") : (board ? "Outline" : "Board");
+  const toggle = element("button", "issue-page-action", other);
   toggle.type = "button";
-  toggle.onclick = () => setBoard(!board);
+  toggle.onclick = () => setBoard(!showsBoard());
   const add = element("button", "primary-button", "New issue");
   add.type = "button";
   add.onclick = () => newIssue();
@@ -338,25 +362,14 @@ function card(issue: Issue) {
   open.type = "button";
   const top = element("span", "issue-card-top");
   top.append(marker(issue.project), element("span", "issue-card-key", view === allProjects && issue.project ? `${issue.project} · ${issue.key}` : issue.key));
-  if (issue.priority !== "none") top.append(element("span", "issue-badge priority-" + issue.priority, priorityName(issue.priority)));
+  const badge = priorityBadge(issue);
+  if (badge) top.append(badge);
   open.append(top, element("span", "issue-card-title", issue.title));
   if (steps(issue).length) open.append(facets(issue));
   const foot = element("span", "issue-card-foot");
-  for (const label of issue.labels) {
-    const pill = element("span", "issue-pill");
-    const dot = element("span", "issue-pill-dot");
-    dot.style.background = colourOf(label);
-    pill.append(dot, label);
-    foot.append(pill);
-  }
-  const notes = linkedNotes(issue).length;
-  if (notes) {
-    const linked = element("span", "issue-card-links");
-    linked.innerHTML = icon("noteLink");
-    linked.append(String(notes));
-    linked.title = `${notes} linked ${notes === 1 ? "note" : "notes"}`;
-    foot.append(linked);
-  }
+  foot.append(...labelPills(issue));
+  const links = linkCount(issue);
+  if (links) foot.append(links);
   if (foot.children.length) open.append(foot);
   open.onclick = () => openIssue(issue);
   open.onkeydown = (event) => {
@@ -430,8 +443,13 @@ function renderBoard() {
   $("issues-page").replaceChildren(page);
 }
 function setBoard(on: boolean) {
-  board = on;
-  storage.set(boardKey, String(on));
+  if (view === allProjects) {
+    allBoard = on;
+    storage.set(allBoardKey, String(on));
+  } else {
+    board = on;
+    storage.set(boardKey, String(on));
+  }
   $("issues-board-toggle").setAttribute("aria-pressed", String(on));
   closeIssuePage();
   render();
@@ -445,9 +463,79 @@ function showProject(name: string) {
 function render() {
   renderTree();
   if (shownIssue()) return;
+  $("issues-board-toggle").setAttribute("aria-pressed", String(showsBoard()));
   if (!issues.length && !projectList.length) renderIntro();
-  else if (board) renderBoard();
+  else if (showsBoard()) renderBoard();
+  else if (view === allProjects) renderOverview();
   else renderOutline();
+}
+
+// The overview of all projects: what has attention now across them, then a
+// card per project with its steps ring, its states and its next issues.
+function stateBar(inside: Issue[]) {
+  const bar = element("span", "issue-state-bar");
+  const counts = columns.map((status) => [status, inside.filter((issue) => issue.status === status).length] as const);
+  const total = counts.reduce((sum, [, n]) => sum + n, 0);
+  const track = element("span", "issue-state-track");
+  for (const [status, n] of counts) if (n) {
+    const part = element("span", "issue-state-part state-" + status);
+    part.style.flexGrow = String(n);
+    track.append(part);
+  }
+  const words = element("span", "issue-state-words", counts.filter(([, n]) => n).map(([status, n]) => `${n} ${statusName(status)}`).join(" · ") || "No issues yet");
+  bar.setAttribute("role", "img");
+  bar.setAttribute("aria-label", words.textContent || "");
+  if (total) bar.append(track);
+  bar.append(words);
+  return bar;
+}
+function projectCard(name: string) {
+  const inside = issues.filter((issue) => !issue.flat && issue.project === name && matches(issue));
+  const project = projectOf(name);
+  const card = element("button", "issue-project-card");
+  card.type = "button";
+  card.dataset.project = name;
+  card.style.setProperty("--project", colourOf(name));
+  const top = element("span", "issue-project-top");
+  const title = element("span", "issue-project-name");
+  title.append(marker(name), element("span", "", name));
+  top.append(title, element("span", "issue-project-prefix", project?.prefix || ""));
+  const all = inside.flatMap(steps);
+  const middle = element("span", "issue-project-middle");
+  middle.append(stepRing(all.filter((step) => step.done).length, all.length), stateBar(inside));
+  const next = element("span", "issue-project-next");
+  for (const issue of inside.filter((item) => !finished(item)).sort(byAttention).slice(0, 3)) {
+    const line = element("span", "issue-project-line");
+    line.append(element("span", "issue-state state-" + issue.status, statusName(issue.status)), element("span", "issue-project-line-title", issue.title));
+    next.append(line);
+  }
+  card.append(top, middle, next);
+  card.onclick = () => showProject(name);
+  return card;
+}
+function renderOverview() {
+  const page = element("div", "issues-overview");
+  const shown = issues.filter(matches);
+  page.append(...projectHeader(shown));
+  const now = shown.filter((issue) => issue.status === "in-progress").sort(byAttention);
+  if (now.length) {
+    const strip = element("section", "issues-overview-section");
+    const heading = element("h2", "issues-column-heading");
+    heading.append(element("span", "", "Now across projects"), element("span", "issues-doc-count", String(now.length)));
+    const cards = element("div", "issues-now-strip");
+    cards.setAttribute("role", "list");
+    cards.append(...now.map(card));
+    strip.append(heading, cards);
+    page.append(strip);
+  }
+  const grid = element("section", "issues-overview-section");
+  const heading = element("h2", "issues-column-heading");
+  heading.append(element("span", "", "Projects"), element("span", "issues-doc-count", String(projects().length)));
+  const cards = element("div", "issues-project-grid");
+  cards.append(...projects().map(projectCard));
+  grid.append(heading, cards);
+  page.append(grid);
+  $("issues-page").replaceChildren(page);
 }
 
 function openIssue(issue: Issue) {
@@ -640,7 +728,7 @@ function setup() {
         <button type="button" class="icon-button" id="issues-new" aria-label="New issue" title="New issue · Alt N"><span data-icon="plus">${icon("plus")}</span></button>
         <button type="button" class="icon-button" id="issues-search-button" aria-label="Find issues" title="Find issues" aria-expanded="false" aria-controls="issues-search-field"><span data-icon="search">${icon("search")}</span></button>
         <button type="button" class="icon-button" id="issues-overview" aria-label="All projects" title="All projects" aria-pressed="false"><span data-icon="list">${icon("list")}</span></button>
-        <button type="button" class="icon-button" id="issues-board-toggle" aria-label="Show as a board" title="Show as a board" aria-pressed="${board}"><span data-icon="columns">${icon("columns")}</span></button>
+        <button type="button" class="icon-button" id="issues-board-toggle" aria-label="Show as a board" title="Show as a board" aria-pressed="false"><span data-icon="columns">${icon("columns")}</span></button>
       </div>
       <div class="issues-search-field" id="issues-search-field" hidden>
         <input type="search" id="issues-search" placeholder="Find by title or ID" aria-label="Find issues by title or ID" autocomplete="off">
@@ -652,7 +740,7 @@ function setup() {
   $("issues-new").onclick = () => newIssue();
   $("issues-search-button").onclick = () => toggleSearch();
   $("issues-overview").onclick = () => showProject(allProjects);
-  $("issues-board-toggle").onclick = () => setBoard(!board);
+  $("issues-board-toggle").onclick = () => setBoard(!showsBoard());
   searchBox().oninput = () => {
     query = searchBox().value.trim();
     render();
