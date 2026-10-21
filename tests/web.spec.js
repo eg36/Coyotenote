@@ -2214,7 +2214,7 @@ test("note history shows earlier versions with changes marked and restores one",
   await expect(page.getByRole("dialog", { name: "Note history" })).toContainText("No earlier versions yet");
 });
 
-for (const key of ["Home", "End", "Shift+Home", "Wrapped Home"]) {
+for (const key of ["Home", "End", "Shift+Home", "Wrapped Home", "Shift+ArrowLeft", "Shift+ArrowRight", "Formula selection"]) {
   test(`native ${key} survives delayed selectionchange after Write gains focus`, async ({ page }) => {
     await page.addInitScript(() => {
       const add = document.addEventListener.bind(document);
@@ -2231,15 +2231,15 @@ for (const key of ["Home", "End", "Shift+Home", "Wrapped Home"]) {
       document.removeEventListener = (type, listener, options) => remove(type, type === "selectionchange" ? wrappers.get(listener) || listener : listener, options);
     });
     if (key === "Wrapped Home") await page.setViewportSize({ width: 390, height: 844 });
-    const text = key === "Wrapped Home" ? "A wrapped paragraph with enough words to occupy several visual lines while remaining a single Markdown paragraph. ".repeat(3).trim() : "A paragraph for caret movement.";
+    const text = key === "Formula selection" ? "Before E=mc^2" : key === "Wrapped Home" ? "A wrapped paragraph with enough words to occupy several visual lines while remaining a single Markdown paragraph. ".repeat(3).trim() : "A paragraph for caret movement.";
     const id = await openSeed(page, text);
     await mode(page, "Write");
     await page.locator('#view-switch [aria-selected="true"]').focus();
     await page.locator(".tiptap").evaluate((dom, { key, text }) => {
       const editor = dom.editor;
-      editor.commands.setTextSelection(key === "End" ? 1 : text.length + 1);
+      editor.commands.setTextSelection(key === "End" || key === "Shift+ArrowRight" ? 1 : text.length + 1);
       dom.addEventListener("keyup", event => {
-        if (!["Home", "End"].includes(event.key)) return;
+        if (!["Home", "End", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
         const selection = getSelection();
         window.__nativeCaret = {
           anchor: editor.view.posAtDOM(selection.anchorNode, selection.anchorOffset),
@@ -2248,7 +2248,9 @@ for (const key of ["Home", "End", "Shift+Home", "Wrapped Home"]) {
       }, true);
       editor.view.focus();
     }, { key, text });
-    await page.keyboard.press(key === "Wrapped Home" ? "Home" : key);
+    if (key === "Formula selection") {
+      for (let count = 0; count < 6; count++) await page.keyboard.press("Shift+ArrowLeft");
+    } else await page.keyboard.press(key === "Wrapped Home" ? "Home" : key);
     // ProseMirror's focus restoration runs after 20ms. Keep selectionchange
     // delayed for 100ms so this checks the race rather than eventual recovery.
     await page.waitForTimeout(50);
@@ -2265,11 +2267,20 @@ for (const key of ["Home", "End", "Shift+Home", "Wrapped Home"]) {
     if (key === "Home") expect(state.native).toEqual({ anchor: 1, head: 1 });
     if (key === "End") expect(state.native).toEqual({ anchor: text.length + 1, head: text.length + 1 });
     if (key === "Shift+Home") expect(state.native).toEqual({ anchor: text.length + 1, head: 1 });
+    if (key === "Shift+ArrowLeft") expect(state.native).toEqual({ anchor: text.length + 1, head: text.length });
+    if (key === "Shift+ArrowRight") expect(state.native).toEqual({ anchor: 1, head: 2 });
     if (key === "Wrapped Home") {
       expect(state.native.head).toBeGreaterThan(1);
       expect(state.native.head).toBeLessThan(text.length + 1);
     }
     expect(await diskBody(page, id)).toBe(text);
+    if (key === "Formula selection") {
+      expect(state.native).toEqual({ anchor: text.length + 1, head: text.length - 5 });
+      await page.locator("#format-panel").getByRole("button", { name: "Inline formula", exact: true }).click();
+      await expect(page.getByRole("textbox", { name: "Formula TeX", exact: true })).toHaveValue("E=mc^2");
+      await page.keyboard.press("Escape");
+      await expect.poll(() => diskBody(page, id)).toBe("Before $E=mc^2$");
+    }
   });
 }
 

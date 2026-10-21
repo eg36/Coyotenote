@@ -540,11 +540,12 @@ export function createRich(
       editorProps: {
         handleDOMEvents: {
           keyup(view, event) {
-            if (event.isComposing || !["Home", "End"].includes(event.key) || document.activeElement !== view.dom) return false;
+            const nativeMove = ["Home", "End"].includes(event.key) || (event.shiftKey && /^Arrow(?:Left|Right|Up|Down)$/.test(event.key));
+            if (event.isComposing || !nativeMove || document.activeElement !== view.dom) return false;
             const selection = window.getSelection();
             if (!selection?.anchorNode || !selection.focusNode ||
                 !view.dom.contains(selection.anchorNode) || !view.dom.contains(selection.focusNode)) return false;
-            // Home/End use the browser's visual line boundaries. Commit its
+            // Home/End and Shift-arrow use native text movement. Commit its
             // result on keyup: a delayed focus callback can otherwise restore
             // the old model selection before selectionchange has reached it.
             const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
