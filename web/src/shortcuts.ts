@@ -16,6 +16,7 @@ import { toggleOutline } from "./outline.js";
 import { dailyNote } from "./daily.js";
 import { settingsDialog } from "./settings.js";
 import { setSidebar } from "./sidebar.js";
+import { toggleSwitcher } from "./switcher.js";
 
 async function navigate(delta: number) {
   const notes = visibleNotes();
@@ -53,6 +54,7 @@ type Shortcut = [label: string, description: string, chords?: string[], run?: (c
 const shortcuts: Shortcut[] = [
   ["Alt N / Ctrl / ⌘ N", "Create note", ["alt+n", "mod+n"], newNoteDialog],
   ["Alt J", "Open today's note", ["alt+j"], () => dailyNote().catch(showError)],
+  ["Alt P", "Switch plugin, then 1–9 or ↑ ↓ and Enter", ["alt+p"], toggleSwitcher, { shell: true }],
   ["Alt K / Ctrl / ⌘ K", "Quick open a note, heading or command", ["alt+k", "mod+k"], () => paletteDialog(), { shell: true }],
   ["Alt S / Ctrl / ⌘ Shift E", "Search note contents", ["alt+s", "mod+shift+e"], findNotes],
   ["Ctrl / ⌘ S", "Save immediately", ["mod+s"], () => save().catch(showError)],

@@ -61,6 +61,7 @@ import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
 import { isActive, startPlugins } from "./plugins.js";
+import { setupSwitcher } from "./switcher.js";
 import { registerNotesPlugin } from "./notes-plugin.js";
 import { insertCallout, setupFormatting } from "./formatting.js";
 import { historyDialog } from "./history.js";
@@ -124,6 +125,7 @@ async function initialize() {
   setupRailOrder();
   setupFormatting();
   registerNotesPlugin();
+  setupSwitcher();
   const data = await refresh();
   if (!data) return;
   adoptFormerVault(data.formerVaultIds);
@@ -156,6 +158,7 @@ $("sidebar-search").onclick = () => {
 };
 $("fold-folders").onclick = toggleAllFolders;
 $("first-note").onclick = newNoteDialog;
+$("space-empty-settings").onclick = () => settingsDialog({ plugins: true });
 $("document-title").onclick = renameInPlace;
 // The logo goes to the start page without reloading.
 $("brand").onclick = (event) => {
@@ -389,7 +392,9 @@ document.addEventListener("keydown", (event) => {
     (event.ctrlKey || event.metaKey) && "mod",
     event.shiftKey && "shift",
     event.altKey && "alt",
-    event.key.toLowerCase(),
+    // With Alt held, macOS and some layouts type another character, so
+    // letters and digits are read from the key's position.
+    event.altKey && /^(Key[A-Z]|Digit\d)$/.test(event.code) ? event.code.slice(-1).toLowerCase() : event.key.toLowerCase(),
   ]
     .filter(Boolean)
     .join("+");

@@ -57,6 +57,7 @@ function isActive(id: string) {
 function show() {
   const app = document.getElementById("app")!;
   app.dataset.plugin = active?.id || "";
+  document.getElementById("space-empty")!.hidden = Boolean(active);
   for (const plugin of registered)
     for (const item of plugin.railItems()) item.hidden = plugin !== active;
   document.dispatchEvent(new Event("plugin-change"));

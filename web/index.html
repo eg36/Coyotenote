@@ -17,6 +17,8 @@
     <div class="app" id="app">
       <nav class="activity-rail" aria-label="Workspace">
         <a class="brand" id="brand" href="/" aria-label="Labradorite home" title="Labradorite home"><img class="brand-mark" src="/assets/logo.png" alt="" width="40" height="40" /></a>
+        <button id="plugin-switcher" class="icon-button plugin-switcher" type="button" aria-label="Switch plugin" aria-haspopup="dialog" aria-expanded="false" aria-controls="plugin-switcher-panel" aria-keyshortcuts="Alt+P"></button>
+        <span class="rail-divider" aria-hidden="true"></span>
 
         <button id="sidebar-toggle" class="icon-button" aria-label="Toggle notes" title="Notes · Show or hide the list" aria-controls="sidebar"><span data-icon="notebook"></span></button>
         <button id="sidebar-search" class="icon-button" aria-label="Search all notes" title="Search all notes · Ctrl/⌘ Shift E" aria-expanded="false" aria-controls="search"><span data-icon="search"></span></button>
@@ -28,6 +30,13 @@
         <button id="settings-button" class="icon-button" aria-label="Settings" title="Settings · Ctrl/⌘ Shift T" ><span data-icon="settings"></span></button>
         </div>
       </nav>
+      <div id="plugin-switcher-panel" class="plugin-switcher-panel" role="dialog" aria-label="Switch plugin" hidden></div>
+      <section id="space-empty" class="space-empty" hidden>
+        <span data-icon="apps"></span>
+        <h1>No plugins are enabled</h1>
+        <p>Labradorite Space hosts tools as plugins. Turn one on to start.</p>
+        <button id="space-empty-settings" class="primary-button" type="button">Open plugin settings</button>
+      </section>
       <aside class="sidebar" id="sidebar" aria-label="Notes">
         <section id="recent-panel" class="recent-panel" aria-label="Recently opened notes" hidden>
           <div class="panel-heading"><h2>Recently opened</h2><button class="text-button" id="show-all-notes">All notes</button></div>

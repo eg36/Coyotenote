@@ -13,7 +13,8 @@ import { closeModal, helpDialog, openModal } from "./dialogs.js";
 import { headings, jumpToHeading } from "./outline.js";
 import { findNotes } from "./shortcuts.js";
 import { settingsDialog } from "./settings.js";
-import { activePlugin, isActive, type PluginCommand } from "./plugins.js";
+import { activePlugin, isActive, plugins, switchPlugin, type PluginCommand } from "./plugins.js";
+import { openSwitcher } from "./switcher.js";
 
 // fuzzyMatch finds the letters of query in text, in order, and scores the
 // match: word starts and runs of consecutive letters count for more, and
@@ -71,9 +72,19 @@ const shellCommands: PluginCommand[] = [
   { label: "Keyboard shortcuts", keys: "F1", run: helpDialog },
 ];
 const mac = /Mac|iPhone|iPad/.test(navigator.platform);
-const commands = () => [...shellCommands, ...(activePlugin()?.commands() || [])].map((command) => ({
+// Switching plugins is the shell's too, one command per enabled plugin.
+const switchCommands = (): PluginCommand[] => [
+  { label: "Switch plugin…", keys: "Alt P", run: openSwitcher },
+  ...plugins().map((plugin, index) => ({
+    label: "Switch to " + plugin.name,
+    keys: index < 9 ? `Alt P ${index + 1}` : "",
+    run: () => switchPlugin(plugin.id),
+    when: () => activePlugin() !== plugin,
+  })),
+];
+const commands = () => [...shellCommands, ...switchCommands(), ...(activePlugin()?.commands() || [])].map((command) => ({
   ...command,
-  keys: mac ? (command.keys || "").replace(/^Ctrl /, "⌘") : command.keys || "",
+  keys: mac ? (command.keys || "").replace(/^Ctrl /, "⌘").replace(/^Alt /, "⌥ ") : command.keys || "",
   when: () => !command.when || command.when(),
 }));
 

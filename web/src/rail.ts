@@ -5,7 +5,8 @@ const key = "labradorite-rail-order";
 function setupRailOrder() {
   const rail = document.querySelector<HTMLElement>(".activity-rail")!;
   const groups = [rail, rail.querySelector<HTMLElement>(".rail-bottom")!];
-  const buttons = (group: HTMLElement) => [...group.querySelectorAll<HTMLButtonElement>(":scope > button")];
+  // The plugin switcher stays under the logo, like the logo itself.
+  const buttons = (group: HTMLElement) => [...group.querySelectorAll<HTMLButtonElement>(":scope > button:not(#plugin-switcher)")];
   let saved: unknown;
   try { saved = JSON.parse(storage.get(key) || "null"); } catch { /* Keep the default order. */ }
   groups.forEach((group, index) => {

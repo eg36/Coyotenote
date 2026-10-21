@@ -64,7 +64,7 @@ function registerNotesPlugin() {
     contract: 1,
     id: "notes",
     name: "Notes",
-    description: "Markdown notes with links, tags and search",
+    description: "Markdown notes, links and search",
     icon: "notebook",
     colour: "--plugin-notes",
     fileTypes: [".md"],

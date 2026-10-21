@@ -1,6 +1,8 @@
-// One settings window: the appearance and the writing preferences. Every change
-// applies and is kept at once, so the window only needs Done.
+// One settings window: the appearance, the writing preferences and the
+// plugins. Every change applies and is kept at once, so the window only needs
+// Done.
 import { showToast, storage } from "./core.js";
+import { enablePlugin, plugins } from "./plugins.js";
 import { appearanceChooser, closeModal, openModal } from "./dialogs.js";
 import { applyWritingSettings, lineWidths, textSizes, writingSettings } from "./preferences.js";
 
@@ -58,8 +60,46 @@ function writingFields() {
   return container;
 }
 
-// settingsDialog opens the window; appearance focuses its chosen card.
-function settingsDialog({ appearance = false } = {}) {
+// pluginFields offers a switch for each built-in plugin. The server keeps the
+// choice for the vault.
+function pluginFields() {
+  const container = document.createElement("div");
+  container.className = "settings-plugins";
+  for (const plugin of plugins({ all: true })) {
+    const toggle = document.createElement("label");
+    toggle.className = "setting-toggle";
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.role = "switch";
+    check.dataset.plugin = plugin.id;
+    check.checked = plugins().includes(plugin);
+    // The switch keeps focus while the server saves; it then shows what was
+    // kept, so a failed save flips it back.
+    check.onchange = () => {
+      check.setAttribute("aria-busy", "true");
+      enablePlugin(plugin.id, check.checked).finally(() => {
+        check.removeAttribute("aria-busy");
+        check.checked = plugins().includes(plugin);
+      });
+    };
+    const text = document.createElement("span");
+    text.textContent = plugin.name;
+    const hint = document.createElement("small");
+    hint.textContent = plugin.description;
+    text.append(hint);
+    toggle.append(check, text);
+    container.append(toggle);
+  }
+  const note = document.createElement("p");
+  note.className = "dialog-description";
+  note.textContent = "Every plugin is optional. Turning one off keeps its files in the vault.";
+  container.append(note);
+  return container;
+}
+
+// settingsDialog opens the window; appearance focuses its chosen card, and
+// plugins the first plugin switch.
+function settingsDialog({ appearance = false, plugins: showPlugins = false } = {}) {
   const container = document.createElement("div");
   container.className = "settings-layout";
   const done = document.createElement("button");
@@ -71,10 +111,16 @@ function settingsDialog({ appearance = false } = {}) {
   container.append(
     section("Appearance", look.element),
     section("Writing", writingFields()),
+    section("Plugins", pluginFields()),
     done,
   );
   openModal("Settings", container, null, {className:"settings", hideFooter:true});
   if (appearance) setTimeout(look.focus, 40);
+  else if (showPlugins) setTimeout(() => {
+    const first = container.querySelector<HTMLInputElement>(".settings-plugins input");
+    first?.scrollIntoView({ block: "nearest" });
+    first?.focus();
+  }, 40);
 }
 
 export { settingsDialog };

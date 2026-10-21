@@ -1596,7 +1596,7 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await expect(page.locator("#modal-title")).toHaveText(
     "Keyboard shortcuts",
   );
-  await expect(page.locator(".help-grid kbd")).toHaveCount(18);
+  await expect(page.locator(".help-grid kbd")).toHaveCount(19);
   await expect(page.locator(".help-grid")).toContainText("Cycle writing views");
   await page.keyboard.press("Escape");
   await page.locator("body").click({ position: { x: 5, y: 5 } });
@@ -2990,15 +2990,15 @@ test("rail icons can be dragged, reordered by keyboard and remembered after relo
   const notes = page.locator("#sidebar-toggle");
   await expect(commands).toHaveAttribute("draggable", "true");
   await commands.dragTo(notes, { targetPosition: { x: 20, y: 5 } });
-  await expect(page.locator(".activity-rail > button").first()).toHaveAttribute("id", "commands-button");
+  await expect(page.locator(".activity-rail > button:not(#plugin-switcher)").first()).toHaveAttribute("id", "commands-button");
   await page.reload();
-  await expect(page.locator(".activity-rail > button").first()).toHaveAttribute("id", "commands-button");
+  await expect(page.locator(".activity-rail > button:not(#plugin-switcher)").first()).toHaveAttribute("id", "commands-button");
   await commands.focus();
   await page.keyboard.press("Alt+Shift+ArrowDown");
-  await expect(page.locator(".activity-rail > button").nth(1)).toHaveAttribute("id", "commands-button");
+  await expect(page.locator(".activity-rail > button:not(#plugin-switcher)").nth(1)).toHaveAttribute("id", "commands-button");
   await expect(commands).toBeFocused();
   await page.reload();
-  await expect(page.locator(".activity-rail > button").nth(1)).toHaveAttribute("id", "commands-button");
+  await expect(page.locator(".activity-rail > button:not(#plugin-switcher)").nth(1)).toHaveAttribute("id", "commands-button");
   await commands.click();
   await expect(page.getByRole("combobox", { name: "Search notes, headings and commands" })).toBeVisible();
 });
@@ -3166,6 +3166,141 @@ test("the shell opens Notes as its plugin and remembers it for the vault", async
   await expect(page.locator(".palette-option").first()).toContainText("Rename or move note");
 });
 
+test("the plugin switcher lists Notes and works by mouse and keyboard", async ({ page }) => {
+  await openSeed(page, "Switching.");
+  const button = page.getByRole("button", { name: "Switch plugin" });
+  const panel = page.getByRole("dialog", { name: "Switch plugin" });
+  await expect(button).toHaveAttribute("aria-expanded", "false");
+  await button.click();
+  await expect(panel).toBeVisible();
+  await expect(button).toHaveAttribute("aria-expanded", "true");
+  const notes = panel.locator('.switcher-row[data-plugin="notes"]');
+  await expect(notes).toHaveAttribute("aria-current", "true");
+  await expect(notes).toBeFocused();
+  // The arrows reach "Add or manage plugins" and wrap around; Escape returns.
+  await page.keyboard.press("ArrowDown");
+  await expect(panel.getByRole("button", { name: "Add or manage plugins" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(notes).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(button).toBeFocused();
+  await expect(button).toHaveAttribute("aria-expanded", "false");
+  // Alt P opens it from anywhere; a number chooses and focuses the plugin.
+  await page.locator(".tiptap").click();
+  await page.keyboard.press("Alt+p");
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("1");
+  await expect(panel).toBeHidden();
+  await expect(page.locator(".tiptap")).toBeFocused();
+  // An outside click closes it.
+  await button.click();
+  await page.locator(".workspace").click({ position: { x: 400, y: 300 } });
+  await expect(panel).toBeHidden();
+  // The help lists the shortcut.
+  await page.keyboard.press("F1");
+  await expect(page.locator("#modal")).toContainText("Switch plugin");
+});
+
+test("the switcher and the title row menus never stay open together", async ({ page }) => {
+  await openSeed(page, "One popover.");
+  const panel = page.locator("#plugin-switcher-panel"), popup = page.locator("#menu-popup");
+  await page.locator("#plugin-switcher").click();
+  await expect(panel).toBeVisible();
+  await page.locator('[data-menu="file"]').click();
+  await expect(popup).toBeVisible();
+  await expect(panel).toBeHidden();
+  await page.locator("#plugin-switcher").click();
+  await expect(panel).toBeVisible();
+  await expect(popup).toBeHidden();
+});
+
+test("the palette switches plugins and the rail keeps the switcher in place", async ({ page }) => {
+  await openSeed(page, "Palette switch.");
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.type(">switch");
+  await expect(page.locator(".palette-option", { hasText: "Switch plugin…" })).toBeVisible();
+  // Notes is already active, so only the switcher command lists.
+  await expect(page.locator(".palette-option", { hasText: "Switch to Notes" })).toHaveCount(0);
+  await page.locator(".palette-option", { hasText: "Switch plugin…" }).click();
+  await expect(page.locator("#plugin-switcher-panel")).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Alt Shift arrows move rail shortcuts, never the switcher.
+  const switcher = page.locator("#plugin-switcher");
+  await expect(switcher).not.toHaveAttribute("draggable", "true");
+  await switcher.focus();
+  await page.keyboard.press("Alt+Shift+ArrowDown");
+  await expect(page.locator(".activity-rail > :nth-child(2)")).toHaveId("plugin-switcher");
+  await page.locator("#sidebar-search").focus();
+  await page.keyboard.press("Alt+Shift+ArrowUp");
+  await page.keyboard.press("Alt+Shift+ArrowUp");
+  await expect(page.locator(".activity-rail > :nth-child(2)")).toHaveId("plugin-switcher");
+  const saved = await page.evaluate(() => localStorage.getItem("labradorite-rail-order") || "");
+  expect(saved).toContain("sidebar-search");
+  expect(saved).not.toContain("plugin-switcher");
+});
+
+test("turning Notes off leaves the shell's empty state, and turning it on returns", async ({ page }) => {
+  await openSeed(page, "Optional.");
+  await page.locator("#plugin-switcher").click();
+  await page.getByRole("button", { name: "Add or manage plugins" }).click();
+  const notesSwitch = page.getByRole("switch", { name: /Notes/ });
+  await expect(notesSwitch).toBeFocused();
+  await expect(notesSwitch).toBeChecked();
+  await notesSwitch.uncheck();
+  await expect(notesSwitch).not.toBeChecked();
+  await page.keyboard.press("Escape");
+  const empty = page.locator("#space-empty");
+  await expect(empty).toBeVisible();
+  await expect(empty).toContainText("No plugins are enabled");
+  for (const hidden of [".topbar", "#sidebar", ".workspace", "#new-note", "#trash-button"])
+    await expect(page.locator(hidden)).toBeHidden();
+  // Notes' shortcuts rest; the shell's still work.
+  await page.keyboard.press("Alt+n");
+  await expect(page.locator("#modal")).not.toBeVisible();
+  await page.keyboard.press("Alt+p");
+  await expect(page.locator("#plugin-switcher-panel")).toContainText("No plugins are enabled.");
+  await page.keyboard.press("Escape");
+  // The choice is kept by the server, so it survives a reload.
+  await page.reload();
+  await expect(empty).toBeVisible();
+  await page.getByRole("button", { name: "Open plugin settings" }).click();
+  await page.getByRole("switch", { name: /Notes/ }).check();
+  await page.keyboard.press("Escape");
+  await expect(empty).toBeHidden();
+  await expect(page.locator(".topbar")).toBeVisible();
+  await expect(page.locator("#new-note")).toBeVisible();
+});
+
+test("the switcher fits a phone and reads at AA in Light and Dark", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openSeed(page, "Phone switcher.");
+  const group = await openAppearance(page);
+  for (const name of ["Light", "Dark"]) {
+    await group.getByRole("radio", { name }).click();
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)));
+    await page.locator("#plugin-switcher").click();
+    const box = await page.locator("#plugin-switcher-panel").boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    const worst = await page.evaluate(() => {
+      const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
+      const rgba = (color) => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data; return [r, g, b, a / 255]; };
+      const over = (top, base) => top.slice(0, 3).map((v, i) => v * top[3] + base[i] * (1 - top[3]));
+      const backdrop = (el) => { const layers = []; for (let n = el; n; n = n.parentElement) layers.push(rgba(getComputedStyle(n).backgroundColor)); return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]); };
+      const lum = (c) => c.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+      return Math.min(...[...document.querySelectorAll("#plugin-switcher-panel *")]
+        .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+        .map((el) => { const bg = backdrop(el); return ratio(over(rgba(getComputedStyle(el).color), bg), bg); }));
+    });
+    expect(worst, name).toBeGreaterThanOrEqual(4.5);
+    await page.keyboard.press("Escape");
+    if (name === "Light") await openAppearance(page);
+  }
+});
+
 test("Format panel and title row text reaches 4.5:1 as drawn in Light and Dark", async ({ page }) => {
   await openSeed(page, "Drawn contrast.");
   await expect(page.locator("#format-panel")).toBeVisible();
@@ -3174,7 +3309,7 @@ test("Format panel and title row text reaches 4.5:1 as drawn in Light and Dark",
     await group.getByRole("radio", { name }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", id);
     // Measure the settled colours, not a theme fade in progress.
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+    await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)));
     const failures = await page.evaluate(() => {
       // A canvas resolves any CSS colour syntax to sRGB bytes.
       const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
