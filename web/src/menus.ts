@@ -1,15 +1,18 @@
-// The menu row above the writing toolbar: File, Edit, View and Insert hold the
-// app's commands with their shortcuts, as a document editor's menus do.
+// The header's menus: File, Edit, View and Insert hold the app's commands
+// with their shortcuts, as a document editor's menus do, and the chevron by
+// the note title opens the note's own actions.
 import { $, showError, state } from "./core.js";
+import { icon } from "./icons.js";
 import { chooseImages } from "./attachments.js";
 import { historyDialog } from "./history.js";
-import { findInNote, save, setMode } from "./editor.js";
+import { exportNote, findInNote, save, setMode } from "./editor.js";
 import {
   deleteDialog,
   helpDialog,
   linkDialog,
   newNoteDialog,
   renameDialog,
+  renameInPlace,
   trashDialog,
 } from "./dialogs.js";
 import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
@@ -24,8 +27,9 @@ const note = () => Boolean(state.current) && !state.pendingDraft;
 const writing = () => note() && state.mode === "write";
 const rich = (name: string) => () => state.rich?.command(name);
 
-// Each item is [label, shortcut, action, when it is available]; "-" separates.
-type MenuEntry = "-" | [label: string, shortcut: string, run: () => unknown, when?: () => boolean];
+// Each item is [label, shortcut, action, when it is available, icon]; "-"
+// separates. Items with an icon show it before the label.
+type MenuEntry = "-" | [label: string, shortcut: string, run: () => unknown, when?: () => boolean, iconName?: string];
 const menus: Record<string, MenuEntry[]> = {
   file: [
     ["New note", "Ctrl N", newNoteDialog],
@@ -35,7 +39,7 @@ const menus: Record<string, MenuEntry[]> = {
     "-",
     ["Rename or move…", "Ctrl Shift R", renameDialog, note],
     ["Note history", "", () => historyDialog().catch(showError), note],
-    ["Download as Markdown", "", () => $("export-note").click(), note],
+    ["Download as Markdown", "", () => exportNote(), note],
     "-",
     ["Move to trash", "Ctrl Shift D", deleteDialog, note],
     ["Open the trash", "", () => trashDialog().catch(showError)],
@@ -72,12 +76,25 @@ const menus: Record<string, MenuEntry[]> = {
     ["Checklist", "", rich("taskList"), writing],
     ["Quote", "", rich("blockquote"), writing],
   ],
+  title: [
+    ["Rename", "", renameInPlace, note, "note"],
+    ["Move to folder…", "", renameDialog, note, "folder"],
+    ["Export as Markdown", "", () => exportNote(), note, "download"],
+    ["Version history", "", () => historyDialog().catch(showError), note, "history"],
+    "-",
+    ["All commands", "", () => paletteDialog(">"), undefined, "command"],
+    "-",
+    ["Move to trash", "", deleteDialog, note, "trash"],
+  ],
 };
+// The menu bar's own menus, in the order the arrow keys move between them.
+const barMenus = ["file", "edit", "view", "insert"];
+const trigger = (name: string) => document.querySelector<HTMLButtonElement>(`[data-menu="${name}"]`);
 
 let openName = "";
 function closeMenu(refocus = false) {
   if (!openName) return;
-  const button = $("menu-bar").querySelector<HTMLButtonElement>(`[data-menu="${openName}"]`);
+  const button = trigger(openName);
   button?.setAttribute("aria-expanded", "false");
   $("menu-popup").hidden = true;
   openName = "";
@@ -86,7 +103,7 @@ function closeMenu(refocus = false) {
 
 function openMenu(name: string, focusItem = 0) {
   closeMenu();
-  const button = $("menu-bar").querySelector<HTMLButtonElement>(`[data-menu="${name}"]`);
+  const button = trigger(name);
   if (!button || !menus[name]) return;
   const popup = $("menu-popup");
   popup.replaceChildren();
@@ -98,10 +115,12 @@ function openMenu(name: string, focusItem = 0) {
       popup.append(line);
       continue;
     }
-    const [label, shortcut, run, when] = entry;
+    const [label, shortcut, run, when, iconName] = entry;
     const item = document.createElement("button");
     item.type = "button";
     item.className = "menu-item";
+    if (iconName) item.insertAdjacentHTML("beforeend", icon(iconName));
+    item.classList.toggle("danger", iconName === "trash");
     item.setAttribute("role", "menuitem");
     item.disabled = when ? !when() : false;
     const text = document.createElement("span");
@@ -122,7 +141,8 @@ function openMenu(name: string, focusItem = 0) {
   popup.hidden = false;
   popup.style.top = Math.max(8, Math.min(box.bottom + 4, innerHeight - popup.offsetHeight - 8)) + "px";
   popup.style.left = Math.max(8, Math.min(box.left, innerWidth - popup.offsetWidth - 8)) + "px";
-  popup.setAttribute("aria-label", button.textContent || "");
+  popup.setAttribute("aria-label", button.getAttribute("aria-label") || button.textContent || "");
+  popup.dataset.openMenu = name;
   button.setAttribute("aria-expanded", "true");
   openName = name;
   const items = [...popup.querySelectorAll<HTMLButtonElement>(".menu-item:not(:disabled)")];
@@ -130,9 +150,7 @@ function openMenu(name: string, focusItem = 0) {
 }
 
 function setupMenus() {
-  const bar = $("menu-bar");
-  const names = Object.keys(menus);
-  for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-menu]")) {
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-menu]")) {
     button.onclick = () =>
       openName === button.dataset.menu ? closeMenu() : openMenu(button.dataset.menu || "");
     // Once a menu is open, pointing at another one switches to it.
@@ -154,8 +172,8 @@ function setupMenus() {
     else if (event.key === "Home") items[0]?.focus();
     else if (event.key === "End") items.at(-1)?.focus();
     else if (event.key === "Escape") closeMenu(true);
-    else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-      const next = names[(names.indexOf(openName) + (event.key === "ArrowRight" ? 1 : -1) + names.length) % names.length];
+    else if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && barMenus.includes(openName)) {
+      const next = barMenus[(barMenus.indexOf(openName) + (event.key === "ArrowRight" ? 1 : -1) + barMenus.length) % barMenus.length];
       openMenu(next);
     } else if (event.key === "Tab") closeMenu();
     else return;
@@ -163,7 +181,7 @@ function setupMenus() {
     event.stopPropagation();
   };
   document.addEventListener("mousedown", (event) => {
-    if (openName && !(event.target instanceof Element && event.target.closest("#menu-popup, #menu-bar"))) closeMenu();
+    if (openName && !(event.target instanceof Element && event.target.closest("#menu-popup, [data-menu]"))) closeMenu();
   });
   addEventListener("resize", () => closeMenu());
 }

@@ -162,7 +162,7 @@ async function renameCurrent(name: string) {
   });
   renameNavigation(previousId, result.note.id);
   await refresh();
-  await openNote(result.note.id, { skipSave: true, pushBack: false });
+  await openNote(result.note.id, { skipSave: true });
   if (result.warnings.length)
     showToast(result.warnings.join(" · "), { persistent: true });
 }
@@ -276,9 +276,9 @@ async function moveNote(id: string, folder: string) {
     renameNavigation(id, result.note.id);
     await refresh();
     const open = state.current && state.notes.find((n) => n.id === state.current?.id);
-    if (moving) await openNote(result.note.id, { skipSave: true, pushBack: false });
+    if (moving) await openNote(result.note.id, { skipSave: true });
     else if (open && open.revision !== state.current?.revision && !state.dirty)
-      await openNote(open.id, { skipSave: true, pushBack: false });
+      await openNote(open.id, { skipSave: true });
     showToast(
       [`Moved “${name.split("/").pop()}” to ${folder || "the top of the vault"}.`, ...result.warnings].join(" · "),
       { persistent: result.warnings.length > 0 },

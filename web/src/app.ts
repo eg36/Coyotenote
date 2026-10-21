@@ -27,20 +27,17 @@ import { browseFolder, filterTag, renderList, setupDragging, toggleAllFolders, v
 import {
   applyEditability,
   buildBlockMenu,
-  buildViewMenu,
+  buildViewSwitch,
   changed,
   chooseBlock,
   chooseView,
   closeBlockMenu,
-  closeViewMenu,
   editProperties,
   emptyNotebook,
   findInNote,
   highlightBlock,
-  highlightView,
   openBlockMenu,
   openNote,
-  openViewMenu,
   refresh,
   save,
   schedulePreview,
@@ -48,7 +45,6 @@ import {
 } from "./editor.js";
 import {
   backlinksDialog,
-  deleteDialog,
   followWiki,
   helpDialog,
   linkDialog,
@@ -61,8 +57,7 @@ import {
 import { compareDialog } from "./compare.js";
 import { findNotes, shortcutChords } from "./shortcuts.js";
 import { paletteDialog } from "./palette.js";
-import { setupOutline, toggleOutline } from "./outline.js";
-import { historyDialog } from "./history.js";
+import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
 import { setupFormatting } from "./formatting.js";
@@ -93,7 +88,7 @@ async function initialize() {
   applyWritingSettings();
   hydrateIcons();
   buildBlockMenu();
-  buildViewMenu();
+  buildViewSwitch();
   setupTooltips();
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
   for (const key of document.querySelectorAll<HTMLElement>("kbd[data-keys]"))
@@ -157,50 +152,12 @@ $("sidebar-search").onclick = () => {
 $("fold-folders").onclick = toggleAllFolders;
 $("first-note").onclick = newNoteDialog;
 $("document-title").onclick = renameInPlace;
-$("delete-note").onclick = deleteDialog;
-// The logo goes to the start page without reloading, so the back button
-// can return to the note that was open.
+// The logo goes to the start page without reloading.
 $("brand").onclick = (event) => {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
   if (!state.current) return;
-  const id = state.current.id;
-  save()
-    .then(() => {
-      state.back.push(id);
-      state.forward = [];
-      $("history-forward").disabled = true;
-      emptyNotebook();
-    })
-    .catch(showError);
-};
-$("history-back").onclick = async () => {
-  const id = state.back.at(-1);
-  if (!id) return;
-  const current = state.current?.id;
-  try {
-    await openNote(id, { pushBack: false });
-    if (state.current?.id !== id) return;
-    state.back.pop();
-    if (current) state.forward.push(current);
-    $("history-back").disabled = state.back.length === 0;
-    $("history-forward").disabled = state.forward.length === 0;
-  } catch (error) {
-    showError(error);
-  }
-};
-$("history-forward").onclick = async () => {
-  const id = state.forward.at(-1);
-  if (!id) return;
-  const current = state.current?.id;
-  try {
-    await openNote(id, { pushBack: false });
-    if (state.current?.id !== id) return;
-    state.forward.pop();
-    if (current) state.back.push(current);
-    $("history-back").disabled = state.back.length === 0;
-    $("history-forward").disabled = state.forward.length === 0;
-  } catch (error) { showError(error); }
+  save().then(emptyNotebook).catch(showError);
 };
 $("note-sort").onchange = () => {
   const sort = $("note-sort").value;
@@ -213,7 +170,7 @@ $("sidebar-toggle").onclick = () => {
   if ($("app").classList.contains("show-recents")) { showAllNotes(); setSidebar(true); }
   else toggleSidebar();
 };
-$("collapse-sidebar").onclick = () => { setSidebar(false); $("sidebar-toggle").focus(); };
+$("panel-toggle").onclick = () => toggleSidebar();
 $("recent-notes").onclick = showRecent;
 $("show-all-notes").onclick = () => { showAllNotes(); browseFolder(null); };
 $("clear-folder").onclick = () => browseFolder(null);
@@ -231,8 +188,6 @@ $("settings-button").onclick = () => settingsDialog();
 $("trash-button").onclick = () => trashDialog().catch(showError);
 $("hint-help").onclick = helpDialog;
 $("hint-open").onclick = () => paletteDialog();
-$("outline-button").onclick = () => toggleOutline();
-$("history-button").onclick = () => historyDialog().catch(showError);
 $("tags-button").onclick = () => {
   $("tag-filter").open = !$("tag-filter").open;
 };
@@ -291,43 +246,23 @@ $("block-menu").onkeydown = (event) => {
 };
 $("block-menu").addEventListener("focusout", () => closeBlockMenu());
 addEventListener("resize", () => closeBlockMenu());
-$("view-type").onmousedown = (e) => e.preventDefault();
-$("view-type").onclick = () =>
-  $("view-menu").hidden ? openViewMenu() : closeViewMenu(true);
-$("view-type").onkeydown = (event) => {
-  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+// The view switch is a tab list: a click or Enter picks a view, and the
+// arrow keys move between views and pick them, as tabs do.
+$("view-switch").onmousedown = (e) => e.preventDefault();
+$("view-switch").onclick = (event) => {
+  const tab = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-view]") : null;
+  if (tab) chooseView(tab.dataset.view || "write");
+};
+$("view-switch").onkeydown = (event) => {
+  const tabs = [...$("view-switch").querySelectorAll<HTMLElement>("[data-view]")];
+  const index = tabs.findIndex((tab) => tab === document.activeElement);
+  const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 };
+  if (!(event.key in moves)) return;
   event.preventDefault();
-  openViewMenu();
+  const next = tabs[(moves[event.key] + tabs.length) % tabs.length];
+  next?.focus();
+  chooseView(next?.dataset.view || "write");
 };
-$("view-menu").onmousedown = (e) => e.preventDefault();
-$("view-menu").onclick = (event) => {
-  const option = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-view]") : null;
-  if (option) chooseView(option.dataset.view || "write");
-};
-$("view-menu").onmousemove = (event) => {
-  const option = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-view]") : null;
-  if (option && !option.classList.contains("active"))
-    highlightView([...$("view-menu").children].indexOf(option));
-};
-$("view-menu").onkeydown = (event) => {
-  const options = [...$("view-menu").querySelectorAll<HTMLElement>("[data-view]")];
-  const index = options.findIndex((o) => o.classList.contains("active"));
-  const moves: Record<string, number> = {
-    ArrowDown: index + 1,
-    ArrowUp: index - 1,
-    Home: 0,
-    End: options.length - 1,
-  };
-  if (event.key in moves) highlightView(moves[event.key]);
-  else if (event.key === "Enter" || event.key === " ")
-    chooseView(options[index]?.dataset.view || "write");
-  else if (event.key === "Escape" || event.key === "Tab") closeViewMenu(true);
-  else return;
-  event.preventDefault();
-  event.stopPropagation();
-};
-$("view-menu").addEventListener("focusout", () => closeViewMenu());
-addEventListener("resize", () => closeViewMenu());
 $("toast-close").onclick = () => {
   $("toast").hidden = true;
 };
@@ -409,17 +344,6 @@ $("discard-draft").onclick = () => {
   $("draft-banner").hidden = true;
   applyEditability();
   setSaveState("saved", "All changes saved");
-};
-$("export-note").onclick = async () => {
-  try {
-    await save();
-    const a = document.createElement("a");
-    if (!state.current) return;
-    a.href = "/api/export?id=" + encodeURIComponent(state.current.id);
-    a.click();
-  } catch (error) {
-    showError(error);
-  }
 };
 $("backlinks-button").onclick = backlinksDialog;
 $("preview").addEventListener("click", (event) => {
@@ -506,11 +430,11 @@ async function syncFromDisk() {
     const summary = state.notes.find((note) => note.id === id);
     if (!summary) {
       const next = visibleNotes()[0] || state.notes[0];
-      if (next) await openNote(next.id, { skipSave: true, pushBack: false });
+      if (next) await openNote(next.id, { skipSave: true });
       else emptyNotebook();
       showToast(`“${id}” was moved or deleted outside Labradorite.`);
     } else if (summary.revision !== before) {
-      await openNote(id, { skipSave: true, pushBack: false });
+      await openNote(id, { skipSave: true });
       showToast("Reloaded changes made outside Labradorite.");
     }
   } catch {

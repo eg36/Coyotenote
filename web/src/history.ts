@@ -102,7 +102,7 @@ async function historyDialog() {
         name: version.id,
         revision: state.current.revision,
       });
-      await openNote(id, { skipSave: true, pushBack: false });
+      await openNote(id, { skipSave: true });
       showToast(`Restored the version from ${when(version.time)}. The text it replaced is in the history.`);
     },
     { submit: "Restore this version", className: "history" },

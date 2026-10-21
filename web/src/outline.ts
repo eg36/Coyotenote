@@ -105,8 +105,6 @@ function markCurrent() {
 // toggleOutline shows or hides the outline and remembers the choice.
 function toggleOutline(open = $("outline").hidden) {
   $("outline").hidden = !open;
-  $("outline-button").setAttribute("aria-pressed", String(open));
-  $("outline-button").setAttribute("aria-label", open ? "Hide outline" : "Show outline");
   if (window.innerWidth >= 800) storage.set("coyote-outline", open ? "open" : "");
   renderOutline(true);
 }

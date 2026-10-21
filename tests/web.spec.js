@@ -38,16 +38,14 @@ async function openAppearance(page) {
   await expect(group).toBeVisible();
   return group;
 }
-// mode picks a view from the header's selector, or from the View menu when
-// the header is hidden.
+// mode picks a view from the header's view switch, or from the View menu
+// when the switch is hidden.
 async function mode(page, name) {
   // A reload resolves before startup has opened the note and restored the
   // sidebar. Do not mistake its temporarily hidden selector for phone UI.
   await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", /true|false/);
-  if (await page.locator("#view-type").isVisible()) {
-    await page.locator("#view-type").click();
-    await page.getByRole("option", { name, exact: true }).click();
-    await expect(page.locator("#view-menu")).toBeHidden();
+  if (await page.locator("#view-switch").isVisible()) {
+    await page.getByRole("tablist", { name: "Editor view" }).getByRole("tab", { name, exact: true }).click();
   } else {
     await menu(page, "view");
     await page.getByRole("menuitem", { name, exact: true }).click();
@@ -68,6 +66,11 @@ async function caretAt(page, text, offset) {
 }
 async function menu(page, section) {
   await page.locator(`[data-menu="${section}"]`).click();
+}
+// noteAction runs an item from the menu beside the note title.
+async function noteAction(page, name) {
+  await page.locator("#title-menu-button").click();
+  await page.getByRole("menuitem", { name, exact: true }).click();
 }
 async function diskBody(page, id) {
   return (
@@ -146,22 +149,34 @@ test("document menus and note actions stay above the left formatting panel", asy
   await expect(page.getByRole("menuitem", { name: "Split", exact: true })).toBeDisabled();
   await page.keyboard.press("Escape");
   await expect(page.locator('[data-menu="view"]')).toBeFocused();
-  const homeMenus = await page.locator("#menu-bar").boundingBox();
-  const homeWorkspace = await page.locator(".workspace").boundingBox();
   await openSeed(page, "A document with menus.");
+  // The menus follow the notes panel toggle at the header's left end.
+  const header = await page.locator(".topbar").boundingBox();
+  const toggle = await page.locator("#panel-toggle").boundingBox();
   const menus = await page.locator("#menu-bar").boundingBox();
-  // At home and in a note, the menus centre over the content beside the open panels.
-  const homeContent = homeWorkspace;
-  expect(Math.abs(homeMenus.x + homeMenus.width / 2 - homeContent.x - homeContent.width / 2)).toBeLessThan(1);
-  const noteContent = await page.locator(".workspace").boundingBox();
-  expect(Math.abs(menus.x + menus.width / 2 - noteContent.x - noteContent.width / 2)).toBeLessThan(1);
-  const writing = await page.locator(".editor-bar").boundingBox();
+  expect(toggle.x - header.x).toBeLessThan(16);
+  expect(menus.x).toBeGreaterThan(toggle.x + toggle.width);
+  expect(menus.x - header.x).toBeLessThan(64);
   await expect(page.locator("#format-panel")).toBeVisible();
   const panel = await page.locator("#format-panel").boundingBox();
   const workspace = await page.locator(".workspace").boundingBox();
   expect(menus.y + menus.height).toBeLessThanOrEqual(panel.y);
-  expect(writing.y + writing.height).toBeLessThanOrEqual(panel.y);
   expect(panel.x + panel.width).toBeLessThanOrEqual(workspace.x);
+  // The note's own menu opens from the chevron beside its title.
+  const actions = page.locator("#title-menu-button");
+  await actions.click();
+  await expect(popup.getByRole("menuitem")).toHaveText(["Rename", "Move to folder…", "Export as Markdown", "Version history", "All commands", "Move to trash"]);
+  await expect(popup).toHaveAttribute("aria-label", "Note actions");
+  await expect(actions).toHaveAttribute("aria-expanded", "true");
+  // Arrow keys stay inside it; Escape and an outside click close it.
+  await page.keyboard.press("ArrowRight");
+  await expect(popup).toHaveAttribute("aria-label", "Note actions");
+  await page.keyboard.press("Escape");
+  await expect(actions).toBeFocused();
+  await expect(actions).toHaveAttribute("aria-expanded", "false");
+  await actions.click();
+  await page.mouse.click(700, 500);
+  await expect(popup).toBeHidden();
   await menu(page, "view");
   await page.getByRole("menuitem", { name: "Split", exact: true }).click();
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
@@ -446,9 +461,7 @@ test("create in folders, body search, rename, trash and undo", async ({
   await expect(page.locator("#document-title")).toHaveText(
     renamed.split("/").pop(),
   );
-  await page
-    .getByRole("button", { name: "Move note to trash", exact: true })
-    .click();
+  await noteAction(page, "Move to trash");
   await page
     .getByRole("button", { name: "Move to trash", exact: true })
     .click();
@@ -470,9 +483,7 @@ test("trashing a repeated name keeps both copies and undo restores the original 
   const id = `Repeated ${Date.now()}`;
   for (const body of ["older copy", "newer copy"]) {
     await openSeed(page, body, id);
-    await page
-      .getByRole("button", { name: "Move note to trash", exact: true })
-      .click();
+    await noteAction(page, "Move to trash");
     await page
       .getByRole("button", { name: "Move to trash", exact: true })
       .click();
@@ -884,7 +895,7 @@ test("mobile workflow, focus and no horizontal overflow", async ({ page }) => {
   ).toBeTruthy();
 });
 
-test("start-page navigation stays centered and its save indicator is hidden", async ({ page }) => {
+test("start-page menus hold the header's left end and its save indicator is hidden", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#app")).toHaveClass(/at-home/);
   await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
@@ -895,9 +906,8 @@ test("start-page navigation stays centered and its save indicator is hidden", as
       await expect(page.locator("#app-title")).toBeEmpty();
       const headerBox = await page.locator(".topbar").boundingBox();
       const menuBox = await page.locator("#menu-bar").boundingBox();
-      // Centred over the page content beside the notes panel, and in the header's height.
-      const content = await page.locator(".workspace").boundingBox();
-      expect(Math.abs(menuBox.x + menuBox.width / 2 - content.x - content.width / 2)).toBeLessThan(2);
+      // At the header's left end, after the notes panel toggle on desktop, and in its height.
+      expect(menuBox.x - headerBox.x).toBeLessThan(width < 800 ? 16 : 64);
       expect(Math.abs(menuBox.y + menuBox.height / 2 - headerBox.y - headerBox.height / 2)).toBeLessThan(2);
       for (const name of ["file", "edit", "view", "insert"])
         await expect(page.locator(`[data-menu="${name}"]`)).toBeInViewport();
@@ -907,9 +917,7 @@ test("start-page navigation stays centered and its save indicator is hidden", as
       expect(sidebarToggle.x).toBeLessThan(60);
       await expect(page.locator("#sidebar-toggle")).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-      if (width < 800 && await page.locator("#sidebar-toggle").getAttribute("aria-expanded") === "true")
-        await page.locator("#collapse-sidebar").click();
-      else await page.locator("#sidebar-toggle").click();
+      await page.locator("#sidebar-toggle").click();
     }
   }
 });
@@ -1140,7 +1148,7 @@ test("restoring an old draft cannot overwrite a newer disk revision", async ({
   expect(await diskBody(page, id)).toBe("Newer disk version.");
 });
 
-test("linked-note navigation has a back button and source history stays per note", async ({
+test("linked-note navigation opens the target and source history stays per note", async ({
   page,
 }) => {
   const suffix = Date.now(),
@@ -1150,11 +1158,7 @@ test("linked-note navigation has a back button and source history stays per note
   await mode(page, "Write");
   await page.locator(".wiki-link").click();
   await expect(page.locator("#document-title")).toHaveText(target);
-  await page.getByRole("button", { name: "Previous note", exact: true }).click();
-  await expect(page.locator("#document-title")).toHaveText(origin);
-  await page.getByRole("button", { name: "Next note", exact: true }).click();
-  await expect(page.locator("#document-title")).toHaveText(target);
-  await page.getByRole("button", { name: "Previous note", exact: true }).click();
+  await page.locator(`#note-list [data-note="${origin}"]`).click();
   await expect(page.locator("#document-title")).toHaveText(origin);
   await mode(page, "Markdown");
   await page.locator(".cm-content").fill("Edit in origin.");
@@ -1237,9 +1241,7 @@ test("trashing the only search match opens another note without errors", async (
   await openSeed(page, `Unique word zephyr${stamp}.`, lonely);
   await (await searchBox(page)).fill(`zephyr${stamp}`);
   await expect(page.locator("#note-list .note-row")).toHaveCount(1);
-  await page
-    .getByRole("button", { name: "Move note to trash", exact: true })
-    .click();
+  await noteAction(page, "Move to trash");
   await page.getByRole("button", { name: "Move to trash", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("Note moved to trash.");
   await expect(page.locator("#modal")).toBeHidden();
@@ -1269,9 +1271,7 @@ test("a trash in progress cannot be dismissed and undo keeps edits made meanwhil
   await page.route("**/api/note", (route) =>
     route.request().method() === "DELETE" ? holdAnswer(route) : route.fallback(),
   );
-  await page
-    .getByRole("button", { name: "Move note to trash", exact: true })
-    .click();
+  await noteAction(page, "Move to trash");
   await page.getByRole("button", { name: "Move to trash", exact: true }).click();
   await expect.poll(() => typeof release).toBe("function");
   await expect(page.locator("#modal-cancel")).toBeDisabled();
@@ -1443,17 +1443,17 @@ test("sidebar icons start notes, open today's note, search and fold every folder
   await expect(page.getByRole("button", { name: "Browse Journal", exact: true })).toBeVisible();
 });
 
-test("the logo goes to the start page and back returns to the note that was open", async ({ page }) => {
+test("the logo goes to the start page without reloading", async ({ page }) => {
   const id = await openSeed(page, "Come back to me.");
   await page.evaluate(() => { window.stayed = true; });
   await page.locator("#brand").click();
   await expect(page.locator("#empty-state")).toBeVisible();
   // No reload: the page and its back history are the same.
   expect(await page.evaluate(() => window.stayed)).toBe(true);
-  await expect(page.locator("#history-back")).toBeEnabled();
-  await page.locator("#history-back").click();
+  // Visited-note arrows are gone; the list and Recent notes reopen a note.
+  await expect(page.locator("#history-back, #history-forward")).toHaveCount(0);
+  await page.locator(`#note-list [data-note="${id}"]`).click();
   await expect(page.locator("#document-title")).toHaveText(id);
-  await expect(page.locator("#history-back")).toBeDisabled();
 });
 
 test("search scope switches to this note while keeping the same query", async ({ page }) => {
@@ -1484,11 +1484,11 @@ test("controls show themed tooltips with their shortcut instead of the browser's
   await expect(tip).toBeHidden();
   await expect(bold).toHaveAttribute("title", "Bold · Ctrl/⌘ B");
   // Keyboard focus shows it at once, and Escape hides it.
-  await page.locator("#history-button").focus();
+  await page.locator("#title-menu-button").focus();
   await page.keyboard.press("Tab");
-  await expect(page.locator("#export-note")).toBeFocused();
+  await expect(page.locator("#pin-note")).toBeFocused();
   await expect(tip).toBeVisible();
-  await expect(tip).toHaveText("Download Markdown");
+  await expect(tip).toHaveText("Pin note");
   await page.keyboard.press("Escape");
   await expect(tip).toBeHidden();
 });
@@ -1582,9 +1582,11 @@ test("keyboard shortcuts run their actions and match the help list", async ({
   await page.locator("body").click({ position: { x: 5, y: 5 } });
   await page.keyboard.press("Control+Shift+M");
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "source");
+  // Views cycle in the view switch's order.
+  await page.keyboard.press("Alt+m");
+  await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "split");
   await page.keyboard.press("Alt+m");
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "preview");
-  await page.keyboard.press("Alt+m");
   await page.keyboard.press("Alt+m");
   await expect(page.locator("#editor-area")).toHaveAttribute("data-mode", "write");
   await page.keyboard.press("Control+Shift+F");
@@ -1610,9 +1612,7 @@ test("the trash lists trashed notes and restores any of them", async ({
     second = `Trashed second ${stamp}`;
   for (const id of [first, second]) {
     await openSeed(page, `Body of ${id}.`, id);
-    await page
-      .getByRole("button", { name: "Move note to trash", exact: true })
-      .click();
+    await noteAction(page, "Move to trash");
     await page
       .getByRole("button", { name: "Move to trash", exact: true })
       .click();
@@ -1727,9 +1727,7 @@ test("typing in search after closing a dialog never lands in the note", async ({
   const kept = `Kept ${stamp}`;
   await seed(page, kept, "Kept body.");
   await openSeed(page, "Leaving.", `Leaving ${stamp}`);
-  await page
-    .getByRole("button", { name: "Move note to trash", exact: true })
-    .click();
+  await noteAction(page, "Move to trash");
   // Hold frames only during the dialog-close/note-open transition. Install
   // inside the click so Playwright's confirmation action remains actionable.
   await page.evaluate(() => {
@@ -1811,7 +1809,8 @@ test("the outline lists headings, jumps to them, follows scrolling and stays ope
   const id = await openSeed(page, body);
   const outline = page.getByRole("complementary", { name: "Outline" });
   await expect(outline).toBeHidden();
-  await page.getByRole("button", { name: "Show outline" }).click();
+  await menu(page, "view");
+  await page.getByRole("menuitem", { name: /^Outline/ }).click();
   await expect(outline.getByRole("button")).toHaveText(["Top", "Middle section", "Deep end"]);
   const depth = (name) =>
     outline.getByRole("button", { name }).evaluate((el) => getComputedStyle(el).paddingLeft);
@@ -2170,7 +2169,7 @@ test("note history shows earlier versions with changes marked and restores one",
   await mode(page, "Markdown");
   await page.locator(".cm-content").fill("Rewritten line.\nKept line.");
   await expect.poll(() => diskBody(page, id)).toBe("Rewritten line.\nKept line.");
-  await page.getByRole("button", { name: "Note history" }).click();
+  await noteAction(page, "Version history");
   const dialog = page.getByRole("dialog", { name: "Note history" });
   await expect(dialog.getByRole("option")).toHaveCount(1);
   const preview = dialog.getByLabel("Version text");
@@ -2191,7 +2190,7 @@ test("note history shows earlier versions with changes marked and restores one",
   await page.keyboard.press("Escape");
 
   await openSeed(page, "");
-  await page.getByRole("button", { name: "Note history" }).click();
+  await noteAction(page, "Version history");
   await expect(page.getByRole("dialog", { name: "Note history" })).toContainText("No earlier versions yet");
 });
 
@@ -2215,7 +2214,7 @@ for (const key of ["Home", "End", "Shift+Home", "Wrapped Home"]) {
     const text = key === "Wrapped Home" ? "A wrapped paragraph with enough words to occupy several visual lines while remaining a single Markdown paragraph. ".repeat(3).trim() : "A paragraph for caret movement.";
     const id = await openSeed(page, text);
     await mode(page, "Write");
-    await page.locator("#view-type").focus();
+    await page.locator('#view-switch [aria-selected="true"]').focus();
     await page.locator(".tiptap").evaluate((dom, { key, text }) => {
       const editor = dom.editor;
       editor.commands.setTextSelection(key === "End" ? 1 : text.length + 1);
@@ -2349,7 +2348,7 @@ test("the trash can be emptied for good after a confirmation", async ({ page }) 
   const stamp = Date.now();
   for (const id of [`Doomed one ${stamp}`, `Doomed two ${stamp}`]) {
     await openSeed(page, "Gone soon.", id);
-    await page.getByRole("button", { name: "Move note to trash", exact: true }).click();
+    await noteAction(page, "Move to trash");
     await page.getByRole("button", { name: "Move to trash", exact: true }).click();
     await expect(page.locator("#toast")).toContainText("Note moved to trash.");
   }
@@ -2865,58 +2864,59 @@ test("the rail marks the notes panel's view with a bar: notes, recent or search"
 });
 
 
-test("notes panel actions keep navigation on the left and dismissal at the right", async ({ page }) => {
+test("the title row's notes panel toggle shows, hides and remembers the panel", async ({ page }) => {
   await openSeed(page, "Panel controls.");
-  for (const width of [1440, 900, 390]) {
+  const toggle = page.locator("#panel-toggle");
+  const pane = () => toggle.locator(".icon-pane").evaluate((el) => getComputedStyle(el).fillOpacity);
+  for (const width of [1440, 900]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.evaluate(() => new Promise(requestAnimationFrame));
     if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
-    await expect(page.locator("#collapse-sidebar")).toBeVisible();
-    const [fold, previous, next, collapse, row] = await page.locator(".sidebar-actions").evaluate(el =>
-      [el.querySelector("#fold-folders"), el.querySelector("#history-back"), el.querySelector("#history-forward"), el.querySelector("#collapse-sidebar"), el]
-        .map(node => { const r = node.getBoundingClientRect(); return { x: r.x, width: r.width }; }));
-    expect(previous.x).toBeGreaterThanOrEqual(fold.x + fold.width);
-    expect(next.x).toBeGreaterThanOrEqual(previous.x + previous.width);
-    expect(collapse.x).toBeGreaterThanOrEqual(next.x + next.width);
-    expect(Math.abs(collapse.x + collapse.width - row.x - row.width)).toBeLessThan(2);
-    await page.locator("#collapse-sidebar").click();
+    // It opens the header row; the notes toolbar keeps only its own actions.
+    const header = await page.locator(".topbar").boundingBox(), box = await toggle.boundingBox();
+    expect(box.x - header.x).toBeLessThan(16);
+    await expect(page.locator(".sidebar-actions button")).toHaveCount(3);
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(await pane()).toBe("0.45");
+    await toggle.click();
+    await expect(page.locator("#sidebar")).toBeHidden();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
-    await expect(page.locator("#sidebar-toggle")).toBeFocused();
     await page.reload();
-    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "false");
-    await page.locator("#sidebar-toggle").click();
-    await expect(page.locator("#collapse-sidebar")).toBeInViewport();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+    await expect(page.locator("#sidebar")).toBeVisible();
+    await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", "true");
   }
+  // Phones open the notes drawer from the rail instead.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(toggle).toBeHidden();
 });
 
-test("editor toolbar stays anchored when note titles change", async ({ page }) => {
+test("title row controls stay in place when note titles change", async ({ page }) => {
   const suffix = Date.now();
   const short = `Hi ${suffix}`;
-  const long = `A much longer note title that must not move the writing controls ${suffix}`;
+  const long = `A much longer note title that must not move the writing controls or overlap them ${suffix}`;
   await seed(page, short, "Short title.");
   await seed(page, long, "Long title.");
-  for (const width of [1280, 1440, 1840, 1999]) {
+  const apart = (a, b) => a.x + a.width <= b.x + 1;
+  for (const width of [1100, 1280, 1440, 1999]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/?note=" + encodeURIComponent(short));
     await expect(page.locator("#document-title")).toHaveText(short);
     await expect(page.locator("#sidebar-toggle")).toHaveAttribute("aria-expanded", /true|false/);
     if (await page.locator("#sidebar-toggle").getAttribute("aria-expanded") !== "true") await page.locator("#sidebar-toggle").click();
-    const initial = await page.locator(".header-tools").boundingBox();
+    const menus = await page.locator("#menu-bar").boundingBox(), views = await page.locator("#view-switch").boundingBox();
+    // A short title sits centred in the header from 1280 px.
+    const header = await page.locator(".topbar").boundingBox(), head = await page.locator("#document-head").boundingBox();
+    if (width >= 1280) expect(Math.abs(head.x + head.width / 2 - header.x - header.width / 2)).toBeLessThan(2);
     await page.locator(`#note-list [data-note="${long}"]`).click();
     await expect(page.locator("#document-title")).toHaveText(long);
-    const changed = await page.locator(".header-tools").boundingBox();
-    expect(Math.abs(changed.x - initial.x)).toBeLessThan(1);
-    const title = await page.locator("#document-title").boundingBox();
-    const menuRow = await page.locator("#menu-bar").boundingBox();
-    expect(title.y + title.height).toBeLessThanOrEqual(menuRow.y);
-    const titleBlock = await page.locator(".title-block").boundingBox();
-    expect(Math.abs(titleBlock.x + titleBlock.width / 2 - menuRow.x - menuRow.width / 2)).toBeLessThan(2);
-    // The header widens when the notes panel folds away; the title stays over the menus.
-    await page.locator("#collapse-sidebar").click();
-    await expect(page.locator("#sidebar")).toBeHidden();
-    const collapsedTitle = await page.locator(".title-block").boundingBox();
-    const collapsedMenus = await page.locator("#menu-bar").boundingBox();
-    expect(Math.abs(collapsedTitle.x + collapsedTitle.width / 2 - collapsedMenus.x - collapsedMenus.width / 2)).toBeLessThan(2);
+    // A long one shrinks between the menus and the view switch without moving them.
+    expect((await page.locator("#menu-bar").boundingBox()).x).toBeCloseTo(menus.x, 0);
+    expect((await page.locator("#view-switch").boundingBox()).x).toBeCloseTo(views.x, 0);
+    const longHead = await page.locator("#document-head").boundingBox(), format = await page.locator("#format-toggle").boundingBox();
+    expect(apart(menus, longHead)).toBeTruthy();
+    expect(apart(longHead, format)).toBeTruthy();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
@@ -2947,31 +2947,19 @@ test("this-note search supports case, whole words, regex captures and invalid pa
 });
 
 
-test("note actions stay in the writing toolbar and the save dot precedes the note title", async ({ page }) => {
-  await openSeed(page, "Stable status.");
+test("the save dot precedes the note path and title on one line", async ({ page }) => {
+  await openSeed(page, "Stable status.", `Status/Dot ${Date.now()}`);
   for (const width of [1999, 1440, 1280, 900, 390, 320]) {
     await page.setViewportSize({width, height: 900});
-    expect(await page.locator(".editor-bar #document-actions").count()).toBe(1);
-    if (width <= 680) {
-      const menus = await page.locator('[data-menu="insert"]').boundingBox();
-      const actions = await page.locator("#document-actions").boundingBox();
-      expect(menus.y + menus.height).toBeLessThanOrEqual(actions.y);
-    }
     const status = await page.locator("#save-state").boundingBox();
-    const title = await page.locator("#document-title").boundingBox();
-    expect(title.x - status.x - status.width).toBeGreaterThanOrEqual(3);
+    const first = width >= 1100 ? "#note-folder" : "#document-title";
+    const next = await page.locator(first).boundingBox(), title = await page.locator("#document-title").boundingBox();
+    expect(next.x - status.x - status.width).toBeGreaterThanOrEqual(3);
     expect(Math.abs(status.y + status.height / 2 - title.y - title.height / 2)).toBeLessThan(2);
-    await expect(page.locator(".header-divider")).toHaveCount(0);
-    // A thin divider sits between Insert and the action icons while they share a row.
-    const divider = await page.locator(".editor-bar").evaluate((el) => {
-      const style = getComputedStyle(el, "::before");
-      return style.content !== "none" && style.display !== "none" ? parseFloat(style.width) : 0;
-    });
-    expect(divider).toBe(width <= 680 ? 0 : 1);
-    expect(await page.locator("#menu-bar #document-actions").count()).toBe(1);
-    const label = await page.locator("#save-label").boundingBox();
-    expect(label.width).toBeLessThanOrEqual(1);
-    expect(await page.locator(".topbar").evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe("1px");
+    // The dot speaks its state; the label stays for screen readers only.
+    await expect(page.locator("#save-state")).toHaveAttribute("role", "status");
+    expect((await page.locator("#save-label").boundingBox()).width).toBeLessThanOrEqual(1);
+    await expect(page.locator("#save-state")).toHaveAttribute("title", "All changes saved");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
 });
@@ -3001,18 +2989,15 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   const pane = page.locator("#format-panel"), toggle = page.locator("#format-toggle");
   await expect(pane).toBeVisible();
   expect(await page.locator(".activity-rail #format-toggle").count()).toBe(0);
-  // It sits in the header, right after the editor view selector.
-  const toggleBox = await toggle.boundingBox(), viewBox = await page.locator("#view-type").boundingBox();
-  expect(toggleBox.x).toBeGreaterThanOrEqual(viewBox.x + viewBox.width);
-  expect(toggleBox.x - viewBox.x - viewBox.width).toBeLessThan(10);
+  // It sits in the header's right end, just before the view switch.
+  const toggleBox = await toggle.boundingBox(), viewBox = await page.locator("#view-switch").boundingBox();
+  expect(viewBox.x).toBeGreaterThanOrEqual(toggleBox.x + toggleBox.width);
+  expect(viewBox.x - toggleBox.x - toggleBox.width).toBeLessThan(10);
   expect(Math.abs(toggleBox.y + toggleBox.height / 2 - viewBox.y - viewBox.height / 2)).toBeLessThan(2);
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  // Labelled like the view selector beside it, with the same height and border.
   await expect(toggle).toHaveText("Format");
   await expect(toggle).toHaveAttribute("aria-label", "Text formatting");
-  expect(toggleBox.height).toBe(viewBox.height);
-  expect(await toggle.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe(
-    await page.locator("#view-type").evaluate((el) => getComputedStyle(el).borderTopWidth));
+  expect(Math.abs(toggleBox.height - viewBox.height)).toBeLessThanOrEqual(2);
   const sidebar = await page.locator("#sidebar").boundingBox(), panel = await pane.boundingBox();
   expect(panel.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width);
   await page.getByRole("textbox", { name: "WYSIWYG editor" }).click();
@@ -3042,61 +3027,54 @@ test("left text formatting panel edits, remembers visibility and folds away on p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
-test("the editor view selector sits at the header's left end and views stay reachable", async ({ page }) => {
+test("the view switch holds the header's right end and views stay reachable", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#view-type")).toBeHidden();
+  const views = page.getByRole("tablist", { name: "Editor view" }), area = page.locator("#editor-area");
+  await expect(views).toBeHidden();
   await openSeed(page, "Switch views freely.");
-  const view = page.locator("#view-type"), area = page.locator("#editor-area");
-  expect(await page.locator(".topbar .view-tools #view-type").count()).toBe(1);
-  expect(await page.locator(".sidebar-actions #view-type").count()).toBe(0);
-  await expect(view).toHaveAttribute("aria-label", "Editor view: Write");
-  await expect(page.locator("#view-type-label")).toHaveText("Write");
+  await expect(views.getByRole("tab")).toHaveCount(4);
+  expect(await views.getByRole("tab").evaluateAll((tabs) => tabs.map((t) => t.getAttribute("aria-label")))).toEqual(["Write", "Markdown", "Split", "Preview"]);
+  await expect(views.getByRole("tab", { name: "Write" })).toHaveAttribute("aria-selected", "true");
   for (const width of [1999, 1440, 900, 700, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
-    const box = await view.boundingBox(), header = await page.locator(".topbar").boundingBox();
-    // Left end of the header and inside the bar.
-    expect(box.x - header.x).toBeLessThan(16);
+    const box = await views.boundingBox(), header = await page.locator(".topbar").boundingBox();
+    // Right end of the header and inside the bar.
+    expect(header.x + header.width - box.x - box.width).toBeLessThan(16);
     expect(box.y).toBeGreaterThanOrEqual(header.y);
     expect(box.y + box.height).toBeLessThanOrEqual(header.y + header.height);
-    // The centered title, menus and note actions never overlap it.
-    const format = await page.locator("#format-toggle").boundingBox();
-    for (const selector of ["#document-head", "#menu-bar [data-menu=file]", "#document-actions"]) {
+    // The title, menus and the formatting toggle never overlap it.
+    for (const selector of ["#document-head", "#menu-bar [data-menu=insert]", "#format-toggle"]) {
       const other = await page.locator(selector).boundingBox();
-      for (const [name, own] of [["view", box], ["format", format]]) {
-        const apart = other.x >= own.x + own.width || other.x + other.width <= own.x || other.y >= own.y + own.height || other.y + other.height <= own.y;
-        expect(apart, `${selector} and ${name} at ${width}px`).toBeTruthy();
-      }
+      const apart = other.x >= box.x + box.width || other.x + other.width <= box.x || other.y >= box.y + box.height || other.y + other.height <= box.y;
+      expect(apart, `${selector} at ${width}px`).toBeTruthy();
     }
-    expect(format.y + format.height).toBeLessThanOrEqual(header.y + header.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  await view.click();
-  await page.getByRole("option", { name: "Split", exact: true }).click();
+  await views.getByRole("tab", { name: "Split" }).click();
   await expect(area).toHaveAttribute("data-mode", "split");
-  await expect(view).toHaveAttribute("aria-label", "Editor view: Split");
-  await expect(page.locator("#view-type-label")).toHaveText("Split");
-  // It stays in the header with the notes panel collapsed; Alt+M and the View menu work too.
-  await page.locator("#collapse-sidebar").click();
-  await expect(view).toBeVisible();
+  await expect(views.getByRole("tab", { name: "Split" })).toHaveAttribute("aria-selected", "true");
+  await expect(views.locator('[tabindex="0"]')).toHaveCount(1);
+  // It stays with the notes panel collapsed; Alt+M and the View menu work too.
+  await page.locator("#panel-toggle").click();
+  await expect(views).toBeVisible();
   await menu(page, "view");
   await page.getByRole("menuitem", { name: "Preview", exact: true }).click();
   await expect(area).toHaveAttribute("data-mode", "preview");
   await page.locator("#preview").click();
   await page.keyboard.press("Alt+m");
-  await expect(area).toHaveAttribute("data-mode", "split");
-  await view.press("ArrowDown");
-  await expect(page.locator("#view-menu")).toBeFocused();
-  // Only the chevron turns while the menu is open; the view icon stays upright.
-  expect(await page.locator("#view-type-icon svg").evaluate((el) => getComputedStyle(el).transform)).toBe("none");
-  expect(await page.locator('#view-type [data-icon="chevronDown"] svg').evaluate((el) => getComputedStyle(el).transform)).not.toBe("none");
+  await expect(area).toHaveAttribute("data-mode", "write");
+  // Arrow keys move between views and choose them, as tabs do.
+  await views.getByRole("tab", { name: "Write" }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(views.getByRole("tab", { name: "Preview" })).toBeFocused();
+  await expect(area).toHaveAttribute("data-mode", "preview");
   await page.keyboard.press("Home");
-  await page.keyboard.press("Enter");
   await expect(area).toHaveAttribute("data-mode", "write");
   await expect(page.locator("#format-panel")).toBeVisible();
 });
 
-test("pin sits right after the note title and pins the open note", async ({ page }) => {
+test("pin follows the title and its menu and pins the open note", async ({ page }) => {
   const id = await openSeed(page, "Pin me from the title.", `Title pin ${Date.now()}`);
   const pin = page.locator("#pin-note");
   expect(await page.locator("#document-actions #pin-note").count()).toBe(0);
@@ -3104,9 +3082,12 @@ test("pin sits right after the note title and pins the open note", async ({ page
   for (const width of [1440, 900, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await expect(pin).toBeInViewport();
-    const title = await page.locator("#document-title").boundingBox(), box = await pin.boundingBox();
-    expect(box.x).toBeGreaterThanOrEqual(title.x + title.width - 1);
-    expect(box.x - title.x - title.width).toBeLessThan(8);
+    // Title, then the note's menu chevron, then the pin.
+    const title = await page.locator("#document-title").boundingBox(), actions = await page.locator("#title-menu-button").boundingBox(), box = await pin.boundingBox();
+    expect(actions.x).toBeGreaterThanOrEqual(title.x + title.width - 1);
+    expect(actions.x - title.x - title.width).toBeLessThan(8);
+    expect(box.x).toBeGreaterThanOrEqual(actions.x + actions.width - 1);
+    expect(box.x - actions.x - actions.width).toBeLessThan(8);
     expect(Math.abs(box.y + box.height / 2 - title.y - title.height / 2)).toBeLessThan(2);
   }
   await pin.click();
@@ -3634,7 +3615,7 @@ test("long note titles take one line in the notes list", async ({ page }) => {
 
 test("tooltips sit 7px below the control they describe", async ({ page }) => {
   await openSeed(page, "Tooltip spacing.");
-  const control = page.locator("#history-button");
+  const control = page.locator("#title-menu-button");
   await control.hover();
   const tip = page.getByRole("tooltip");
   await expect(tip).toBeVisible();

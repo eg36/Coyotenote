@@ -96,8 +96,6 @@ export interface AppState {
   sort: "modified" | "title-asc" | "title-desc";
   searchGeneration: number;
   trash: { id: string; trashId: string }[];
-  back: string[];
-  forward: string[];
   pendingDraft: Draft | null;
   block: string;
   edits: number;

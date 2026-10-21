@@ -144,7 +144,7 @@ async function refresh({ query = state.search } = {}) {
 }
 async function openNote(
   id: string,
-  { skipSave = false, pushBack = true, heading = "", reveal = true } = {},
+  { skipSave = false, heading = "", reveal = true } = {},
 ) {
   const generation = ++state.openGeneration;
   if (!skipSave) await save();
@@ -158,13 +158,7 @@ async function openNote(
     await save();
     if (generation !== state.openGeneration || state.current?.id === id) return;
   }
-  if (pushBack && state.current?.id !== id) {
-    if (state.current?.id) state.back.push(state.current.id);
-    state.forward = [];
-  }
   if (reveal) revealNote(note.id);
-  $("history-back").disabled = state.back.length === 0;
-  $("history-forward").disabled = state.forward.length === 0;
   clearTimeout(state.saveTimer);
   state.current = note;
   rememberNote(note.id);
@@ -180,14 +174,13 @@ async function openNote(
   $("document-title").textContent = note.title.split("/").pop() || note.title;
   $("document-title").title = note.id;
   $("document-head").hidden = false;
-  $("document-actions").hidden = false;
   $("find-replace").disabled = false;
   $("app").classList.remove("at-home");
   $("editor-frame").hidden = false;
   $("editor-area").hidden = false;
   $("empty-state").hidden = true;
   $("note-stats").hidden = false;
-  $("view-type").hidden = false;
+  $("view-switch").hidden = false;
   $("app-title").hidden = true;
   if (state.pendingDraft) setSaveState("dirty", "Unsaved draft found");
   else setSaveState("saved", "All changes saved");
@@ -217,16 +210,14 @@ function emptyNotebook() {
     : "Capture a thought. Connect an idea. Make something worth keeping.";
   $("first-note-label").textContent = hasNotes ? "New note" : "Create your first note";
   $("note-stats").hidden = true;
-  $("view-type").hidden = true;
+  $("view-switch").hidden = true;
   $("app-title").hidden = false;
   state.current = null;
   renderNavigation();
   state.body = "";
   state.savedBody = "";
   state.dirty = false;
-  $("history-back").disabled = state.back.length === 0;
   $("document-head").hidden = true;
-  $("document-actions").hidden = true;
   $("find-replace").disabled = true;
   $("app").classList.add("at-home");
   $("editor-frame").hidden = true;
@@ -318,13 +309,10 @@ async function switchMode(mode: AppState["mode"], generation: number, { focus = 
   $("preview-pane").hidden = !["preview", "split"].includes(mode);
   $("editor-toolbar").hidden = mode !== "write";
   closeBlockMenu();
-  const view = views.find(([value]) => value === mode);
-  $("view-type-icon").innerHTML = icon(view?.[2] || "pen");
-  $("view-type-label").textContent = view?.[1] || "Write";
-  $("view-type").setAttribute("aria-label", `Editor view: ${view?.[1] || "Write"}`);
-  $("view-type").title = `Editor view: ${view?.[1] || "Write"} · Alt M`;
-  for (const option of $("view-menu").querySelectorAll<HTMLElement>("[data-view]"))
-    option.setAttribute("aria-selected", String(option.dataset.view === mode));
+  for (const tab of $("view-switch").querySelectorAll<HTMLElement>("[data-view]")) {
+    tab.setAttribute("aria-selected", String(tab.dataset.view === mode));
+    tab.tabIndex = tab.dataset.view === mode ? 0 : -1;
+  }
   applyEditability();
   state.source?.refresh();
   if (mode === "preview" || mode === "split") schedulePreview(true);
@@ -518,48 +506,35 @@ function chooseBlock(value: string) {
   closeBlockMenu();
   state.rich?.command("block", value);
 }
-// The editor view is a dropdown like the text style, to save toolbar room.
+// The editor view is a segmented switch in the header's right end, in the
+// order the views widen: writing, its Markdown, both side by side, the page.
 const views: [AppState["mode"], string, string][] = [
   ["write", "Write", "pen"],
   ["source", "Markdown", "code"],
-  ["preview", "Preview", "eye"],
   ["split", "Split", "columns"],
+  ["preview", "Preview", "eye"],
 ];
-function buildViewMenu() {
-  $("view-menu").innerHTML = views
+function buildViewSwitch() {
+  $("view-switch").innerHTML = views
     .map(
       ([value, label, iconName]) =>
-        `<div class="block-option view-option" role="option" id="view-option-${value}" data-view="${value}" aria-selected="${value === state.mode}">${icon("check")}<span class="view-sample">${icon(iconName)}${label}</span></div>`,
+        `<button type="button" role="tab" id="view-tab-${value}" data-view="${value}" aria-label="${label}" title="${label} · Alt M" aria-selected="${value === state.mode}" tabindex="${value === state.mode ? 0 : -1}">${icon(iconName)}</button>`,
     )
     .join("");
 }
-function openViewMenu() {
-  const menu = $("view-menu"),
-    trigger = $("view-type");
-  if (trigger.disabled) return;
-  menu.hidden = false;
-  trigger.setAttribute("aria-expanded", "true");
-  const box = trigger.getBoundingClientRect();
-  menu.style.top = box.bottom + 4 + "px";
-  menu.style.left =
-    Math.max(8, Math.min(box.left, innerWidth - menu.offsetWidth - 8)) + "px";
-  highlightView(views.findIndex(([value]) => value === state.mode));
-  menu.focus({ preventScroll: true });
-}
-function closeViewMenu(refocus = false) {
-  if ($("view-menu").hidden) return;
-  $("view-menu").hidden = true;
-  $("view-type").setAttribute("aria-expanded", "false");
-  if (refocus) $("view-type").focus();
-}
-function highlightView(index: number) {
-  const options = [...$("view-menu").children];
-  index = (index + options.length) % options.length;
-  options.forEach((option, i) => option.classList.toggle("active", i === index));
-  $("view-menu").setAttribute("aria-activedescendant", options[index].id);
+// exportNote saves the note, then downloads its Markdown.
+async function exportNote() {
+  try {
+    await save();
+    if (!state.current) return;
+    const a = document.createElement("a");
+    a.href = "/api/export?id=" + encodeURIComponent(state.current.id);
+    a.click();
+  } catch (error) {
+    showError(error);
+  }
 }
 function chooseView(value: string) {
-  closeViewMenu();
   const view = views.find(([mode]) => mode === value);
   if (view) setMode(view[0]).catch(showError);
 }
@@ -586,22 +561,20 @@ function scrollToHeading(heading: string) {
 export {
   applyEditability,
   buildBlockMenu,
-  buildViewMenu,
+  buildViewSwitch,
+  exportNote,
   changed,
   chooseBlock,
   chooseView,
   closeBlockMenu,
-  closeViewMenu,
   createNote,
   editProperties,
   emptyNotebook,
   findInNote,
   focusEditor,
   highlightBlock,
-  highlightView,
   openBlockMenu,
   openNote,
-  openViewMenu,
   refresh,
   save,
   schedulePreview,

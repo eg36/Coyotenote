@@ -29,67 +29,25 @@
         </div>
       </nav>
       <header class="topbar">
-        <div class="view-tools">
-          <button id="view-type" class="view-type" type="button" title="Editor view: Write · Alt M" aria-label="Editor view: Write" aria-haspopup="listbox" aria-controls="view-menu" aria-expanded="false" hidden><span id="view-type-icon" data-icon="pen"></span><span id="view-type-label" class="view-tool-label">Write</span><span data-icon="chevronDown"></span></button>
-          <button id="format-toggle" class="view-type" type="button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span><span class="view-tool-label">Format</span></button>
+        <div class="title-left">
+          <button id="panel-toggle" class="icon-button" type="button" aria-label="Notes panel" title="Notes panel · Show or hide" aria-controls="sidebar" aria-expanded="true"><span data-icon="sidebar"></span></button>
+          <span class="title-divider" aria-hidden="true"></span>
+          <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button></nav>
         </div>
         <div class="title-block">
-          <div class="title-row">
-            <span class="app-title" id="app-title"></span>
-          <span class="save-state" id="save-state" role="status"
-            ><span class="save-dot"></span
-            ><span id="save-label">Ready when you are</span></span
-          >
-            <div class="note-heading" id="document-head" hidden>
-              <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
-              ><button id="document-title" class="document-title" title="Rename note" aria-description="Click to rename this note">
-                Untitled
-              </button><button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
-            </div>
+          <span class="app-title" id="app-title"></span>
+          <div class="note-heading" id="document-head" hidden>
+            <span class="save-state" id="save-state" role="status"><span class="save-dot"></span><span id="save-label">Ready when you are</span></span>
+            <nav class="note-folder" id="note-folder" aria-label="Folder breadcrumbs"></nav
+            ><button id="document-title" class="document-title" title="Rename note" aria-description="Click to rename this note">Untitled</button
+            ><button id="title-menu-button" class="icon-button title-menu-button" type="button" data-menu="title" aria-haspopup="menu" aria-expanded="false" aria-label="Note actions" title="Note actions"><span data-icon="chevronDown"></span></button
+            ><button id="pin-note" class="icon-button" title="Pin note" aria-label="Pin note" aria-pressed="false"><span data-icon="pin"></span></button>
           </div>
-
         </div>
-        <div class="header-tools">
-        <nav class="menu-bar" id="menu-bar" aria-label="Document menus"><button type="button" data-menu="file" aria-haspopup="menu" aria-expanded="false">File</button><button type="button" data-menu="edit" aria-haspopup="menu" aria-expanded="false">Edit</button><button type="button" data-menu="view" aria-haspopup="menu" aria-expanded="false">View</button><button type="button" data-menu="insert" aria-haspopup="menu" aria-expanded="false">Insert</button>        <div class="editor-bar">
-
-          <div class="document-actions" id="document-actions" hidden>
-
-            <button
-              id="outline-button"
-              class="icon-button"
-              title="Outline · Alt O"
-              aria-label="Show outline"
-              aria-pressed="false"
-              aria-controls="outline"
-            >
-              <span data-icon="outline"></span></button
-            ><button
-              id="history-button"
-              class="icon-button"
-              title="Note history"
-              aria-label="Note history"
-            >
-              <span data-icon="history"></span></button
-            ><button
-              id="export-note"
-              class="icon-button"
-              title="Download Markdown"
-              aria-label="Download Markdown"
-            >
-              <span data-icon="download"></span></button
-            ><button
-              id="delete-note"
-              class="icon-button danger-hover"
-              title="Move note to trash"
-              aria-label="Move note to trash"
-            >
-              <span data-icon="trash"></span>
-            </button>
-          </div>
-        </div></nav>
+        <div class="title-right">
+          <button id="format-toggle" class="view-type" type="button" title="Text formatting" aria-label="Text formatting" aria-controls="format-panel" aria-expanded="false" hidden><span data-icon="textStyle"></span><span class="view-tool-label">Format</span></button>
+          <div class="view-switch" id="view-switch" role="tablist" aria-label="Editor view" hidden></div>
         </div>
-
-
       </header>
       <aside class="sidebar" id="sidebar" aria-label="Notes">
         <section id="recent-panel" class="recent-panel" aria-label="Recently opened notes" hidden>
@@ -100,9 +58,6 @@
         <button id="today-note" class="icon-button" aria-label="Today's note" title="Today's note · Alt J" ><span data-icon="calendar"></span></button>
         <button id="tags-button" class="icon-button" aria-label="All tags" title="All tags" aria-expanded="false" aria-controls="tag-filter"><span data-icon="hash"></span></button>
         <button id="fold-folders" class="icon-button" aria-label="Collapse all folders" title="Collapse all folders" ><span data-icon="collapse"></span></button>
-        <button id="history-back" class="icon-button" title="Previous note" aria-label="Previous note" disabled><span data-icon="back"></span></button>
-        <button id="history-forward" class="icon-button" title="Next note" aria-label="Next note" disabled><span data-icon="forward"></span></button>
-        <button id="collapse-sidebar" class="icon-button" aria-label="Collapse notes panel" title="Collapse notes panel" aria-controls="sidebar"><span data-icon="sidebar"></span></button>
         </div>
         <div class="search-scopes" role="group" aria-label="Search scope">
           <button id="search-all" aria-pressed="true">All notes</button>
@@ -388,14 +343,6 @@
       </form>
     </dialog>
     <div id="menu-popup" class="menu-popup" role="menu" tabindex="-1" hidden></div>
-    <div
-      id="view-menu"
-      class="block-menu view-menu"
-      role="listbox"
-      aria-label="Editor view"
-      tabindex="-1"
-      hidden
-    ></div>
     <div
       id="block-menu"
       class="block-menu"

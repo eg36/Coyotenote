@@ -28,8 +28,6 @@ function renameNavigation(before: string, after: string) {
     url.searchParams.set("note", after);
     history.replaceState(null, "", url);
   }
-  state.back = state.back.map(id => id === before ? after : id);
-  state.forward = state.forward.map(id => id === before ? after : id);
   for (const kind of ["pins", "recent"] as const)
     keep(kind, [...new Set(ids(kind).map((id) => id === before ? after : id))]);
 }

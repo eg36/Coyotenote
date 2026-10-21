@@ -10,6 +10,7 @@ function setSidebar(open: boolean, persist = true, dismissSearch = true) {
   $("app").classList.toggle("sidebar-hidden", !mobile.matches && !open);
   if (open) $("app").classList.remove("focus-mode");
   $("sidebar-toggle").setAttribute("aria-expanded", String(open));
+  $("panel-toggle").setAttribute("aria-expanded", String(open));
   // The phone drawer covers the note: what is beneath it cannot be reached
   // by keyboard or pointer, and closing it returns focus to its button.
   const covering = mobile.matches && open;

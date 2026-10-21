@@ -582,12 +582,7 @@ input[type="search"]::-webkit-search-cancel-button {
   flex-direction: column;
   margin-left: 8px;
 }
-.title-row {
-  display: flex;
-  align-items: center;
-  min-height: 28px;
-  min-width: 0;
-}
+
 .app-title {
   font-size: 16px;
   font-weight: 600;
@@ -761,49 +756,11 @@ input[type="search"]::-webkit-search-cancel-button {
   background: var(--line);
   margin: 0 4px;
 }
-.document-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
+
 .danger-hover:hover {
   color: var(--danger);
 }
-/* The editor controls sit in the header row, so writing starts right
-   below it. They take the room left between the menus and search, and
-   the formatting buttons scroll sideways when it is tight. */
-.editor-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1 1 0;
-  min-width: 0;
-  padding-left: 10px;
-}
-/* Showing the notes and going back sit beside the note's title. */
-.nav-buttons {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-  margin-left: 12px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-}
-.nav-buttons .icon-button {
-  color: var(--text);
-}
-.nav-buttons .icon-button + .icon-button {
-  border-left: 1px solid var(--line);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-.nav-buttons .icon-button:disabled {
-  color: var(--muted);
-  opacity: 0.45;
-}
+
 #sidebar-toggle {
   margin-right: 6px;
   border: 1px solid var(--line);
@@ -812,50 +769,13 @@ input[type="search"]::-webkit-search-cancel-button {
 #sidebar-toggle:hover {
   background: var(--hover);
 }
-/* The start page has no note to edit, so the writing tools leave. */
-.app.at-home .header-tools,
-.app.at-home .editor-bar {
-  display: none;
-}
+
 .app.at-home .save-state {
   margin-left: auto;
 }
-/* Wide headers group the tools in one rounded pill, as in Google Docs,
-   centered between the title and the note actions; from 1840 px it is
-   centered over the writing area, wherever the sidebar leaves it.
-   Narrower layouts ignore the group. */
-.header-tools {
-  display: flex;
-  align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: 0 auto;
-  padding: 3px 6px;
-  gap: 2px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--text) 5%, transparent);
-}
-.header-tools .editor-bar {
-  flex: 0 1 auto;
-  padding-left: 0;
-}
-.header-tools .editor-toolbar {
-  flex: 0 1 auto;
-}
-.header-tools .toolbar-spacer {
-  flex: none;
-  width: 1px;
-  min-width: 0;
-  height: 16px;
-  margin: 0 6px;
-  background: color-mix(in srgb, var(--line) 70%, transparent);
-}
+
 @media (min-width: 1840px) {
-  .header-tools {
-    position: absolute;
-    left: calc((100% + var(--sidebar-width)) / 2);
-    transform: translateX(-50%);
-  }
+  
   .save-state {
     margin-left: auto;
   }
@@ -901,25 +821,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .view-type[aria-expanded="true"] [data-icon="chevronDown"] svg {
   transform: rotate(180deg);
 }
-.view-menu {
-  width: 200px;
-}
-.view-option {
-  grid-template-columns: 18px 1fr;
-  min-height: 40px;
-}
-.view-sample {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-}
-.view-option .view-sample svg {
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-  visibility: visible;
-}
+
 .editor-frame {
   display: flex;
   flex-direction: column;
@@ -1195,9 +1097,7 @@ input[type="search"]::-webkit-search-cancel-button {
   .topbar {
     flex-wrap: wrap;
   }
-  .topbar .document-actions {
-    display: none;
-  }
+  
   .outline-panel {
     position: absolute;
     inset: 0 0 0 auto;
@@ -2324,9 +2224,7 @@ dialog.danger #modal-submit {
 .focus-mode .sidebar {
   display: none;
 }
-.focus-mode .document-actions:not(:hover, :focus-within) {
-  opacity: 0.55;
-}
+
 @media (min-width: 1550px) {
   .app {
     --sidebar-width: 280px;
@@ -2363,35 +2261,18 @@ dialog.danger #modal-submit {
   }
 }
 @media (max-width: 1279px) {
-  .header-tools {
-    display: contents;
-  }
-  .header-tools .toolbar-spacer {
-    flex: 1;
-    width: auto;
-    min-width: 12px;
-    height: auto;
-    margin: 0;
-    background: none;
-  }
+  
+  
   .topbar {
     flex-wrap: wrap;
     row-gap: 4px;
   }
-  .topbar .editor-bar {
-    order: 10;
-    flex-basis: 100%;
-    margin: 2px -12px 0 -14px;
-    padding: 4px 12px 0;
-    border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-  }
+  
   .title-block {
     flex: 0 1 auto;
     max-width: none;
   }
-  .nav-buttons {
-    margin-right: auto;
-  }
+  
 }
 @media (max-width: 980px) {
   .app {
@@ -2447,11 +2328,7 @@ dialog.danger #modal-submit {
   }
 }
 @media (max-width: 680px) {
-  .editor-bar {
-    flex-wrap: wrap;
-    row-gap: 6px;
-    padding-bottom: 4px;
-  }
+  
   .editor-toolbar {
     flex-basis: 100%;
     border-left: 0;
@@ -2500,30 +2377,12 @@ dialog.danger #modal-submit {
     grid-row: 2;
     justify-self: end;
   }
-  /* Phones start the toolbar row with showing the notes and going back. */
-  .topbar .nav-buttons {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    justify-self: start;
-    align-self: start;
-    position: relative;
-    z-index: 1;
-    margin: 4px 0 0 -6px;
-  }
-  .topbar .editor-bar {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    margin: 0 -6px;
-    padding: 4px 6px 0 42px;
-  }
+  
+  
   .title-block {
     display: contents;
   }
-  .title-row {
-    grid-column: 3;
-    grid-row: 1;
-    padding-top: 0;
-  }
+  
   .menu-bar {
     grid-column: 3 / 5;
     grid-row: 2;
@@ -2539,8 +2398,7 @@ dialog.danger #modal-submit {
   .app-title {
     margin-left: 4px;
   }
-  .note-folder,
-  .document-actions {
+  .note-folder {
     display: none;
   }
   .save-state {
@@ -2552,12 +2410,7 @@ dialog.danger #modal-submit {
   .app.at-home .menu-bar {
     grid-column: 3;
   }
-  .app.at-home .nav-buttons {
-    grid-column: 4;
-    grid-row: 2;
-    justify-self: end;
-    margin: 0;
-  }
+  
   /* "Saved" is the usual state, so show it as a dot and keep words for changes. */
   .save-state.saved #save-label,
   .app.at-home .save-state #save-label {
@@ -2658,10 +2511,7 @@ dialog.danger #modal-submit {
 .app.sidebar-hidden, .app.focus-mode { grid-template-columns: var(--rail-width) 0 minmax(0, 1fr); }
 .topbar .title-block { margin-left: 0; }
 .sidebar-actions { justify-content: flex-start; align-items: center; gap: 2px; }
-.sidebar-actions :is(#history-back, #history-forward) { width: 26px; height: 28px; }
-.sidebar-actions :is(#history-back, #history-forward) svg { width: 16px; height: 16px; }
-.sidebar-actions #collapse-sidebar { width: 26px; height: 28px; margin-left: auto; }
-.sidebar-actions #collapse-sidebar svg { width: 16px; height: 16px; }
+
 @media (min-width: 1550px) { .app { --notes-width: 260px; } }
 @media (max-width: 980px) {
   .app { --notes-width: 210px; }
@@ -2679,14 +2529,6 @@ dialog.danger #modal-submit {
   .activity-rail .icon-button { width: 40px; height: 40px; }
   .sidebar { left: var(--rail-width); width: min(300px, calc(100vw - var(--rail-width))); transform: translateX(calc(-100% - var(--rail-width))); }
   .sidebar-open .sidebar { transform: translateX(0); }
-}
-@media (max-width: 530px) {
-  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
-  .topbar .title-row { grid-column: 1; }
-  .topbar .menu-bar { grid-column: 1 / 3; }
-  .topbar #find-replace, .topbar .save-state { grid-column: 2; }
-  .app.at-home .menu-bar { grid-column: 1; }
-  .app.at-home .nav-buttons { grid-column: 2; }
 }
 .pinned-notes { flex-shrink: 0; margin-bottom: 12px; max-height: 28vh; overflow-y: auto; }
 .pinned-notes h2, .panel-heading h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0 8px 8px; }
@@ -2731,9 +2573,6 @@ dialog.danger #modal-submit {
 .search-step button { flex: 1; min-height: 32px; border-radius: 6px; padding: 6px; background: var(--hover); font-size: 12px; }
 .search-open.search-in-note .sidebar > :is(.note-list, .list-heading, .tag-filter, .pinned-notes, .sidebar-actions) { display: none !important; }
 .app:not(.search-open) .note-search-options { display: none !important; }
-@media (max-width: 530px) {
-  .topbar .editor-bar { padding-left: 6px; }
-}
 #tag-filter > summary { display: none; }
 #tags-button.active { background: var(--selected); color: var(--accent-text); }
 .menu-bar button { display: inline-flex; align-items: center; gap: 4px; }
@@ -2757,70 +2596,20 @@ dialog.danger #modal-submit {
 @media (max-width: 360px) {
   #hint-help > span { display: none; }
 }
-/* Title above a centered menu; formatting stays in the left rail and pane. */
-.topbar { display: grid; grid-template-columns: minmax(0, 1fr) 27px; grid-template-rows: minmax(28px, auto) auto; padding: 6px 12px; row-gap: 2px; }
-.topbar .title-block { display: flex; grid-column: 1 / -1; grid-row: 1; justify-self: center; width: fit-content; max-width: min(680px, calc(100vw - var(--rail-width) - 76px)); min-width: 0; margin: 0; }
-.topbar .title-row { justify-content: center; padding: 0; }
-/* The editor view selector and the text formatting toggle hold the header's
-   left end, beside the logo; the centered title and menus keep an equal gutter
-   on both sides to clear them. */
-.topbar { --view-gutter: 224px; }
-.topbar > .view-tools { display: flex; align-items: center; gap: 6px; grid-column: 1; grid-row: 1 / -1; justify-self: start; align-self: center; z-index: 1; }
-.view-tools .view-type { width: auto; height: 32px; gap: 6px; padding: 0 6px 0 8px; border: 1px solid var(--line); color: var(--text); }
-.view-tools .view-type svg { color: var(--muted); }
-.view-tools .view-type svg:first-child { width: 16px; height: 16px; }
-.view-tools #format-toggle { padding: 0 10px 0 8px; }
-.view-tools #format-toggle[aria-expanded="true"] { background: var(--selected); border-color: transparent; color: var(--accent-text); }
-.view-tools #format-toggle[aria-expanded="true"] svg { color: currentColor; }
-/* The title and menus centre over the content beside the open panels, not
-   over the whole header: --content-offset is the width of the notes and
-   formatting panels to the content's left. */
-.app { --content-offset: var(--notes-width); }
-.app.sidebar-hidden, .app.focus-mode { --content-offset: 0px; }
-@media (min-width: 1100px) {
-  .app.formatting-open { --content-offset: calc(var(--notes-width) + 224px); }
-  .app.sidebar-hidden.formatting-open { --content-offset: 224px; }
-}
-@media (max-width: 799px) { .app { --content-offset: 0px; } }
-.topbar .title-block { margin-left: var(--content-offset); }
-.app:not(.at-home) .topbar .title-block { max-width: min(680px, calc(100% - 2 * var(--view-gutter) - var(--content-offset))); }
-.app:not(.at-home) .topbar .header-tools { padding: 0 var(--view-gutter) 0 calc(var(--view-gutter) + var(--content-offset)); }
-.app.at-home .topbar .header-tools { padding-left: var(--content-offset); }
-/* Narrower headers show the current view as an icon only. */
-@media (max-width: 999px) {
-  .topbar { --view-gutter: 90px; }
-  .view-tools .view-type { gap: 0; padding: 0 2px 0 6px; }
-  .view-tools #format-toggle { width: 32px; padding: 0; justify-content: center; }
-  .view-tools .view-tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-}
-/* Phones: the view selector starts the title row and formatting ends it. */
-@media (max-width: 680px) {
-  .topbar { --view-gutter: 44px; }
-  .topbar > .view-tools { display: contents; }
-  .view-tools .view-type { grid-column: 1; grid-row: 1; justify-self: start; align-self: center; }
-  .view-tools #format-toggle { grid-column: 1 / -1; grid-row: 1; justify-self: end; align-self: center; }
-  .app:not(.at-home) .topbar .header-tools { padding: 0; }
-}
+
 .topbar .note-heading { flex: 0 1 auto; gap: 2px; }
 .note-heading #pin-note { width: 26px; height: 26px; }
 .note-heading #pin-note svg { width: 15px; height: 15px; }
 .note-heading #pin-note[aria-pressed="true"] { color: var(--accent-text); }
-.topbar .header-tools { display: flex; justify-content: center; grid-column: 1 / -1; grid-row: 2; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; width: 100%; max-width: none; min-width: 0; margin: 0; padding: 0; gap: 8px; background: transparent; position: static; transform: none; }
-.header-tools .menu-bar { display: flex; align-items: center; flex-shrink: 0; gap: 2px; margin: 0; padding: 0; }
-.header-tools .menu-bar button { width: auto; height: 28px; padding: 0 6px; font-size: 13px; }
-.header-tools .editor-bar { display: flex; margin-left: 8px; flex-wrap: nowrap; width: fit-content; max-width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; gap: 0; }
+
 .app.at-home .topbar { grid-template-rows: 1fr; }
 .app.at-home .topbar .title-block { display: none; }
-.app.at-home .topbar .header-tools { display: flex; grid-row: 1; margin: 0; }
+
 .app.at-home .topbar #save-state { display: none; }
-.app.at-home .editor-bar { display: none; }
+
 .topbar #save-state { display: inline-flex; align-self: center; margin: 0 12px 0 0; padding: 0; flex-shrink: 0; }
 .topbar #save-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.header-tools .document-actions { display: flex; min-width: 0; overflow-x: auto; gap: 2px; margin: 0; }
-/* A thin divider separates the menus from the note's action icons. */
-.header-tools .editor-bar::before { content: ""; align-self: center; flex: none; width: 1px; height: 16px; margin: 0 8px 0 6px; background: var(--line); }
-.header-tools .document-actions .icon-button { width: 28px; height: 28px; padding: 0; }
-.header-tools .document-actions .icon-button svg { width: 18px; height: 18px; }
+
 .format-panel { grid-area: format; min-height: 0; min-width: 0; overflow-y: auto; padding: 12px 16px 24px; background: var(--chrome); border-right: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .format-heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .format-heading h2 { font-size: 14px; font-weight: 500; margin: 0; }
@@ -2836,11 +2625,6 @@ dialog.danger #modal-submit {
 }
 @media (max-width: 1099px) {
   .format-panel { position: absolute; top: var(--topbar-height, 58px); bottom: 0; left: var(--rail-width); width: min(264px, calc(100vw - var(--rail-width))); z-index: 24; box-shadow: 8px 0 24px #0003; }
-}
-@media (max-width: 680px) {
-  .header-tools .menu-bar { flex-wrap: wrap; justify-content: center; }
-  .header-tools .editor-bar { flex: 0 0 100%; justify-content: center; margin: 4px 0 0; }
-  .header-tools .editor-bar::before { display: none; }
 }
 /* ==Highlights== in Preview and Write: a 30% tint, with text kept at AA
    contrast by the theme's computed --mark-text. */
@@ -2939,7 +2723,7 @@ dialog.danger #modal-submit {
   .activity-rail .brand { flex: none; height: var(--topbar-height, 58px); margin: 0; padding: 0 2px; box-sizing: border-box; }
   .sidebar { padding-top: 10px; }
 }
-.sidebar-actions .icon-button svg, .sidebar-actions :is(#history-back, #history-forward, #collapse-sidebar) svg { width: 19px; height: 19px; }
+.sidebar-actions .icon-button svg { width: 19px; height: 19px; }
 
 /* Properties share the writing column and theme colours. */
 .properties [hidden] { display: none; }
@@ -3023,8 +2807,6 @@ dialog.danger #modal-submit {
   html, body { background: var(--ground); }
   .app {
     --rail-width: 52px;
-    --sidebar-width: 0px;
-    --content-offset: 0px;
     gap: var(--island-gap);
     padding: var(--island-gap) var(--island-gap) var(--island-gap) 0;
     grid-template-columns: var(--rail-width) var(--notes-width) minmax(0, 1fr);
@@ -3054,7 +2836,6 @@ dialog.danger #modal-submit {
 }
 @media (min-width: 1100px) {
   .app.formatting-open {
-    --content-offset: calc(224px + var(--island-gap));
     grid-template-columns: var(--rail-width) var(--notes-width) 224px minmax(0, 1fr);
     grid-template-areas: "rail side top top" "rail side format main";
   }
@@ -3063,4 +2844,73 @@ dialog.danger #modal-submit {
     grid-template-areas: "rail top top" "rail format main";
   }
   .app.formatting-open .format-panel { position: static; box-shadow: none; }
+}
+
+/* Title row: the notes panel toggle and the menus at the left, the note's
+   save state, folder, title, actions and pin in the centre, and the
+   formatting toggle and view switch at the right. */
+.topbar { display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr); grid-template-rows: auto; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; }
+.topbar > .title-left { grid-area: 1 / 1; }
+.topbar > .title-block { grid-area: 1 / 2; }
+.topbar > .title-right { grid-area: 1 / 3; }
+.title-left, .title-right { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.title-right { justify-self: end; gap: 8px; }
+#panel-toggle { width: 32px; height: 32px; border-radius: 6px; color: var(--muted); }
+#panel-toggle:hover { background: var(--hover); color: var(--text); }
+#panel-toggle svg { width: 17px; height: 17px; }
+#panel-toggle[aria-expanded="true"] .icon-pane { fill: currentColor; fill-opacity: 0.45; }
+.title-divider { flex: none; width: 1px; height: 20px; margin: 0 8px; background: var(--line-strong); }
+.topbar .menu-bar { display: flex; align-items: center; gap: 2px; margin: 0; padding: 0; }
+.topbar .menu-bar button { height: 30px; padding: 0 9px; border-radius: 6px; font-size: 13px; }
+.topbar .title-block { display: flex; justify-content: center; align-items: center; min-width: 0; max-width: none; margin: 0; }
+.topbar .note-heading { display: flex; flex: 0 1 auto; align-items: center; gap: 2px; min-width: 0; max-width: 100%; }
+.topbar .note-heading > :not(.document-title, .title-rename) { flex-shrink: 0; }
+.topbar #save-state { margin: 0 6px 0 0; }
+/* The folder path and the rename field share the title's 15 px size. */
+.topbar :is(.breadcrumb, .breadcrumb-separator, .title-rename-input) { font-size: 15px; }
+.topbar .document-title { flex: 0 1 auto; min-width: 0; font-size: 15px; font-weight: 600; }
+.title-menu-button { width: 24px; height: 28px; border-radius: 6px; color: var(--muted); }
+.title-menu-button:hover, .title-menu-button[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+.title-menu-button svg { width: 15px; height: 15px; }
+.note-heading #pin-note { width: 28px; height: 28px; }
+.topbar #format-toggle { width: auto; height: 32px; justify-content: center; gap: 6px; padding: 0 10px 0 8px; border: 1px solid var(--line); color: var(--text); }
+.topbar #format-toggle svg { width: 16px; height: 16px; color: var(--muted); }
+.topbar #format-toggle[aria-expanded="true"] { background: var(--selected); border-color: transparent; color: var(--accent-text); }
+.topbar #format-toggle[aria-expanded="true"] svg { color: currentColor; }
+.view-switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; }
+.view-switch[hidden] { display: none; }
+.view-switch button { display: grid; place-items: center; width: 30px; height: 28px; padding: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.view-switch button:hover { background: var(--hover); color: var(--text); }
+.view-switch button[aria-selected="true"] { background: var(--selected); color: var(--accent-text); }
+.view-switch button svg { width: 16px; height: 16px; }
+.view-switch button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* Narrower desktops: the sides keep their controls and the title shrinks
+   between them rather than overlapping. */
+@media (min-width: 800px) and (max-width: 1279px) {
+  .topbar { grid-template-columns: max-content minmax(0, 1fr) max-content; }
+  .topbar .title-block { justify-content: center; }
+}
+@media (min-width: 800px) and (max-width: 1099px) {
+  .topbar .note-folder { display: none; }
+  .topbar #format-toggle { width: 32px; padding: 0; }
+  .topbar #format-toggle .view-tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+/* The note's own menu: icons before each action, trash in the danger colour. */
+#menu-popup[data-open-menu="title"] { width: 272px; }
+#menu-popup[data-open-menu="title"] .menu-item { justify-content: flex-start; gap: 0; min-height: 34px; }
+#menu-popup[data-open-menu="title"] .menu-item > kbd { margin-left: auto; }
+#menu-popup .menu-item > svg { flex: none; width: 16px; height: 16px; margin-right: 10px; color: var(--muted); }
+#menu-popup .menu-item.danger, #menu-popup .menu-item.danger > svg { color: var(--danger); }
+/* Narrow windows: the title takes the first line, the menus and the view
+   switch share the second; the rail already toggles the notes drawer. */
+@media (max-width: 799px) {
+  .topbar { display: flex; flex-wrap: wrap; justify-content: space-between; row-gap: 2px; padding: 4px 8px; }
+  .topbar .title-block { order: -1; flex: 1 0 100%; }
+  .app.at-home .topbar .title-block { display: none; }
+  #panel-toggle, .title-divider { display: none; }
+  .topbar .menu-bar button { padding: 0 5px; }
+  .topbar .title-right { margin-left: auto; gap: 4px; }
+  .topbar #format-toggle { width: 32px; padding: 0; justify-content: center; }
+  .topbar #format-toggle .view-tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .view-switch button { width: 26px; }
 }

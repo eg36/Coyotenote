@@ -21,6 +21,7 @@ import {
   refresh,
   save,
   setMode,
+  exportNote,
 } from "./editor.js";
 import {
   backlinksDialog,
@@ -112,7 +113,7 @@ const commandDefinitions: Command[] = [
   ["Insert image", "", chooseImages, true],
   ["Add properties (front matter)", "", addProperties, true, () => !splitFrontMatter(state.body)],
   ["Show note history", "", () => historyDialog().catch(showError), true],
-  ["Download note as Markdown", "", () => $("export-note").click(), true],
+  ["Download note as Markdown", "", () => exportNote(), true],
   ["Write view", "", () => setMode("write").catch(showError), true],
   ["Markdown view", "", () => setMode("source").catch(showError), true],
   ["Preview view", "", () => setMode("preview").catch(showError), true],

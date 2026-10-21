@@ -18,11 +18,9 @@ const paths: Record<string, string> = {
   chevronDown: '<path d="m7 10 5 5 5-5"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>',
   sidebar:
-    '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+    '<path class="icon-pane" d="M5 4h4v16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="none"/><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
   focus: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/>',
-  back: '<path d="M19 12H5m6-6-6 6 6 6"/>',
-  forward: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
   arrowUp: '<path d="m6 11 6-6 6 6m-6-6v14"/>',
   arrowDown: '<path d="m6 13 6 6 6-6m-6-13v14"/>',
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',

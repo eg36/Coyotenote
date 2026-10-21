@@ -34,7 +34,8 @@ function findNotes() {
   openSearch("all").catch(showError);
 }
 function cycleMode() {
-  const modes: AppState["mode"][] = ["write", "source", "preview", "split"];
+  // The view switch's order: writing, its Markdown, both, the page.
+  const modes: AppState["mode"][] = ["write", "source", "split", "preview"];
   setMode(modes[(modes.indexOf(state.mode) + 1) % modes.length]).catch(
     showError,
   );

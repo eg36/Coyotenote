@@ -76,25 +76,27 @@ panel is closed. Desktop and phone remember their own open/closed preference.
 Drag rail icons to reorder them within the main shortcuts or bottom utility group;
 Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order.
 
-The note title and folder breadcrumbs sit above the centered menu row. Hover or
-focus a truncated title to read its full path. The start page leaves the title
-area blank. **File / Edit / View / Insert** stay centered below the title. The
-menus remain available on the start page; note-only commands need an open note.
-Use ↑/↓ within a menu, ←/→ to switch menus, and Escape to close.
+The header is one title row. At its left end, the **notes panel** button shows
+or hides the notes panel (its left pane is filled while the panel is open),
+followed by **File / Edit / View / Insert**. The menus remain available on the
+start page; note-only commands need an open note. Use ↑/↓ within a menu, ←/→
+to switch menus, and Escape to close.
 
-Outline, history, download and trash are grouped with the centered menu. The
-pin button sits right after the note title.
-A status dot before the note title shows save state; hover for details. It is
-hidden on the start page. On phones,
-note actions wrap onto their own row within the menu. At home the menu is
-centered vertically and horizontally in the header.
+In the centre, a status dot shows save state (hover for details; hidden on the
+start page), then the folder breadcrumbs and the note title. Click the title to
+rename the note in place. The chevron after it opens the note's own menu:
+Rename, Move to folder…, Export as Markdown, Version history, All commands and
+Move to trash. The pin button follows the chevron. Hover or focus a truncated
+title to read its full path; on narrower windows the folder path is hidden and
+the title shortens instead of covering the menus.
 
-The **Write / Markdown / Preview / Split** selector sits at the left end of the
-header, beside the logo, and shows the current view (icon only on narrower
-screens). The **View** menu and Alt+M switch views too.
+At the right end, the **Write / Markdown / Split / Preview** switch shows the
+current view. Click a view, or use ←/→ once it has focus; the **View** menu and
+Alt+M switch views too. On phones the title takes the first line and the menus
+and view switch share the second; the rail opens the notes drawer.
 
-**Text formatting**, right after the view selector (at the end of the title row
-on phones), opens a panel between Notes and the document.
+**Text formatting**, just before the view switch, opens a panel between Notes
+and the document.
 It groups paragraph styles, bold/italic/strike/code, lists and quotes, inserts,
 and undo/redo. It is available in Write, and closes in source or preview modes.
 The close button or Escape hides it; this browser remembers the choice separately
@@ -191,8 +193,8 @@ not change the Markdown files or follow the vault to another browser.
   the notes sidebar when you use it. The sort
   menu beside the note count orders notes within each folder by recently edited
   (default), title A–Z or title Z–A, and remembers the choice in this browser.
-  **Alt+Up / Alt+Down** (or View → Previous / Next note) cycles the visible sorted notes; the sidebar arrows move backward and forward
-  through visited notes. The backlink count in the footer lists notes
+  **Alt+Up / Alt+Down** (or View → Previous / Next note) cycles the visible sorted notes;
+  Recently opened in the rail returns to notes you visited. The backlink count in the footer lists notes
   linking here. Hidden folders and symlinks are skipped.
 - **Settings → Appearance** offers three cards: **Light**, **Dark** and
   **System**. Labradorite Light/Dark use slate surfaces and blue accents;
@@ -383,7 +385,7 @@ and all TOML front matter, keep the raw Properties editor.
 | Alt+K or Ctrl/⌘+K | Quick open a note, heading or command |
 | Alt+S or Ctrl/⌘+Shift+E | Search note contents |
 | Ctrl/⌘+S | Save immediately |
-| Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Preview → Split |
+| Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Split → Preview |
 | Alt+T or Ctrl/⌘+Shift+T | Settings: appearance and writing |
 | Ctrl/⌘+Shift+F | Toggle focus mode |
 | Alt+O | Show or hide the outline |
