@@ -31,7 +31,7 @@ def verify(directory, version, target, destination):
     assert info == json.loads((directory / 'BUILDINFO.json').read_text())
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     assert info == {'version': version, 'commit': commit, 'target': target}, info
-    for file in ['README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/GUIDE.md',
+    for file in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/GUIDE.md',
                  *[p.relative_to(ROOT).as_posix() for p in (ROOT / 'docs/licenses').rglob('*') if p.is_file()]]:
         assert (destination / file).read_bytes() == (ROOT / file).read_bytes(), file
     goos, arch = target.split('/')

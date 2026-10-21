@@ -46,7 +46,7 @@ def package(version, target, output):
             actual = subprocess.check_output([str(stage / executable), '-version'], text=True).strip()
             if actual != f'labradorite {version}':
                 raise RuntimeError(f'incorrect executable version: {actual}')
-        for file in ('README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md'):
+        for file in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
             shutil.copyfile(ROOT / file, stage / file)
         (stage / 'docs').mkdir()
         shutil.copyfile(ROOT / 'docs/GUIDE.md', stage / 'docs/GUIDE.md')
