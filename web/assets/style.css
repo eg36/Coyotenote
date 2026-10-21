@@ -3008,7 +3008,8 @@ dialog.danger #modal-submit {
 .issue-tree-row .issue-state { width: 38px; }
 .issue-state.state-in-progress { color: var(--accent-text); }
 .issues-project-marker { flex: none; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); }
-.issue-done-mark { flex: none; width: 8px; text-align: center; font-size: 12px; color: var(--muted); }
+.issue-done-mark { flex: none; display: inline-grid; place-items: center; width: 14px; color: var(--muted); }
+.issue-done-mark svg { width: 13px; height: 13px; }
 .issue-tag { color: var(--accent-text); }
 .issue-priority-word.priority-urgent, .issue-priority-word.priority-high { font-weight: 600; }
 .issue-priority-word.priority-urgent { color: var(--danger); }
@@ -3021,7 +3022,8 @@ dialog.danger #modal-submit {
 summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--muted); }
 .issues-doc-count { font-size: 13px; font-weight: 400; color: var(--muted); }
 .issues-doc-list { display: flex; flex-direction: column; }
-.issue-line { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 8px 10px; margin: 0 -10px; border: 0; border-radius: 8px; background: none; color: var(--text); text-align: left; }
+.issue-line { display: grid; grid-template-columns: minmax(0, 1fr) 168px 168px; align-items: center; gap: 20px; width: calc(100% + 24px); padding: 10px 12px; margin: 0 -12px; border: 0; border-radius: 8px; background: none; color: var(--text); text-align: left; }
+.issue-line-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .issue-line:hover { background: var(--hover); }
 .issue-line-title { font-size: 15px; line-height: 1.4; }
 .issue-line-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
@@ -3098,3 +3100,40 @@ summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--mute
 .switcher-tile.pictured { background: none; }
 .switcher-tile img { width: 36px; height: 36px; object-fit: contain; }
 .setting-plugin-image { flex: none; width: 32px; height: 32px; object-fit: contain; }
+
+/* A project's outline: its steps ring, then its issues with their facets. */
+.issues-doc { max-width: 920px; }
+.issues-doc-top { display: flex; align-items: center; gap: 24px; margin-bottom: 28px; }
+.issues-doc-titles { flex: 1; min-width: 0; }
+.issues-doc-titles h1 { margin: 0 0 4px; font-size: 32px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.issues-doc-facts { margin: 0; font-size: 14px; color: var(--muted); }
+.issues-page-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.issues-page-actions .primary-button { height: 32px; padding: 0 14px; }
+.issues-ring { position: relative; flex: none; width: 104px; height: 104px; }
+.issues-ring svg { width: 104px; height: 104px; }
+.issues-ring polygon { fill: none; stroke-width: 8; stroke-linejoin: round; }
+.issues-ring-base { stroke: var(--line); }
+.issues-ring-lit { stroke: url(#issues-ring-light); transition: stroke-dasharray .6s cubic-bezier(.16, 1, .3, 1); }
+.issues-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.issues-ring-label strong { font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.issues-ring-label small { margin-top: 2px; font-size: 11px; color: var(--muted); }
+.issue-facets { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--muted); }
+.issue-facets small { margin-left: 4px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.issue-facet { flex: none; width: 10px; height: 10px; margin: 0 1px; border: 1.5px solid var(--line-strong); border-radius: 2px; transform: rotate(45deg); }
+.issue-facet.done { border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--cyan)); }
+.issue-line-links { display: flex; justify-content: flex-end; gap: 6px; min-width: 0; font-size: 12px; }
+.issue-line-link { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-text); }
+.issue-line-more { color: var(--muted); }
+.issues-banner { display: flex; align-items: center; gap: 16px; margin: 0 0 24px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--chrome); font-size: 14px; }
+.issues-banner span { flex: 1; }
+.folder-group.current { background: var(--selected); color: var(--text); }
+.issues-board-page { display: flex; flex-direction: column; min-height: 100%; }
+.issues-board-top { display: flex; align-items: center; gap: 16px; padding: 24px 24px 0; }
+.issues-board-top h1 { flex: 1; margin: 0; font-size: 24px; font-weight: 700; }
+.issues-board { flex: 1; }
+.issue-card .issue-facets { margin-top: 2px; }
+@media (max-width: 1100px) { .issue-line { grid-template-columns: minmax(0, 1fr) 150px; } .issue-line-links { display: none; } }
+@media (max-width: 799px) { .issues-doc-top { flex-wrap: wrap; } .issue-line { grid-template-columns: minmax(0, 1fr); } }
+.issue-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* The Done folder's check is a sign, not the fold chevron. */
+.folder-group .issue-done-mark svg { transform: none; }

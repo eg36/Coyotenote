@@ -1,8 +1,11 @@
-// Issues are Markdown notes in the vault's issues/ folder, one file per issue,
-// named by its ID (issues/SPC-3.md). Flat front matter holds the properties;
-// the text below it is the description. issues/Issues.md holds the vault's
-// ID prefix, projects and labels. Editing one property rewrites only its
-// value, so the rest of the file stays as the user wrote it.
+// Issues are Markdown notes in the vault's issues/ folder. Each project is a
+// folder there, issues/<Project>/, whose Project.md holds the project's ID
+// prefix; its issues are named by their ID (issues/Space/LS-3.md). Flat
+// front matter holds the properties; the text below it is the description.
+// issues/Issues.md offers labels. Issues saved directly in issues/ before
+// projects had folders keep working until they are moved into one. Editing
+// one property rewrites only its value, so the rest of the file stays as
+// the user wrote it.
 import { api } from "./api.js";
 import { splitFrontMatter, withProperties } from "./frontmatter.js";
 import { parseProperties } from "./properties.js";
@@ -31,7 +34,7 @@ const priorityName = (priority: Priority) => priorities.find(([id]) => id === pr
 
 interface IssueFile { id: string; title: string; body: string; revision: string; modified: string; backlinks: string[] }
 interface Issue {
-  file: string; // the note ID, such as issues/SPC-3
+  file: string; // the note ID, such as issues/Space/LS-3
   key: string; // SPC-3
   number: number;
   title: string;
@@ -45,8 +48,10 @@ interface Issue {
   revision: string;
   modified: string;
   backlinks: string[];
+  flat: boolean; // saved directly in issues/, not yet in a project folder
 }
 interface IssueSettings { prefix: string; projects: string[]; labels: string[]; file?: IssueFile }
+interface Project { name: string; prefix: string; file: IssueFile }
 
 const folder = "issues";
 const settingsFile = folder + "/Issues";
@@ -64,10 +69,14 @@ function fields(body: string) {
 const list = (value = "") => value.split(",").map((part) => part.trim()).filter(Boolean);
 
 function parseIssue(file: IssueFile): Issue | null {
-  const key = file.id.slice(folder.length + 1);
+  const parts = file.id.split("/");
+  if (parts[0] !== folder || parts.length < 2 || parts.length > 3) return null;
+  const key = parts.at(-1) || "";
   const match = keyPattern.exec(key);
-  if (!file.id.startsWith(folder + "/") || !match) return null;
+  if (!match) return null;
   const { front, values } = fields(file.body);
+  // A project folder names the project; a flat issue keeps its property.
+  const flat = parts.length === 2;
   const status = (values.get("status") || "").toLowerCase().replace(/\s+/g, "-") as Status;
   const priority = (values.get("priority") || "").toLowerCase() as Priority;
   return {
@@ -78,14 +87,21 @@ function parseIssue(file: IssueFile): Issue | null {
     status: statuses.some(([id]) => id === status) ? status : "backlog",
     priority: priorities.some(([id]) => id === priority) ? priority : "none",
     labels: list(values.get("labels")),
-    project: values.get("project") || "",
+    project: flat ? values.get("project") || "" : parts[1],
     created: values.get("created") || file.modified.slice(0, 10),
     description: (front ? front.rest : file.body).trim(),
     body: file.body,
     revision: file.revision,
     modified: file.modified,
     backlinks: file.backlinks || [],
+    flat,
   };
+}
+function parseProject(file: IssueFile): Project | null {
+  const parts = file.id.split("/");
+  if (parts.length !== 3 || parts[0] !== folder || parts[2] !== "Project") return null;
+  const prefix = (fields(file.body).values.get("prefix") || "").toUpperCase();
+  return { name: parts[1], prefix: validPrefix(prefix) ? prefix : "", file };
 }
 
 function parseSettings(file: IssueFile | undefined): IssueSettings {
@@ -126,27 +142,43 @@ function today() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-interface NewIssue { title: string; status: Status; priority: Priority; labels: string[]; project: string; description: string }
+interface NewIssue { title: string; status: Status; priority: Priority; labels: string[]; description: string }
+// An issue in a project folder takes its project from the folder, so the
+// file does not repeat it.
 function issueBody(issue: NewIssue) {
   const rows = [
     `title: ${JSON.stringify(issue.title)}`,
     `status: ${issue.status}`,
     `priority: ${issue.priority}`,
     `labels: ${yamlValue(issue.labels)}`,
-    ...(issue.project ? [`project: ${yamlValue(issue.project)}`] : []),
     `created: ${today()}`,
   ];
   const text = issue.description.trim();
   return `---\n${rows.join("\n")}\n---\n${text ? "\n" + text + "\n" : ""}`;
 }
-function settingsBody(prefix: string) {
-  return `---\nprefix: ${prefix}\nprojects: []\nlabels: []\n---\n\nSettings for Issues in this vault: the ID prefix of new issues, and the projects and labels offered when creating one. Each issue is a note in this folder, named by its ID.\n`;
+function projectBody(name: string, prefix: string) {
+  return `---\nprefix: ${prefix}\n---\n\nThe ${name} project. Its issues are the notes in this folder, named by their ID; new ones start with ${prefix}.\n`;
+}
+// A suggested prefix: the initials of a name of several words, else its
+// first letters.
+function suggestPrefix(name: string) {
+  const words = name.replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  const letters = words.length > 1 ? words.map((word) => word[0]).join("") : words[0] || "";
+  const prefix = letters.replace(/^[^A-Za-z]+/, "").slice(0, words.length > 1 ? 4 : 3).toUpperCase();
+  return prefix.length > 1 ? prefix : (prefix + (words[0] || "ISS").replace(/[^A-Za-z]/g, "")).slice(0, 3).toUpperCase() || "ISS";
+}
+// A project's folder name must also be a valid note folder.
+function checkProjectName(name: string) {
+  if (!name) return "Name the project.";
+  if (/[\/\\<>:"|?*#^\[\],]/.test(name) || name.startsWith(".") || name !== name.trim()) return "Use letters, digits, spaces and dashes in a project name.";
+  return "";
 }
 
 async function loadIssues() {
   const data = await api<{ files: IssueFile[] }>("/api/plugin-files?plugin=issues");
   const issues = data.files.map(parseIssue).filter((issue): issue is Issue => issue !== null);
-  return { issues, settings: parseSettings(data.files.find((file) => file.id === settingsFile)) };
+  const projects = data.files.map(parseProject).filter((project): project is Project => project !== null);
+  return { issues, projects, settings: parseSettings(data.files.find((file) => file.id === settingsFile)) };
 }
 // nextKey numbers on from the highest issue with the prefix.
 function nextKey(prefix: string, issues: Issue[]) {
@@ -155,11 +187,12 @@ function nextKey(prefix: string, issues: Issue[]) {
 }
 // createIssue saves the issue under the next free ID; when another window
 // took that ID meanwhile, it counts on.
-async function createIssue(prefix: string, issues: Issue[], issue: NewIssue) {
+async function createIssue(project: Project, issues: Issue[], issue: NewIssue) {
+  const prefix = project.prefix;
   let key = nextKey(prefix, issues);
   for (let attempt = 0; ; attempt++) {
     try {
-      await api("/api/note", "POST", { id: `${folder}/${key}`, body: issueBody(issue) });
+      await api("/api/note", "POST", { id: `${folder}/${project.name}/${key}`, body: issueBody(issue) });
       return key;
     } catch (error) {
       if (attempt >= 20 || !/already exists/i.test(error instanceof Error ? error.message : "")) throw error;
@@ -167,8 +200,18 @@ async function createIssue(prefix: string, issues: Issue[], issue: NewIssue) {
     }
   }
 }
-async function createSettings(prefix: string) {
-  await api("/api/note", "POST", { id: settingsFile, body: settingsBody(prefix) });
+async function createProject(name: string, prefix: string) {
+  await api("/api/note", "POST", { id: `${folder}/${name}/Project`, body: projectBody(name, prefix) });
+}
+// moveIssue puts an issue in another project's folder, keeping its ID; the
+// server rewrites links to it. A project property left in the file follows.
+async function moveIssue(issue: Issue, project: string) {
+  const target = `${folder}/${project}/${issue.key}`;
+  if (target === issue.file) return issue;
+  const moved = await api<{ note: IssueFile }>("/api/rename", "POST", { id: issue.file, revision: issue.revision, name: target });
+  const next = parseIssue(moved.note);
+  if (!next || !fields(next.body).values.has("project")) return next;
+  return parseIssue(await saveIssue(next, setField(next.body, "project", project)));
 }
 // saveIssue writes a changed body, refusing to replace edits made elsewhere.
 async function saveIssue(issue: Issue, body: string) {
@@ -179,10 +222,13 @@ async function updateSettings(settings: IssueSettings, key: "projects" | "labels
   await api("/api/note", "PUT", { id: settings.file.id, body: setField(settings.file.body, key, values), revision: settings.file.revision });
 }
 
-export type { Issue, IssueFile, IssueSettings, NewIssue, Priority, Status };
+export type { Issue, IssueFile, IssueSettings, NewIssue, Priority, Project, Status };
 export {
+  checkProjectName,
   createIssue,
-  createSettings,
+  createProject,
+  moveIssue,
+  suggestPrefix,
   folder,
   loadIssues,
   nextKey,

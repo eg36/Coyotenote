@@ -1,45 +1,57 @@
-// Issues, a plugin for tracking work, laid out as an issue notebook: a tree
-// of projects beside the open issue's page. Without an open issue, the page
-// reads as a document of what is on Now, Next and Later. Issues are notes in
-// the vault's issues/ folder (see issues-data.ts).
+// Issues, a plugin for keeping a project's map. Each project is a folder in
+// the vault's issues/ folder with its own ID prefix (see issues-data.ts). A
+// tree of projects sits beside the page: a project reads as an outline of
+// its issues in Now, Next and Later, each carrying its "Done when" steps as
+// facets; "All projects" lists what has attention everywhere; an issue opens
+// as its own page. A board shows the same issues as cards in state columns.
 import { $, showError, showToast, state, storage } from "./core.js";
 import { icon } from "./icons.js";
 import { openModal } from "./dialogs.js";
 import { registerPlugin, type PluginCommand, type SpaceContext } from "./plugins.js";
-import { closeIssuePage, refreshIssuePage, setupIssuePage, showIssuePage, shownIssue } from "./issues-page.js";
+import { closeIssuePage, doneWhen, refreshIssuePage, setupIssuePage, showIssuePage, shownIssue } from "./issues-page.js";
 import { showMenu, type MenuEntry } from "./menus.js";
 import {
+  checkProjectName,
   createIssue,
-  createSettings,
+  createProject,
   loadIssues,
-  parseIssue,
-  saveIssue,
-  setField,
+  moveIssue,
   nextKey,
+  parseIssue,
   priorities,
   priorityName,
+  saveIssue,
+  setField,
   statusName,
   statuses,
+  suggestPrefix,
   updateSettings,
   validPrefix,
   type Issue,
   type IssueSettings,
   type Priority,
+  type Project,
   type Status,
 } from "./issues-data.js";
 
 let issues: Issue[] = [];
+let projectList: Project[] = [];
 let settings: IssueSettings = { prefix: "", projects: [], labels: [] };
 let context: SpaceContext | null = null;
 let query = "";
-// The overview shows as a page, or as a board of state columns.
+// What the page shows without an open issue: one project, or all of them.
+const allProjects = "";
+const viewKey = () => "labradorite-issues-view:" + state.vaultId;
+let view = allProjects;
+// The page shows as an outline, or as a board of state columns.
 const boardKey = "labradorite-issues-board";
 let board = storage.get(boardKey) === "true";
 const root = () => $("issues-app");
 const searchBox = () => $("issues-search") as HTMLInputElement;
 const finished = (issue: Issue) => issue.status === "done" || issue.status === "cancelled";
 const doneFolder = "\u0000done";
-const noProject = "";
+const looseFolder = "\u0000loose";
+const inbox = "Inbox";
 const order = (status: Status) => statuses.findIndex(([id]) => id === status);
 const rank = (priority: Priority) => priorities.findIndex(([id]) => id === priority);
 const byAttention = (a: Issue, b: Issue) => order(a.status) - order(b.status) || rank(a.priority) - rank(b.priority) || b.number - a.number;
@@ -62,13 +74,21 @@ function marker(project: string) {
   span.style.background = project ? colourOf(project) : "var(--line-strong)";
   return span;
 }
-const projects = () => [...new Set([...settings.projects, ...issues.map((issue) => issue.project).filter(Boolean)])].sort((a, b) => a.localeCompare(b));
+// Projects are the project folders, plus projects that flat issues name.
+const projects = () => [...new Set([...projectList.map((p) => p.name), ...issues.filter((i) => !i.flat).map((i) => i.project)])].sort((a, b) => a.localeCompare(b));
+const projectOf = (name: string) => projectList.find((p) => p.name === name);
 const labels = () => {
   const seen = new Map<string, string>();
   for (const label of [...settings.labels, ...issues.flatMap((issue) => issue.labels)]) if (!seen.has(label.toLowerCase())) seen.set(label.toLowerCase(), label);
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 };
 const matches = (issue: Issue) => !query || issue.title.toLowerCase().includes(query.toLowerCase()) || issue.key.toLowerCase().includes(query.toLowerCase());
+const inView = (issue: Issue) => view === allProjects || (!issue.flat && issue.project === view);
+const steps = (issue: Issue) => doneWhen(issue.body).tasks;
+function linkedNotes(issue: Issue) {
+  const targets = new Set([...issue.body.matchAll(/\[\[([^\]|#^]+)/g)].map((m) => m[1].trim()));
+  return [...targets, ...issue.backlinks.filter((id) => !targets.has(id))];
+}
 
 // Folded tree folders are remembered per vault; Done starts folded.
 const foldKey = () => "labradorite-issues-folded:" + state.vaultId;
@@ -101,16 +121,29 @@ function treeRow(issue: Issue) {
   row.onclick = () => openIssue(issue);
   return row;
 }
+// A project's row opens its outline; on the open project it folds instead.
 function folderRow(folder: string, name: string, count: number, open: boolean) {
   const row = element("button", "folder-group");
   row.type = "button";
   row.dataset.folder = folder;
   row.setAttribute("aria-expanded", String(open));
+  const isProject = !folder.startsWith("\u0000");
+  const current = isProject && view === folder && !shownIssue();
+  row.classList.toggle("current", current);
+  if (current) row.setAttribute("aria-current", "page");
   row.innerHTML = icon("chevronDown");
-  row.append(folder === doneFolder ? element("span", "issue-done-mark", "✓") : marker(folder), element("span", "", name), element("small", "", String(count)));
+  const sign = folder === doneFolder ? element("span", "issue-done-mark") : folder === looseFolder ? element("span", "issue-done-mark") : marker(folder);
+  if (folder === doneFolder) sign.innerHTML = icon("check");
+  if (folder === looseFolder) sign.innerHTML = icon("note");
+  row.append(sign, element("span", "", name), element("small", "", String(count)));
   row.onclick = () => {
-    setFolded(folder, open);
-    renderTree();
+    if (isProject && !current) {
+      if (!open) setFolded(folder, false);
+      showProject(folder);
+    } else {
+      setFolded(folder, open);
+      renderTree();
+    }
     $("issues-tree").querySelector<HTMLElement>(`.folder-group[data-folder="${CSS.escape(folder)}"]`)?.focus();
   };
   return row;
@@ -122,71 +155,146 @@ function renderTree() {
   const shown = issues.filter(matches);
   const nodes: HTMLElement[] = [];
   const open = shown.filter((issue) => !finished(issue));
-  for (const project of [...projects(), noProject]) {
-    const inside = open.filter((issue) => issue.project === project).sort(byAttention);
-    if (!inside.length) continue;
-    nodes.push(folderRow(project, project || "No project", inside.length, !fold.has(project)));
+  for (const project of projects()) {
+    const inside = open.filter((issue) => !issue.flat && issue.project === project).sort(byAttention);
+    if (!inside.length && (query || !projectOf(project))) continue;
+    nodes.push(folderRow(project, project, inside.length, !fold.has(project)));
     if (!fold.has(project)) nodes.push(...inside.map(treeRow));
+  }
+  const loose = open.filter((issue) => issue.flat).sort(byAttention);
+  if (loose.length) {
+    nodes.push(folderRow(looseFolder, "Not in a folder", loose.length, !fold.has(looseFolder)));
+    if (!fold.has(looseFolder)) nodes.push(...loose.map(treeRow));
   }
   const done = shown.filter(finished).sort((a, b) => b.modified.localeCompare(a.modified));
   if (done.length) {
     nodes.push(folderRow(doneFolder, "Done", done.length, !fold.has(doneFolder)));
     if (!fold.has(doneFolder)) nodes.push(...done.map(treeRow));
   }
-  if (!nodes.length) nodes.push(element("p", "list-empty", issues.length ? "No issues match." : "No issues yet."));
+  if (!nodes.length) nodes.push(element("p", "list-empty", issues.length ? "No issues match." : "No projects yet."));
   tree.replaceChildren(...nodes);
-  $("issues-count").textContent = String(open.length);
+  $("issues-count").textContent = String(projects().length);
+  $("issues-overview").setAttribute("aria-pressed", String(view === allProjects && !shownIssue()));
   if (hadFocus !== null) (tree.querySelector<HTMLElement>(`[data-issue="${CSS.escape(hadFocus)}"]`) || tree.querySelector<HTMLElement>("button"))?.focus();
 }
 
-// The document lists what has attention: Now, Next and Later, with Done
-// and Dropped folded at the end.
-function issueLine(issue: Issue) {
-  const line = element("button", "issue-line");
-  line.type = "button";
-  line.dataset.issue = issue.file;
-  const meta = element("span", "issue-line-meta");
-  meta.append(element("span", "", issue.key));
-  if (issue.project) meta.append(element("span", "", issue.project));
-  if (issue.priority !== "none") meta.append(element("span", "issue-priority-word priority-" + issue.priority, priorityName(issue.priority)));
-  for (const label of issue.labels) meta.append(element("span", "issue-tag", "#" + label));
-  line.append(element("span", "issue-line-title", issue.title), meta);
-  line.onclick = () => openIssue(issue);
+// Facets show an issue's "Done when" steps: one per step, lit when done.
+function facets(issue: Issue) {
+  const all = steps(issue);
+  const wrap = element("span", "issue-facets");
+  if (!all.length) return wrap;
+  const done = all.filter((step) => step.done).length;
+  wrap.setAttribute("role", "img");
+  wrap.setAttribute("aria-label", `${done} of ${all.length} steps done`);
+  for (const step of all.slice(0, 8)) wrap.append(element("span", "issue-facet" + (step.done ? " done" : "")));
+  if (all.length > 8) wrap.append(element("small", "issue-facet-more", `+${all.length - 8}`));
+  wrap.append(element("small", "", `${done} of ${all.length}`));
+  return wrap;
+}
+function meta(issue: Issue, withProject: boolean) {
+  const line = element("span", "issue-line-meta");
+  line.append(element("span", "", issue.key));
+  if (withProject && issue.project) line.append(element("span", "", issue.project));
+  if (issue.priority !== "none") line.append(element("span", "issue-priority-word priority-" + issue.priority, priorityName(issue.priority)));
+  for (const label of issue.labels) line.append(element("span", "issue-tag", "#" + label));
   return line;
 }
-function renderDocument() {
-  if (shownIssue()) return;
-  const page = $("issues-page");
-  if (!issues.length) {
-    const intro = element("div", "issues-intro");
-    const button = element("button", "primary-button", "New issue");
-    button.type = "button";
-    button.onclick = () => newIssue();
-    intro.append(element("h1", "", "Track your work"), element("p", "", "Each issue is a Markdown note in the issues folder, with its state, priority, labels and project at the top. Start with the first one."), button);
-    page.replaceChildren(intro);
-    return;
+function outlineRow(issue: Issue, withProject: boolean) {
+  const row = element("button", "issue-line");
+  row.type = "button";
+  row.dataset.issue = issue.file;
+  const text = element("span", "issue-line-text");
+  text.append(element("span", "issue-line-title", issue.title), meta(issue, withProject));
+  const notes = linkedNotes(issue);
+  const links = element("span", "issue-line-links");
+  if (notes.length) {
+    links.append(element("span", "issue-line-link", (notes[0].split("/").pop() || notes[0])));
+    if (notes.length > 1) links.append(element("span", "issue-line-more", `+${notes.length - 1}`));
   }
+  row.append(text, facets(issue), links);
+  row.onclick = () => openIssue(issue);
+  return row;
+}
+// The ring around a project is its "Done when" steps, as one cut facet each.
+function stepRing(done: number, total: number) {
+  const ring = element("div", "issues-ring");
+  ring.setAttribute("role", "img");
+  ring.setAttribute("aria-label", total ? `${done} of ${total} steps done` : "No steps yet");
+  const share = total ? done / total : 0;
+  ring.innerHTML = `<svg viewBox="0 0 112 112" aria-hidden="true"><defs><linearGradient id="issues-ring-light" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--cyan)"/></linearGradient></defs><polygon class="issues-ring-base" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100"/><polygon class="issues-ring-lit" points="56,6 99,31 99,81 56,106 13,81 13,31" pathLength="100" stroke-dasharray="${(share * 100).toFixed(1)} 100"/></svg>`;
+  const label = element("span", "issues-ring-label");
+  label.append(element("strong", "", total ? `${Math.round(share * 100)}%` : "—"), element("small", "", "steps done"));
+  ring.append(label);
+  return ring;
+}
+function section(status: Status, name: string, inState: Issue[], withProject: boolean) {
+  const folds = status === "done" || status === "cancelled";
+  const block = element(folds ? "details" : "section", "issues-doc-section state-" + status);
+  const heading = element(folds ? "summary" : "h2", "issues-doc-heading");
+  heading.append(element("span", "", name), element("span", "issues-doc-count", String(inState.length)));
+  const list = element("div", "issues-doc-list");
+  list.append(...inState.map((issue) => outlineRow(issue, withProject)));
+  if (!inState.length) list.append(element("p", "issues-doc-empty", status === "in-progress" ? "Nothing has attention now." : "Nothing lined up next."));
+  block.append(heading, list);
+  return block;
+}
+function pageActions() {
+  const actions = element("div", "issues-page-actions");
+  const toggle = element("button", "issue-page-action", board ? "Outline" : "Board");
+  toggle.type = "button";
+  toggle.onclick = () => setBoard(!board);
+  const add = element("button", "primary-button", "New issue");
+  add.type = "button";
+  add.onclick = () => newIssue();
+  actions.append(toggle, add);
+  return actions;
+}
+function renderIntro() {
+  const intro = element("div", "issues-intro");
+  const button = element("button", "primary-button", "New issue");
+  button.type = "button";
+  button.onclick = () => newIssue();
+  intro.append(element("h1", "", "Map your projects"), element("p", "", "Each project is a folder of Markdown notes with its own ID prefix. Start a project with its first issue."), button);
+  $("issues-page").replaceChildren(intro);
+}
+function renderOutline() {
+  const page = $("issues-page");
   const doc = element("div", "issues-doc");
-  const shown = issues.filter(matches);
+  const shown = issues.filter((issue) => matches(issue) && inView(issue));
+  const project = view === allProjects ? null : projectOf(view);
+  const top = element("header", "issues-doc-top");
+  const all = shown.flatMap(steps);
+  top.append(stepRing(all.filter((step) => step.done).length, all.length));
+  const titles = element("div", "issues-doc-titles");
+  titles.append(element("h1", "", view === allProjects ? "All projects" : view));
+  const open = shown.filter((issue) => !finished(issue));
+  const facts = [`${open.length} open ${open.length === 1 ? "issue" : "issues"}`, `${all.filter((s) => s.done).length} of ${all.length} Done-when steps`];
+  if (project) facts.push(`prefix ${project.prefix || "not set"}`, `issues/${project.name}/`);
+  else facts.push(`${projects().length} ${projects().length === 1 ? "project" : "projects"}`);
+  titles.append(element("p", "issues-doc-facts", facts.join(" · ")));
+  top.append(titles, pageActions());
+  doc.append(top);
+  const loose = issues.filter((issue) => issue.flat);
+  if (view === allProjects && loose.length) {
+    const note = element("div", "issues-banner");
+    const move = element("button", "issue-page-action", "Move into project folders");
+    move.type = "button";
+    move.onclick = () => organise();
+    note.append(element("span", "", `${loose.length} ${loose.length === 1 ? "issue is" : "issues are"} not in a project folder yet. Each moves into the folder of its project, keeping its ID.`), move);
+    doc.append(note);
+  }
   for (const [status, name] of statuses) {
     const inState = shown.filter((issue) => issue.status === status).sort(byAttention);
     if (!inState.length && status !== "in-progress" && status !== "todo") continue;
-    const folds = status === "done" || status === "cancelled";
-    const section = element(folds ? "details" : "section", "issues-doc-section state-" + status);
-    const heading = element(folds ? "summary" : "h2", "issues-doc-heading");
-    heading.append(element("span", "", name), element("span", "issues-doc-count", String(inState.length)));
-    const list = element("div", "issues-doc-list");
-    list.append(...inState.map(issueLine));
-    if (!inState.length) list.append(element("p", "issues-doc-empty", status === "in-progress" ? "Nothing has your attention now." : "Nothing is lined up next."));
-    section.append(heading, list);
-    doc.append(section);
+    doc.append(section(status, name, inState, view === allProjects));
   }
   page.replaceChildren(doc);
 }
+
 // The board shows the same issues as cards in Now, Next, Later and Done.
 // A card moves by dragging it, by its "Move to…" button, or by M.
 const columns: Status[] = ["in-progress", "todo", "backlog", "done"];
-async function moveIssue(issue: Issue, status: Status) {
+async function setStatus(issue: Issue, status: Status) {
   if (issue.status === status) return;
   try {
     const moved = parseIssue(await saveIssue(issue, setField(issue.body, "status", status)));
@@ -201,7 +309,7 @@ async function moveIssue(issue: Issue, status: Status) {
 }
 function moveMenu(issue: Issue) {
   showMenu("issue-move-" + issue.key, columns.map((status): MenuEntry =>
-    [statusName(status), "", () => moveIssue(issue, status), undefined, issue.status === status ? "radio:on" : "radio:off"]));
+    [statusName(status), "", () => setStatus(issue, status), undefined, issue.status === status ? "radio:on" : "radio:off"]));
 }
 function card(issue: Issue) {
   const item = element("div", "issue-card");
@@ -216,21 +324,13 @@ function card(issue: Issue) {
   item.ondragend = () => item.classList.remove("dragging");
   const open = element("button", "issue-card-open");
   open.type = "button";
-  const meta = element("span", "issue-line-meta");
-  meta.append(element("span", "", issue.key));
-  if (issue.project) meta.append(element("span", "", issue.project));
-  if (issue.priority !== "none") meta.append(element("span", "issue-priority-word priority-" + issue.priority, priorityName(issue.priority)));
-  open.append(element("span", "issue-card-title", issue.title), meta);
-  if (issue.labels.length) {
-    const tags = element("span", "issue-card-tags");
-    tags.append(...issue.labels.map((label) => element("span", "issue-tag", "#" + label)));
-    open.append(tags);
-  }
-  const links = issue.backlinks.length + new Set([...issue.body.matchAll(/\[\[([^\]|#^]+)/g)].map((m) => m[1])).size;
-  if (links) {
+  open.append(element("span", "issue-card-title", issue.title), meta(issue, view === allProjects));
+  if (steps(issue).length) open.append(facets(issue));
+  const notes = linkedNotes(issue).length;
+  if (notes) {
     const linked = element("span", "issue-card-links");
     linked.innerHTML = icon("noteLink");
-    linked.append(`${links} linked ${links === 1 ? "note" : "notes"}`);
+    linked.append(`${notes} linked ${notes === 1 ? "note" : "notes"}`);
     open.append(linked);
   }
   open.onclick = () => openIssue(issue);
@@ -252,8 +352,10 @@ function card(issue: Issue) {
   return item;
 }
 function renderBoard() {
-  if (shownIssue()) return;
-  const shown = issues.filter(matches);
+  const shown = issues.filter((issue) => matches(issue) && inView(issue));
+  const page = element("div", "issues-board-page");
+  const top = element("header", "issues-board-top");
+  top.append(element("h1", "", view === allProjects ? "All projects" : view), pageActions());
   const wrap = element("div", "issues-board");
   for (const status of columns) {
     const inColumn = shown.filter((issue) => issue.status === status).sort(byAttention);
@@ -278,7 +380,7 @@ function renderBoard() {
       event.preventDefault();
       column.classList.remove("drop-target");
       const issue = issues.find((item) => item.file === event.dataTransfer?.getData("application/x-labradorite-issue"));
-      if (issue) moveIssue(issue, status);
+      if (issue) setStatus(issue, status);
     };
     column.append(heading, list);
     wrap.append(column);
@@ -299,7 +401,8 @@ function renderBoard() {
     event.preventDefault();
     target?.querySelector<HTMLElement>(".issue-card-open")?.focus();
   });
-  $("issues-page").replaceChildren(wrap);
+  page.append(top, wrap);
+  $("issues-page").replaceChildren(page);
 }
 function setBoard(on: boolean) {
   board = on;
@@ -308,10 +411,18 @@ function setBoard(on: boolean) {
   closeIssuePage();
   render();
 }
+function showProject(name: string) {
+  view = name;
+  storage.set(viewKey(), name);
+  closeIssuePage();
+  render();
+}
 function render() {
   renderTree();
-  if (board && issues.length) renderBoard();
-  else renderDocument();
+  if (shownIssue()) return;
+  if (!issues.length && !projectList.length) renderIntro();
+  else if (board) renderBoard();
+  else renderOutline();
 }
 
 function openIssue(issue: Issue) {
@@ -322,7 +433,9 @@ function openIssue(issue: Issue) {
 async function reload() {
   const data = await loadIssues();
   issues = data.issues;
+  projectList = data.projects;
   settings = data.settings;
+  if (view !== allProjects && !projects().includes(view)) view = allProjects;
   refreshIssuePage(issues);
   render();
 }
@@ -347,32 +460,82 @@ function suggestions(id: string, values: string[]) {
   for (const value of values) list.append(new Option(value));
   return list;
 }
-
-// prefixDialog asks for the vault's issue ID prefix before the first issue.
-function prefixDialog(then: () => void) {
-  const container = element("div");
-  const input = element("input");
-  input.id = "issue-prefix";
-  input.autocomplete = "off";
-  input.maxLength = 10;
-  const vault = ($("brand").title.split("·")[1] || "").trim();
-  input.value = (vault.replace(/[^A-Za-z]/g, "").slice(0, 3) || "ISS").toUpperCase();
-  const hint = element("p", "dialog-description");
-  const explain = () => { hint.textContent = `Issue IDs start with this prefix, such as ${input.value || "ISS"}-1. Use 1 to 10 letters or digits, starting with a letter.`; };
-  input.oninput = () => {
-    input.value = input.value.toUpperCase();
-    explain();
+// projectFields asks for a project's name and prefix; the prefix follows
+// the name until the user edits it.
+function projectFields(defaultName: string) {
+  const name = element("input");
+  name.id = "issue-project-name";
+  name.autocomplete = "off";
+  name.maxLength = 60;
+  name.value = defaultName;
+  const prefix = element("input");
+  prefix.id = "issue-project-prefix";
+  prefix.autocomplete = "off";
+  prefix.maxLength = 10;
+  prefix.value = suggestPrefix(defaultName);
+  let edited = false;
+  name.oninput = () => { if (!edited) prefix.value = suggestPrefix(name.value); };
+  prefix.oninput = () => {
+    edited = true;
+    prefix.value = prefix.value.toUpperCase();
   };
-  explain();
-  container.append(field("ID prefix", input), hint);
-  openModal("Set up Issues", container, async () => {
-    const prefix = input.value.trim().toUpperCase();
-    if (!validPrefix(prefix)) throw new Error("Use 1 to 10 letters or digits, starting with a letter.");
-    await createSettings(prefix);
+  const row = element("div", "issue-form-row");
+  row.append(field("Project name", name), field("ID prefix", prefix));
+  const check = async () => {
+    const problem = checkProjectName(name.value.trim());
+    if (problem) throw new Error(problem);
+    if (projects().some((p) => p.toLowerCase() === name.value.trim().toLowerCase())) throw new Error("A project with that name already exists.");
+    if (!validPrefix(prefix.value.trim())) throw new Error("Use 1 to 10 letters or digits for the prefix, starting with a letter.");
+    await createProject(name.value.trim(), prefix.value.trim());
+    return name.value.trim();
+  };
+  return { row, name, check };
+}
+function newProject(then: (name: string) => void) {
+  const container = element("div", "issue-form");
+  const fields = projectFields("");
+  container.append(fields.row, element("p", "dialog-description", "The project becomes a folder in issues/, and its issue IDs start with the prefix."));
+  openModal("New project", container, async () => {
+    const name = await fields.check();
     await reload();
-    setTimeout(then, 0);
-  }, { submit: "Continue" });
-  setTimeout(() => input.select(), 50);
+    setTimeout(() => then(name), 0);
+  }, { submit: "Create project" });
+}
+// ensureProject gives a project named by a flat issue its folder and prefix.
+async function ensureProject(name: string) {
+  if (projectOf(name)) return;
+  await createProject(name, suggestPrefix(name));
+  projectList.push({ name, prefix: suggestPrefix(name), file: { id: `issues/${name}/Project`, title: "Project", body: "", revision: "", modified: "", backlinks: [] } });
+}
+async function moveTo(issue: Issue, project: string) {
+  try {
+    // The page shows the moved issue again once the folder has been read.
+    const wasShown = shownIssue()?.file === issue.file;
+    await ensureProject(project);
+    const moved = await moveIssue(issue, project);
+    await reload();
+    const next = issues.find((item) => item.file === moved?.file);
+    if (next && wasShown) openIssue(next);
+    showToast(`${issue.key} moved to ${project}`);
+  } catch (error) {
+    showError(error);
+  }
+}
+// organise moves issues saved directly in issues/ into their projects' folders.
+async function organise() {
+  const loose = issues.filter((issue) => issue.flat);
+  try {
+    for (const issue of loose) {
+      const project = checkProjectName(issue.project) ? inbox : issue.project;
+      await ensureProject(project);
+      await moveIssue(issue, project);
+    }
+    await reload();
+    showToast(`Moved ${loose.length} ${loose.length === 1 ? "issue" : "issues"} into project folders`);
+  } catch (error) {
+    showError(error);
+    reload().catch(() => {});
+  }
 }
 
 // newIssue reads the folder again first, so the ID it offers is current.
@@ -380,7 +543,6 @@ function newIssue(status: Status = "todo") {
   reload().then(() => issueDialog(status)).catch(showError);
 }
 function issueDialog(status: Status) {
-  if (!settings.prefix) return prefixDialog(() => issueDialog(status));
   const container = element("div", "issue-form");
   const title = element("input");
   title.id = "issue-title-input";
@@ -389,11 +551,12 @@ function issueDialog(status: Status) {
   title.maxLength = 200;
   const stateSelect = select("issue-status-input", statuses.map(([id, name]) => [id, name]), status);
   const prioritySelect = select("issue-priority-input", priorities.map(([id, name]) => [id, name]), "none");
-  const project = element("input");
-  project.id = "issue-project-input";
-  project.autocomplete = "off";
-  project.setAttribute("list", "issue-project-options");
-  project.value = shownIssue()?.project || "";
+  const newValue = "\u0000new";
+  const names = projectList.map((p) => p.name).sort((a, b) => a.localeCompare(b));
+  const chosen = shownIssue()?.project || (view !== allProjects ? view : "");
+  const projectSelect = select("issue-project-input", [...names.map((name): [string, string] => [name, name]), [newValue, "New project…"]],
+    names.includes(chosen) ? chosen : names[0] || newValue);
+  const fresh = projectFields(names.length ? "" : inbox);
   const labelInput = element("input");
   labelInput.id = "issue-labels-input";
   labelInput.autocomplete = "off";
@@ -405,32 +568,40 @@ function issueDialog(status: Status) {
   const row2 = element("div", "issue-form-row");
   row2.append(field("State", stateSelect), field("Priority", prioritySelect));
   const row3 = element("div", "issue-form-row");
-  row3.append(field("Project", project), field("Labels", labelInput));
-  const next = element("p", "dialog-description", `This issue becomes ${nextKey(settings.prefix, issues)}, saved as a Markdown note in the issues folder.`);
-  container.append(field("Title", title), row2, row3, field("Description", description), next,
-    suggestions("issue-project-options", projects()), suggestions("issue-label-options", labels()));
+  row3.append(field("Project", projectSelect), field("Labels", labelInput));
+  const next = element("p", "dialog-description");
+  const explain = () => {
+    const project = projectOf(projectSelect.value);
+    fresh.row.hidden = projectSelect.value !== newValue;
+    next.textContent = project
+      ? `This issue becomes ${nextKey(project.prefix, issues)} in issues/${project.name}/.`
+      : "The new project becomes a folder in issues/, and its issue IDs start with the prefix.";
+  };
+  projectSelect.onchange = explain;
+  explain();
+  container.append(field("Title", title), row2, row3, fresh.row, field("Description", description), next, suggestions("issue-label-options", labels()));
   openModal("New issue", container, async () => {
     const name = title.value.trim();
     if (!name) throw new Error("Give the issue a title.");
-    const chosen = [...new Set(labelInput.value.split(",").map((label) => label.replace(/[\[\]]/g, "").trim()).filter(Boolean))];
-    const projectName = project.value.replace(/[,\[\]]/g, "").trim();
-    const key = await createIssue(settings.prefix, issues, {
+    const projectName = projectSelect.value === newValue ? await fresh.check() : projectSelect.value;
+    await reload();
+    const project = projectOf(projectName);
+    if (!project?.prefix) throw new Error(`Give ${projectName} an ID prefix in issues/${projectName}/Project.md.`);
+    const tags = [...new Set(labelInput.value.split(",").map((label) => label.replace(/[\[\],]/g, "").trim()).filter(Boolean))];
+    const key = await createIssue(project, issues, {
       title: name,
       status: stateSelect.value as Status,
       priority: prioritySelect.value as Priority,
-      labels: chosen,
-      project: projectName,
+      labels: tags,
       description: description.value,
     });
-    // New projects and labels are offered next time.
-    if (projectName && !settings.projects.includes(projectName)) {
-      await updateSettings(settings, "projects", [...settings.projects, projectName]);
-      await reload();
-    }
-    const newLabels = chosen.filter((label) => !settings.labels.some((l) => l.toLowerCase() === label.toLowerCase()));
-    if (newLabels.length) await updateSettings(settings, "labels", [...settings.labels, ...newLabels]);
+    // New labels are offered next time.
+    const newLabels = tags.filter((label) => !settings.labels.some((l) => l.toLowerCase() === label.toLowerCase()));
+    if (newLabels.length && settings.file) await updateSettings(settings, "labels", [...settings.labels, ...newLabels]);
+    view = project.name;
+    storage.set(viewKey(), view);
     await reload();
-    const created = issues.find((issue) => issue.file === "issues/" + key);
+    const created = issues.find((issue) => issue.file === `issues/${project.name}/${key}`);
     showToast(`Created ${key}`);
     // The dialog closes after this returns; then the new issue opens.
     if (created) setTimeout(() => openIssue(created), 0);
@@ -443,19 +614,19 @@ function setup() {
       <div class="sidebar-actions" role="toolbar" aria-label="Issues">
         <button type="button" class="icon-button" id="issues-new" aria-label="New issue" title="New issue · Alt N"><span data-icon="plus">${icon("plus")}</span></button>
         <button type="button" class="icon-button" id="issues-search-button" aria-label="Find issues" title="Find issues" aria-expanded="false" aria-controls="issues-search-field"><span data-icon="search">${icon("search")}</span></button>
-        <button type="button" class="icon-button" id="issues-overview" aria-label="Now, Next and Later" title="Now, Next and Later"><span data-icon="list">${icon("list")}</span></button>
+        <button type="button" class="icon-button" id="issues-overview" aria-label="All projects" title="All projects" aria-pressed="false"><span data-icon="list">${icon("list")}</span></button>
         <button type="button" class="icon-button" id="issues-board-toggle" aria-label="Show as a board" title="Show as a board" aria-pressed="${board}"><span data-icon="columns">${icon("columns")}</span></button>
       </div>
       <div class="issues-search-field" id="issues-search-field" hidden>
         <input type="search" id="issues-search" placeholder="Find by title or ID" aria-label="Find issues by title or ID" autocomplete="off">
       </div>
       <div class="list-heading"><span class="list-title"><span>Projects</span> <span id="issues-count" class="issues-count">0</span></span></div>
-      <nav class="note-list issues-tree" id="issues-tree" aria-label="Issues by project"></nav>
+      <nav class="note-list issues-tree" id="issues-tree" aria-label="Projects and their issues"></nav>
     </aside>
-    <main class="issues-page" id="issues-page" aria-label="Issue"></main>`;
+    <main class="issues-page" id="issues-page" aria-label="Issues"></main>`;
   $("issues-new").onclick = () => newIssue();
   $("issues-search-button").onclick = () => toggleSearch();
-  $("issues-overview").onclick = () => setBoard(false);
+  $("issues-overview").onclick = () => showProject(allProjects);
   $("issues-board-toggle").onclick = () => setBoard(!board);
   searchBox().oninput = () => {
     query = searchBox().value.trim();
@@ -481,7 +652,11 @@ function setup() {
     else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       const open = event.key === "ArrowRight";
       if (item.classList.contains("folder-group")) {
-        if ((item.getAttribute("aria-expanded") === "true") !== open) item.click();
+        if ((item.getAttribute("aria-expanded") === "true") !== open) {
+          setFolded(item.dataset.folder || "", !open);
+          renderTree();
+          $("issues-tree").querySelector<HTMLElement>(`.folder-group[data-folder="${CSS.escape(item.dataset.folder || "")}"]`)?.focus();
+        }
       } else if (!open) target = items.slice(0, at).reverse().find((el) => el.classList.contains("folder-group"));
     } else return;
     event.preventDefault();
@@ -491,6 +666,8 @@ function setup() {
     projects,
     labels,
     colourOf,
+    moveTo,
+    newProject,
     changed(issue) {
       issues = issues.map((item) => (item.file === issue.file ? issue : item));
       renderTree();
@@ -556,16 +733,18 @@ function registerIssuesPlugin() {
   rail[0].setAttribute("aria-controls", "issues-sidebar");
   const commands: PluginCommand[] = [
     { label: "New issue", keys: "Alt N", run: () => newIssue() },
+    { label: "New project", run: () => newProject((name) => showProject(name)) },
     { label: "Find issues", run: findIssues },
-    { label: "Show Now, Next and Later", run: () => setBoard(false) },
+    { label: "Show all projects", run: () => showProject(allProjects) },
     { label: "Show issues as a board", run: () => setBoard(true) },
+    { label: "Show issues as an outline", run: () => setBoard(false) },
     { label: "Show or hide the issue projects", run: toggleSidebar },
   ];
   registerPlugin({
     contract: 1,
     id: "issues",
     name: "Issues",
-    description: "Track work as Markdown notes",
+    description: "Map your projects as Markdown notes",
     icon: "issues",
     image: "/assets/plugin-issues.png",
     colour: "--plugin-issues",
@@ -575,6 +754,7 @@ function registerIssuesPlugin() {
     commands: () => commands,
     mount(ctx) {
       context = ctx;
+      view = storage.get(viewKey()) || allProjects;
       root().hidden = false;
       reload().catch(showError);
     },
@@ -592,7 +772,7 @@ function registerIssuesPlugin() {
       return true;
     },
     focus() {
-      const target = $("issues-tree").querySelector<HTMLElement>(".note-row.selected") || $("issues-tree").querySelector<HTMLElement>("button") || $("issues-new");
+      const target = $("issues-tree").querySelector<HTMLElement>(".note-row.selected, .folder-group.current") || $("issues-tree").querySelector<HTMLElement>("button") || $("issues-new");
       target.focus();
     },
     shortcut(chord) {

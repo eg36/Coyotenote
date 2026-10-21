@@ -21,6 +21,8 @@ import {
 
 interface PageHost {
   projects(): string[];
+  moveTo(issue: Issue, project: string): void; // move to a project's folder
+  newProject(then: (name: string) => void): void; // ask for a project and its prefix
   labels(): string[];
   colourOf(name: string): string;
   changed(issue: Issue): void; // the issue was saved
@@ -132,16 +134,13 @@ function chips(issue: Issue) {
           if (label && !has(label)) return change(issue, "labels", [...issue.labels, label]);
         }), undefined, "plus"],
       ]),
-    chip("issue-project", `Project: ${issue.project || "none"}. Change`,
+    // A project is a folder: choosing another moves the file and keeps its ID.
+    chip("issue-project", `Project: ${issue.project || "none"}. Move`,
       issue.project ? [marker(issue.project), el("span", "", issue.project)] : [el("span", "issue-none", "No project")],
       () => [
-        ["No project", "", () => change(issue, "project", ""), undefined, issue.project ? "radio:off" : "radio:on"],
-        ...host.projects().map((project): MenuEntry => [project, "", () => change(issue, "project", project), undefined, issue.project === project ? "radio:on" : "radio:off"]),
+        ...host.projects().map((project): MenuEntry => [project, "", () => host.moveTo(issue, project), undefined, !issue.flat && issue.project === project ? "radio:on" : "radio:off"]),
         "-",
-        ["New project…", "", () => inputDialog("New project", "Project", "", (name) => {
-          const project = name.replace(/[,\[\]]/g, "").trim();
-          if (project) return change(issue, "project", project);
-        }), undefined, "plus"],
+        ["New project…", "", () => host.newProject((name) => host.moveTo(issue, name)), undefined, "plus"],
       ]),
     el("span", "issue-created", "Created " + longDate(issue.created)),
   );
@@ -315,4 +314,4 @@ function setupIssuePage(pageHost: PageHost) {
   });
 }
 
-export { closeIssuePage, refreshIssuePage, setupIssuePage, show as showIssuePage, shownIssue };
+export { closeIssuePage, doneWhen, refreshIssuePage, setupIssuePage, show as showIssuePage, shownIssue };
