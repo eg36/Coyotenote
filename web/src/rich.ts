@@ -17,6 +17,7 @@ import { marked, Marked, Hooks } from "marked";
 import type { Token, Tokens } from "marked";
 import { Editor, Mark, Node, InputRule, markInputRule } from "@tiptap/core";
 import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import Paragraph from "@tiptap/extension-paragraph";
 import { Markdown } from "@tiptap/markdown";
@@ -489,6 +490,15 @@ export function createRich(
     }
     return "listItem";
   }
+  function nativeTextSelection(view: EditorView) {
+    const selection = window.getSelection();
+    if (!selection?.anchorNode || !selection.focusNode ||
+        !view.dom.contains(selection.anchorNode) || !view.dom.contains(selection.focusNode)) return null;
+    const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
+    const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
+    if (!view.state.doc.resolve(anchor).parent.inlineContent || !view.state.doc.resolve(head).parent.inlineContent) return null;
+    return TextSelection.create(view.state.doc, anchor, head);
+  }
   function make(body: string) {
     editor?.destroy();
     element.replaceChildren();
@@ -550,19 +560,33 @@ export function createRich(
       ],
       editorProps: {
         handleDOMEvents: {
+          keydown(view, event) {
+            if (event.isComposing || !event.shiftKey || event.ctrlKey || event.metaKey || event.altKey ||
+                !["ArrowLeft", "ArrowRight"].includes(event.key) || !view.editable ||
+                document.activeElement !== view.dom || !(view.state.selection instanceof TextSelection)) return false;
+            const selection = window.getSelection();
+            if (!selection || typeof selection.modify !== "function" || !nativeTextSelection(view)) return false;
+            const { anchorNode, anchorOffset, focusNode, focusOffset } = selection;
+            // Ask the browser to extend by a visual character (including bidi
+            // text and grapheme clusters), then commit before any focus timer
+            // can restore the previous range between keydown and keyup.
+            selection.modify("extend", event.key === "ArrowLeft" ? "left" : "right", "character");
+            const next = nativeTextSelection(view);
+            if (!next) {
+              selection.setBaseAndExtent(anchorNode!, anchorOffset, focusNode!, focusOffset);
+              return false;
+            }
+            event.preventDefault();
+            if (!next.eq(view.state.selection)) view.dispatch(view.state.tr.setSelection(next).scrollIntoView());
+            return true;
+          },
           keyup(view, event) {
             const nativeMove = ["Home", "End"].includes(event.key) || (event.shiftKey && /^Arrow(?:Left|Right|Up|Down)$/.test(event.key));
             if (event.isComposing || !nativeMove || document.activeElement !== view.dom) return false;
-            const selection = window.getSelection();
-            if (!selection?.anchorNode || !selection.focusNode ||
-                !view.dom.contains(selection.anchorNode) || !view.dom.contains(selection.focusNode)) return false;
-            // Home/End and Shift-arrow use native text movement. Commit its
-            // result on keyup: a delayed focus callback can otherwise restore
-            // the old model selection before selectionchange has reached it.
-            const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
-            const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
-            if (!view.state.doc.resolve(anchor).parent.inlineContent || !view.state.doc.resolve(head).parent.inlineContent) return false;
-            const next = TextSelection.create(view.state.doc, anchor, head);
+            // Home/End and other native Shift-arrow movement still need a
+            // keyup fallback before delayed selectionchange reaches the editor.
+            const next = nativeTextSelection(view);
+            if (!next) return false;
             if (!next.eq(view.state.selection)) view.dispatch(view.state.tr.setSelection(next));
             return false;
           },

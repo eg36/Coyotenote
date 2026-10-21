@@ -2286,6 +2286,108 @@ for (const key of ["Home", "End", "Shift+Home", "Wrapped Home", "Shift+ArrowLeft
   });
 }
 
+for (const direction of ["Left", "Right"]) {
+  test(`native Shift+Arrow${direction} keeps its step when focus restores before keyup`, async ({ page }) => {
+    await page.addInitScript(() => {
+      const add = document.addEventListener.bind(document);
+      document.addEventListener = (type, listener, options) => add(type,
+        type === "selectionchange" && listener ? event => setTimeout(() => {
+          if (typeof listener === "function") listener.call(document, event);
+          else listener.handleEvent(event);
+        }, 1000) : listener, options);
+      const schedule = window.setTimeout.bind(window);
+      window.setTimeout = (callback, delay, ...args) => {
+        if (window.__captureFocusRestore && delay === 20) {
+          window.__restoreFocus = () => callback(...args);
+          return 0;
+        }
+        return schedule(callback, delay, ...args);
+      };
+    });
+    const text = "Before E=mc^2", id = await openSeed(page, text);
+    await mode(page, "Write");
+    await page.locator('#view-switch [aria-selected="true"]').focus();
+    await page.locator(".tiptap").evaluate((dom, direction) => {
+      dom.editor.commands.setTextSelection(direction === "Left" ? 14 : 1);
+      window.__captureFocusRestore = true;
+      dom.editor.view.focus();
+      window.__captureFocusRestore = false;
+      if (!window.__restoreFocus) throw new Error("Focus restoration timer was not captured");
+    }, direction);
+    await page.keyboard.down("Shift");
+    await page.keyboard.down("Arrow" + direction);
+    // Run the actual deferred focus callback after native movement and before
+    // keyup, while selectionchange is still delayed. No timing race is needed.
+    const selection = await page.locator(".tiptap").evaluate(dom => {
+      window.__restoreFocus();
+      const native = getSelection(), editor = dom.editor;
+      return {
+        native: { anchor: editor.view.posAtDOM(native.anchorNode, native.anchorOffset), head: editor.view.posAtDOM(native.focusNode, native.focusOffset) },
+        model: { anchor: editor.state.selection.anchor, head: editor.state.selection.head },
+      };
+    });
+    const expected = direction === "Left" ? { anchor: 14, head: 13 } : { anchor: 1, head: 2 };
+    expect(selection.native).toEqual(expected);
+    expect(selection.model).toEqual(expected);
+    await page.keyboard.up("Arrow" + direction);
+    await page.keyboard.up("Shift");
+    if (direction === "Left") {
+      for (let count = 1; count < 6; count++) await page.keyboard.press("Shift+ArrowLeft");
+      await page.locator("#format-panel").getByRole("button", { name: "Inline formula", exact: true }).click();
+      await expect(page.getByRole("textbox", { name: "Formula TeX", exact: true })).toHaveValue("E=mc^2");
+      await page.keyboard.press("Escape");
+      await expect.poll(() => diskBody(page, id)).toBe("Before $E=mc^2$");
+    } else expect(await diskBody(page, id)).toBe(text);
+  });
+}
+
+test("Shift arrows select whole graphemes and cross inline formatting without editing", async ({ page }) => {
+  const emoji = "👩🏽‍💻", combining = "e\u0301";
+  const body = `A ${emoji} ${combining} **bold** Z`, id = await openSeed(page, body);
+  const editor = page.locator(".tiptap");
+  for (const direction of ["Left", "Right"]) {
+    for (const token of [emoji, combining]) {
+      await editor.evaluate((dom, { direction, token }) => {
+        const text = dom.querySelector("p").firstChild;
+        const offset = text.textContent.indexOf(token) + (direction === "Left" ? token.length : 0);
+        dom.editor.commands.setTextSelection(dom.editor.view.posAtDOM(text, offset));
+        dom.editor.view.focus();
+      }, { direction, token });
+      await page.keyboard.press("Shift+Arrow" + direction);
+      expect(await page.evaluate(() => getSelection().toString())).toBe(token);
+    }
+    await editor.evaluate((dom, direction) => {
+      const text = direction === "Left" ? dom.querySelector("strong").firstChild : dom.querySelector("p").firstChild;
+      const offset = direction === "Left" ? text.textContent.length : text.textContent.length - 1;
+      dom.editor.commands.setTextSelection(dom.editor.view.posAtDOM(text, offset));
+      dom.editor.view.focus();
+    }, direction);
+    for (let count = 0; count < 5; count++) await page.keyboard.press("Shift+Arrow" + direction);
+    expect(await page.evaluate(() => getSelection().toString())).toBe(" bold");
+    await expect(editor.locator("strong")).toHaveText("bold");
+  }
+  expect(await diskBody(page, id)).toBe(body);
+});
+
+test("Shift arrows leave formula textarea selection and the document selection independent", async ({ page }) => {
+  const body = "Before $E=mc^2$ after.", id = await openSeed(page, body);
+  await page.getByRole("button", { name: "Edit formula E=mc^2", exact: true }).click();
+  const field = page.getByRole("textbox", { name: "Formula TeX", exact: true });
+  const editorSelection = await page.locator(".tiptap").evaluate(dom => ({ anchor: dom.editor.state.selection.anchor, head: dom.editor.state.selection.head }));
+  for (const direction of ["Left", "Right"]) {
+    await field.evaluate((input, direction) => {
+      input.focus();
+      input.setSelectionRange(direction === "Left" ? input.value.length : 0, direction === "Left" ? input.value.length : 0);
+    }, direction);
+    for (let count = 0; count < 2; count++) await page.keyboard.press("Shift+Arrow" + direction);
+    await expect(field).toBeFocused();
+    expect(await field.evaluate(input => input.value.slice(input.selectionStart, input.selectionEnd))).toBe(direction === "Left" ? "^2" : "E=");
+    expect(await page.locator(".tiptap").evaluate(dom => ({ anchor: dom.editor.state.selection.anchor, head: dom.editor.state.selection.head }))).toEqual(editorSelection);
+  }
+  await page.keyboard.press("Escape");
+  expect(await diskBody(page, id)).toBe(body);
+});
+
 test("front matter shows as properties in Write and keeps its exact form", async ({
   page,
 }) => {
