@@ -1,13 +1,17 @@
-// Images added to a note are saved in the vault's attachment folder and
-// linked from the note with ordinary Markdown.
+// Images, PDFs, audio and video added to a note are saved in the vault's
+// attachment folder. Images are linked with ordinary Markdown; the others
+// are embedded with ![[…]], which shows their viewer or player.
 import { showToast, state } from "./core.js";
 import { api } from "./api.js";
 
 const imageTypes = "image/png,image/jpeg,image/gif,image/webp,image/avif,image/svg+xml";
+const mediaExtensions = [".pdf", ".mp3", ".m4a", ".ogg", ".oga", ".wav", ".flac", ".mp4", ".webm", ".mov", ".ogv"];
+const isMedia = (file: File) => mediaExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
 
-// imageFiles are the images among the files a paste or drop carries.
+// imageFiles are the files a paste or drop carries that a note can hold:
+// images, PDFs, audio and video.
 function imageFiles(transfer: DataTransfer | null | undefined) {
-  return [...(transfer?.files || [])].filter((file) => imageTypes.split(",").includes(file.type));
+  return [...(transfer?.files || [])].filter((file) => imageTypes.split(",").includes(file.type) || isMedia(file));
 }
 
 // uploadName keeps a file's own name, but names a pasted screenshot, which
@@ -27,8 +31,9 @@ async function addImages(files: File[]) {
   // An upload belongs to the note it started in, even if another opens meanwhile.
   const note = state.current.id;
   for (const file of files) {
-    if (file.size > 20 * 1048576) {
-      showToast(`“${file.name}” is over the 20 MiB image limit.`, { persistent: true });
+    const media = isMedia(file);
+    if (file.size > (media ? 100 : 20) * 1048576) {
+      showToast(`“${file.name}” is over the ${media ? "100 MiB file" : "20 MiB image"} limit.`, { persistent: true });
       continue;
     }
     try {
@@ -38,6 +43,13 @@ async function addImages(files: File[]) {
         file,
       );
       const alt = (path.split("/").pop() || "image").replace(/\.\w+$/, "").replace(/-/g, " ");
+      if (media) {
+        if (state.current?.id !== note) {
+          showToast(`“${file.name}” finished uploading after you left “${note.split("/").pop()}”. It is saved as ${path}; paste ![[${path}]] where you want it.`, { persistent: true });
+        } else if (state.mode === "write" && state.rich) state.rich.insertEmbed(path);
+        else state.source?.insert(`![[${path}]]`);
+        continue;
+      }
       if (state.current?.id !== note) {
         showToast(`“${file.name}” finished uploading after you left “${note.split("/").pop()}”. It is saved as ${path}; paste ![${alt}](${path}) where you want it.`, { persistent: true });
         continue;
@@ -50,10 +62,10 @@ async function addImages(files: File[]) {
   }
 }
 
-function chooseImages() {
+function chooseImages(files = false) {
   const input = document.createElement("input");
   input.type = "file";
-  input.accept = imageTypes;
+  input.accept = files ? mediaExtensions.join(",") : imageTypes;
   input.multiple = true;
   input.onchange = () => addImages([...(input.files || [])]);
   input.click();

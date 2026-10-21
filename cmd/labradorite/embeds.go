@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"html"
 	"net/url"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -57,6 +58,9 @@ func escapedAt(body string, at int) bool {
 // embedNote renders the note, heading section or block that the embed l
 // points to, framed with a link to it.
 func (a *webApp) embedNote(l vault.Link, from string, notes []vault.Note, resolver vault.Resolver, embedding map[string]bool, budget *embedBudget) string {
+	if media := a.embedMedia(l, from); media != "" {
+		return media
+	}
 	id, found := resolver.Resolve(l.Target, from)
 	label := l.Alias
 	if label == "" {
@@ -175,3 +179,33 @@ func noteSection(body, heading string) (string, bool) {
 }
 
 var listItem = regexp.MustCompile(`^\s*(?:[-*+]|\d+[.)])[ \t]`)
+
+// embedMedia shows ![[file.pdf]], ![[talk.mp3]] or ![[clip.mp4]] with the
+// browser's own viewer or player, or returns "" for other targets.
+func (a *webApp) embedMedia(l vault.Link, from string) string {
+	kind := vault.MediaType(l.Target)
+	if kind == "" {
+		return ""
+	}
+	rel, found := a.store.ResolveFile(l.Target, from)
+	if !found {
+		rel, found = a.store.FindFile(l.Target)
+	}
+	label := l.Alias
+	if label == "" {
+		label = path.Base(l.Target)
+	}
+	if !found {
+		return `<div class="embed embed-missing">` + html.EscapeString(label) + " — this file is not in the vault</div>\n"
+	}
+	src := html.EscapeString(fileURL("", rel))
+	caption := `<figcaption>` + html.EscapeString(label) + `</figcaption>`
+	switch {
+	case kind == "application/pdf":
+		return `<figure class="media-embed media-pdf"><iframe src="` + src + `" title="` + html.EscapeString(label) + `" loading="lazy"></iframe>` + caption + "</figure>\n"
+	case strings.HasPrefix(kind, "audio/"):
+		return `<figure class="media-embed media-audio"><audio controls preload="metadata" src="` + src + `"></audio>` + caption + "</figure>\n"
+	default:
+		return `<figure class="media-embed media-video"><video controls preload="metadata" src="` + src + `"></video>` + caption + "</figure>\n"
+	}
+}

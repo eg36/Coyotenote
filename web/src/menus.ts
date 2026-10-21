@@ -74,7 +74,8 @@ const menus: Record<string, MenuEntry[]> = {
   insert: [
     ["Link…", "", () => linkDialog(), note],
     ["Link to a note…", "", () => linkDialog(true), note],
-    ["Image…", "", chooseImages, note],
+    ["Image…", "", () => chooseImages(), note],
+    ["PDF, audio or video…", "", () => chooseImages(true), note],
     "-",
     ["Table", "", rich("table"), writing],
     ["Checklist", "", rich("taskList"), writing],

@@ -4635,6 +4635,34 @@ test("Write shows the preview's HTML and saves it exactly", async ({ page }) => 
   expect(await diskBody(page, other)).toBe("A <video src=x></video> clip.");
 });
 
+test("PDF, audio and video files attach and play in Preview and Write", async ({ page }) => {
+  const { token } = await (await page.request.get("/api/state")).json();
+  const upload = (name, bytes) => page.request.post("/api/attachment?name=" + name, { headers: { "X-Labradorite-Token": token }, data: Buffer.from(bytes) });
+  expect((await upload("Report.pdf", "%PDF-1.4\n%fake\n")).status()).toBe(201);
+  expect((await upload("clip.mp4", "\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom" + "\x00".repeat(64))).status()).toBe(201);
+  expect((await upload("talk.mp3", "ID3\x03\x00\x00\x00\x00\x00\x00" + "\x00".repeat(64))).status()).toBe(201);
+  expect((await upload("tool.exe", "MZ")).status()).toBe(415);
+  const text = "Files:\n\n![[Report.pdf]]\n\n![[talk.mp3]]\n\n![[clip.mp4]]";
+  const id = await openSeed(page, text);
+  await mode(page, "Preview");
+  await expect(page.locator("#preview .media-pdf iframe")).toHaveAttribute("src", /vault-file/);
+  await expect(page.locator("#preview .media-audio audio")).toHaveAttribute("controls", "");
+  const video = page.locator("#preview .media-video video");
+  await expect(video).toHaveAttribute("src", /vault-file/);
+  const response = await page.request.get(await video.getAttribute("src"), { headers: { Range: "bytes=4-11" } });
+  expect(response.status()).toBe(206);
+  expect(response.headers()["content-type"]).toBe("video/mp4");
+  // Write shows the same players inside its embed frames and keeps the text.
+  await mode(page, "Write");
+  await expect(page.locator("#rich-editor .note-embed video")).toHaveCount(1);
+  await expect(page.locator("#rich-editor .note-embed audio")).toHaveCount(1);
+  await expect(page.locator("#rich-editor .note-embed iframe")).toHaveCount(1);
+  await page.locator(".tiptap > p").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Three.");
+  await expect.poll(() => diskBody(page, id)).toBe(text.replace("Files:", "Files: Three."));
+});
+
 test("long note titles take one line in the notes list", async ({ page }) => {
   const long = "A remarkably long note title that would otherwise wrap onto several lines " + Date.now();
   await openSeed(page, "Long.", long);

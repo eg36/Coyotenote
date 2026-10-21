@@ -3292,3 +3292,9 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 .issue-project-line .issue-state { width: 38px; flex: none; }
 .issue-project-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .issue-project-middle .issues-ring-label small { display: none; }
+/* PDFs, audio and video embedded in a note. */
+.media-embed { margin: 16px 0; }
+.media-embed figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.media-embed video { display: block; max-width: 100%; border-radius: 10px; background: #000; }
+.media-embed audio { display: block; width: 100%; max-width: 560px; }
+.media-embed iframe { display: block; width: 100%; height: min(80vh, 760px); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }

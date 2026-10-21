@@ -54,6 +54,7 @@ export interface RichEditor {
   spellcheck(value: boolean): void;
   insertImage(src: string, alt: string): void;
   insertWiki(raw: string): void;
+  insertEmbed(raw: string): void;
   command(name: string, value?: string): void;
   destroy(): void;
 }

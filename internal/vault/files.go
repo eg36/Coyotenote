@@ -35,6 +35,27 @@ var imageTypes = map[string]string{
 // Labradorite does not show.
 func ImageType(name string) string { return imageTypes[strings.ToLower(path.Ext(name))] }
 
+// MaxMediaBytes caps a PDF, audio or video attachment.
+const MaxMediaBytes = 100 << 20
+
+var mediaTypes = map[string]string{
+	".pdf":  "application/pdf",
+	".mp3":  "audio/mpeg",
+	".m4a":  "audio/mp4",
+	".ogg":  "audio/ogg",
+	".oga":  "audio/ogg",
+	".wav":  "audio/wav",
+	".flac": "audio/flac",
+	".mp4":  "video/mp4",
+	".webm": "video/webm",
+	".mov":  "video/quicktime",
+	".ogv":  "video/ogg",
+}
+
+// MediaType is the media type of a PDF, audio or video file name, or "" for
+// other files.
+func MediaType(name string) string { return mediaTypes[strings.ToLower(path.Ext(name))] }
+
 // regularFile reports whether the vault-relative path rel names a regular
 // file reached without symlinks or hidden folders.
 func (s *Store) regularFile(rel string) bool {
@@ -185,8 +206,8 @@ func attachmentName(name string) string {
 // name and returns its vault-relative path. It never replaces a file.
 func (s *Store) SaveAttachment(name string, data []byte) (string, error) {
 	name = attachmentName(name)
-	if ImageType(name) == "" {
-		return "", errors.New("only PNG, JPEG, GIF, WebP, AVIF and SVG images can be attached")
+	if ImageType(name) == "" && MediaType(name) == "" {
+		return "", errors.New("only images, PDFs, audio and video can be attached")
 	}
 	dir, err := noteDir(s.Dir, AttachmentDir+"/"+name, true)
 	if err != nil {

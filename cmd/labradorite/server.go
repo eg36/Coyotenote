@@ -812,6 +812,9 @@ func (a *webApp) serveFile(w http.ResponseWriter, r *http.Request) {
 		rel, ok = a.store.ResolveFile(decoded, query.Get("from"))
 	}
 	kind := vault.ImageType(rel)
+	if kind == "" {
+		kind = vault.MediaType(rel)
+	}
 	if !ok || kind == "" {
 		http.NotFound(w, r)
 		return
@@ -828,8 +831,16 @@ func (a *webApp) serveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", kind)
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if kind == "application/pdf" {
+		// The browser's PDF viewer refuses sandboxed frames; this app's own
+		// pages may still frame the file, and no other site can.
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self'")
+	} else {
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+	}
 	w.Header().Set("Cache-Control", "no-cache")
+	// ServeContent answers range requests, so audio and video can seek.
 	http.ServeContent(w, r, "", info.ModTime(), f)
 }
 
@@ -838,8 +849,11 @@ func (a *webApp) serveFile(w http.ResponseWriter, r *http.Request) {
 func (a *webApp) attach(w http.ResponseWriter, r *http.Request) error {
 	name := r.URL.Query().Get("name")
 	kind := vault.ImageType(name)
+	if media := vault.MediaType(name); kind == "" && media != "" {
+		return a.attachMedia(w, r, name, media)
+	}
 	if kind == "" {
-		return &apiError{status: 415, message: "Only PNG, JPEG, GIF, WebP, AVIF and SVG images can be attached."}
+		return &apiError{status: 415, message: "Only images (PNG, JPEG, GIF, WebP, AVIF, SVG), PDFs, audio (MP3, M4A, OGG, WAV, FLAC) and video (MP4, WebM, MOV, OGV) can be attached."}
 	}
 	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, vault.MaxAttachmentBytes+1))
 	if err != nil || len(data) > vault.MaxAttachmentBytes {
@@ -852,6 +866,32 @@ func (a *webApp) attach(w http.ResponseWriter, r *http.Request) error {
 		}
 	} else if sniffed != kind && !(kind == "image/avif" && sniffed == "application/octet-stream") {
 		return &apiError{status: 415, message: "That file's contents do not match its image type."}
+	}
+	rel, err := a.store.SaveAttachment(name, data)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, 201, map[string]string{"path": rel})
+	return nil
+}
+
+// attachMedia saves a PDF, audio or video file after checking its contents
+// look like that kind of file. Browsers cannot always name a recording's
+// exact format, so audio and video only need to sniff as media.
+func (a *webApp) attachMedia(w http.ResponseWriter, r *http.Request, name, kind string) error {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, vault.MaxMediaBytes+1))
+	if err != nil || len(data) > vault.MaxMediaBytes {
+		return &apiError{status: 413, message: "A PDF, audio or video file can be up to 100 MiB."}
+	}
+	sniffed := http.DetectContentType(data)
+	ok := sniffed == kind
+	switch {
+	case kind == "application/pdf":
+	case strings.HasPrefix(kind, "audio/") || strings.HasPrefix(kind, "video/"):
+		ok = ok || strings.HasPrefix(sniffed, "audio/") || strings.HasPrefix(sniffed, "video/") || sniffed == "application/ogg" || sniffed == "application/octet-stream"
+	}
+	if !ok {
+		return &apiError{status: 415, message: "That file's contents do not match its type."}
 	}
 	rel, err := a.store.SaveAttachment(name, data)
 	if err != nil {

@@ -741,6 +741,13 @@ export function createRich(
         .insertContent({ type: "wikiLink", attrs: { raw } })
         .run();
     },
+    insertEmbed(raw) {
+      editor
+        ?.chain()
+        .focus()
+        .insertContent({ type: "noteEmbed", attrs: { raw } })
+        .run();
+    },
     command(name, value) {
       if (!editor) return;
       const chain = editor.chain().focus();

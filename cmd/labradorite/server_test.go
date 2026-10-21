@@ -325,6 +325,52 @@ func TestLibraryListsEveryVaultFileAndDownloadsThem(t *testing.T) {
 	}
 }
 
+func TestMediaAttachUploadRenderAndServe(t *testing.T) {
+	a := testApp(t)
+	upload := func(name string, data []byte, want int) map[string]any {
+		t.Helper()
+		r := httptest.NewRequest("POST", "http://127.0.0.1:4280/api/attachment?name="+url.QueryEscape(name), bytes.NewReader(data))
+		r.Header.Set("X-Labradorite-Token", a.token)
+		r.Header.Set("Origin", "http://127.0.0.1:4280")
+		w := httptest.NewRecorder()
+		a.ServeHTTP(w, r)
+		if w.Code != want {
+			t.Fatalf("upload %s: %d %s", name, w.Code, w.Body.String())
+		}
+		got := map[string]any{}
+		_ = json.Unmarshal(w.Body.Bytes(), &got)
+		return got
+	}
+	pdf := upload("Report.pdf", []byte("%PDF-1.4\n%fake\n"), 201)["path"].(string)
+	mp3 := upload("talk.mp3", append([]byte("ID3\x03\x00\x00\x00\x00\x00\x00"), make([]byte, 64)...), 201)["path"].(string)
+	mp4 := upload("clip.mp4", append([]byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"), make([]byte, 64)...), 201)["path"].(string)
+	upload("fake.pdf", []byte("not a pdf at all"), 415)
+	upload("tool.exe", []byte("MZ"), 415)
+	if pdf != "attachments/Report.pdf" || mp3 != "attachments/talk.mp3" || mp4 != "attachments/clip.mp4" {
+		t.Fatalf("paths: %s %s %s", pdf, mp3, mp4)
+	}
+	out := request(t, a, "POST", "/api/render", mutation{Body: "![[Report.pdf]]\n\n![[talk.mp3]]\n\n![[clip.mp4|My clip]]\n\n![[gone.mp4]]", ID: "Plan"}, 200)["html"].(string)
+	for _, want := range []string{`<iframe src="/vault-file?`, `<audio controls preload="metadata" src="/vault-file?`, `<video controls preload="metadata" src="/vault-file?`, "<figcaption>My clip</figcaption>", "gone.mp4 — this file is not in the vault"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("render lacks %q:\n%s", want, out)
+		}
+	}
+	// Files serve with their type, and audio and video can seek.
+	r := httptest.NewRequest("GET", "http://127.0.0.1:4280"+fileURL("", mp4), nil)
+	r.Header.Set("Range", "bytes=4-11")
+	w := httptest.NewRecorder()
+	a.ServeHTTP(w, r)
+	if w.Code != 206 || w.Header().Get("Content-Type") != "video/mp4" || w.Body.String() != "ftypmp42" {
+		t.Fatalf("range: %d %q %q", w.Code, w.Header().Get("Content-Type"), w.Body.String())
+	}
+	r = httptest.NewRequest("GET", "http://127.0.0.1:4280"+fileURL("", pdf), nil)
+	w = httptest.NewRecorder()
+	a.ServeHTTP(w, r)
+	if w.Code != 200 || w.Header().Get("Content-Type") != "application/pdf" || strings.Contains(w.Header().Get("Content-Security-Policy"), "sandbox") || !strings.Contains(w.Header().Get("Content-Security-Policy"), "frame-ancestors 'self'") {
+		t.Fatalf("pdf: %d %q %q", w.Code, w.Header().Get("Content-Type"), w.Header().Get("Content-Security-Policy"))
+	}
+}
+
 func TestRetiredThemesOpenByBrightness(t *testing.T) {
 	a := testApp(t)
 	for saved, want := range map[string]string{"gruvbox-light": "light", "catppuccin-latte": "light", "nord": "dark", "tokyo-night": "dark", "unknown": "dark"} {
