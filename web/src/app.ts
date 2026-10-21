@@ -60,7 +60,8 @@ import { paletteDialog } from "./palette.js";
 import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
-import { isActive, startPlugins } from "./plugins.js";
+import { activePlugin, isActive, startPlugins } from "./plugins.js";
+import { registerIssuesPlugin } from "./issues-plugin.js";
 import { setupSwitcher } from "./switcher.js";
 import { registerNotesPlugin } from "./notes-plugin.js";
 import { insertCallout, setupFormatting } from "./formatting.js";
@@ -126,9 +127,11 @@ async function initialize() {
   setupOutline();
   setupDragging();
   setupMenus();
+  // Plugins add their rail buttons before the rail order is restored.
+  registerNotesPlugin();
+  registerIssuesPlugin();
   setupRailOrder();
   setupFormatting();
-  registerNotesPlugin();
   setupSwitcher();
   const data = await refresh();
   if (!data) return;
@@ -403,7 +406,12 @@ document.addEventListener("keydown", (event) => {
     .filter(Boolean)
     .join("+");
   const shortcut = shortcutChords.get(chord);
-  if (!shortcut || !shortcut.options.shell && !isActive("notes")) return;
+  // Other plugins handle their own chords; Notes' table rests meanwhile.
+  if (!shortcut?.options.shell && !isActive("notes")) {
+    if (activePlugin()?.shortcut?.(chord)) event.preventDefault();
+    return;
+  }
+  if (!shortcut) return;
   if (!shortcut.options.keepDefault) event.preventDefault();
   shortcut.run?.(chord);
 });

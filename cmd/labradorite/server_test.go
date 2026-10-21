@@ -256,6 +256,27 @@ func TestPluginsDefaultOnAndPersist(t *testing.T) {
 	}
 }
 
+func TestPluginFilesListTheirFolderWithText(t *testing.T) {
+	a := testApp(t)
+	empty := request(t, a, "GET", "/api/plugin-files?plugin=issues", nil, 200)
+	if files := empty["files"].([]any); len(files) != 0 || empty["folder"] != "issues" {
+		t.Fatalf("empty folder: %v", empty)
+	}
+	request(t, a, "POST", "/api/note", mutation{ID: "issues/A-1", Body: "---\ntitle: One\n---\nText"}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "Plan", Body: "See [[issues/A-1]]."}, 201)
+	request(t, a, "POST", "/api/note", mutation{ID: "issuesish/Other", Body: "x"}, 201)
+	got := request(t, a, "GET", "/api/plugin-files?plugin=issues", nil, 200)["files"].([]any)
+	if len(got) != 1 {
+		t.Fatalf("files: %v", got)
+	}
+	file := got[0].(map[string]any)
+	if file["id"] != "issues/A-1" || !strings.Contains(file["body"].(string), "title: One") || len(file["backlinks"].([]any)) != 1 {
+		t.Fatalf("file: %v", file)
+	}
+	request(t, a, "GET", "/api/plugin-files?plugin=notes", nil, 404)
+	request(t, a, "GET", "/api/plugin-files?plugin=../x", nil, 404)
+}
+
 func TestRetiredThemesOpenByBrightness(t *testing.T) {
 	a := testApp(t)
 	for saved, want := range map[string]string{"gruvbox-light": "light", "catppuccin-latte": "light", "nord": "dark", "tokyo-night": "dark", "unknown": "dark"} {

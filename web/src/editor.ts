@@ -120,6 +120,8 @@ async function refresh({ query = state.search } = {}) {
   versionLink.hidden = false;
   state.notes = data.notes;
   state.stamp = data.stamp;
+  // Plugins that show vault files refresh with the notes.
+  document.dispatchEvent(new Event("notes-refreshed"));
   if (!state.changing) state.listedChanges = Math.max(state.listedChanges, changes);
   state.filteredIds = query ? new Set(data.matches) : null;
   state.snippets = query ? data.snippets : {};

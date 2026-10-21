@@ -5,7 +5,7 @@ import { draftsDialog } from "./drafts.js";
 import { chooseImages } from "./attachments.js";
 import { historyDialog } from "./history.js";
 import { splitFrontMatter } from "./frontmatter.js";
-import { editProperties, exportNote, findInNote, focusEditor, save, setMode } from "./editor.js";
+import { editProperties, exportNote, findInNote, focusEditor, openNote, save, setMode } from "./editor.js";
 import { backlinksDialog, deleteDialog, newNoteDialog, renameDialog, trashDialog } from "./dialogs.js";
 import { toggleOutline } from "./outline.js";
 import { findNotes, navigate, toggleFocus } from "./shortcuts.js";
@@ -74,6 +74,10 @@ function registerNotesPlugin() {
     // Leaving Notes saves the open note; everything else stays as it was.
     unmount() {
       save().catch(showError);
+    },
+    openLink(target) {
+      openNote(target).catch(showError);
+      return true;
     },
     focus() {
       if (state.current && state.mode !== "preview") focusEditor();

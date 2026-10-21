@@ -25,6 +25,7 @@ interface LabradoritePlugin {
   unmount(): void; // hide it and finish pending work
   focus(): void; // move focus to its main area
   openLink?(target: string): boolean; // open a link into this plugin
+  shortcut?(chord: string): boolean; // run a key chord while active; true if handled
   settings?(): HTMLElement; // its own section in Settings
 }
 

@@ -427,6 +427,23 @@ func (a *webApp) api(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, 200, map[string]any{"notes": list, "matches": matches, "snippets": snippets, "themes": themeList, "theme": theme, "plugins": a.enabledPlugins(), "pluginFolders": a.enabledFolders(), "vault": filepath.Base(absolute), "vaultId": vaultID(a.store.Dir), "formerVaultIds": append([]string{}, a.formerIDs...), "token": a.token, "stamp": a.stamp(notes), "version": version.String(), "warnings": warnings, "limits": map[string]int{"lines": vault.MaxLines, "bytes": maxBodyBytes}})
 		return nil
 	}
+	if route == "GET /api/plugin-files" {
+		// A plugin reads all its files at once, with their text and backlinks.
+		folder := pluginFolders[r.URL.Query().Get("plugin")]
+		if folder == "" {
+			return &apiError{status: 404, message: "unknown plugin folder"}
+		}
+		views := a.views(notes, false)
+		files := []noteView{}
+		for i, n := range notes {
+			if strings.HasPrefix(n.ID, folder+"/") {
+				views[i].Body, _ = vault.EditorText(n.Body)
+				files = append(files, views[i])
+			}
+		}
+		writeJSON(w, 200, map[string]any{"folder": folder, "files": files})
+		return nil
+	}
 	if route == "GET /api/note" || route == "GET /api/export" {
 		n, v, err := a.current(r.URL.Query().Get("id"), notes, "")
 		if err != nil {

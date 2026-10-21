@@ -3177,7 +3177,9 @@ test("the plugin switcher lists Notes and works by mouse and keyboard", async ({
   const notes = panel.locator('.switcher-row[data-plugin="notes"]');
   await expect(notes).toHaveAttribute("aria-current", "true");
   await expect(notes).toBeFocused();
-  // The arrows reach "Add or manage plugins" and wrap around; Escape returns.
+  // The arrows pass Issues, reach "Add or manage plugins" and wrap around.
+  await page.keyboard.press("ArrowDown");
+  await expect(panel.locator('.switcher-row[data-plugin="issues"]')).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(panel.getByRole("button", { name: "Add or manage plugins" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
@@ -3249,6 +3251,9 @@ test("turning Notes off leaves the shell's empty state, and turning it on return
   await expect(notesSwitch).toBeChecked();
   await notesSwitch.uncheck();
   await expect(notesSwitch).not.toBeChecked();
+  // With Notes off the shell opens the next plugin, Issues; turn it off too.
+  await page.getByRole("switch", { name: /Issues/ }).uncheck();
+  await expect(page.getByRole("switch", { name: /Issues/ })).not.toBeChecked();
   await page.keyboard.press("Escape");
   const empty = page.locator("#space-empty");
   await expect(empty).toBeVisible();
@@ -3307,6 +3312,155 @@ test("Notes leaves enabled plugins' folders out of its list but still follows li
   await page.request.post("/api/settings", { headers: { "X-Labradorite-Token": token }, data: { plugins: { issues: false } } });
   await page.reload();
   await expect(row).toHaveCount(1);
+});
+
+async function noteBody(page, id) {
+  return (await (await page.request.get("/api/note?id=" + encodeURIComponent(id))).json()).body;
+}
+async function openIssues(page) {
+  await page.keyboard.press("Alt+p");
+  await page.locator('.switcher-row[data-plugin="issues"]').click();
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "issues");
+}
+const issueFile = (title, status, priority, labels, project = "Space", created = "2026-10-20") =>
+  `---\ntitle: "${title}"\nstatus: ${status}\npriority: ${priority}\nlabels: [${labels.join(", ")}]\nproject: ${project}\ncreated: ${created}\n---\n\nAbout ${title}.\n`;
+
+test("Issues asks for a prefix, then saves each new issue as a Markdown file", async ({ page }) => {
+  await openSeed(page, "Start.");
+  await openIssues(page);
+  for (const id of ["issues-new-rail", "issues-sidebar-toggle", "issues-search-rail"]) await expect(page.locator("#" + id)).toBeVisible();
+  await expect(page.locator("#new-note")).toBeHidden();
+  await expect(page.locator("#issues-empty")).toContainText("No issues yet");
+  await page.getByRole("button", { name: "New issue", exact: true }).click();
+  // The first issue sets up the folder with a prefix of the user's choice.
+  const prefix = page.getByLabel("ID prefix");
+  await prefix.fill("1x");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.locator("#modal-error")).toContainText("starting with a letter");
+  await prefix.fill("spc");
+  await expect(prefix).toHaveValue("SPC");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.locator("#modal")).toContainText("This issue becomes SPC-1");
+  await page.getByLabel("Title", { exact: true }).fill('Plan: the "shell"');
+  await page.getByLabel("Status", { exact: true }).selectOption("in-progress");
+  await page.getByLabel("Priority", { exact: true }).selectOption("high");
+  await page.getByLabel("Project").fill("Space");
+  await page.getByLabel("Labels").fill("Feature, UX");
+  await page.getByLabel("Description").fill("Build it.");
+  await page.getByRole("button", { name: "Create issue" }).click();
+  await expect(page.locator("#modal")).not.toBeVisible();
+  const created = page.locator('.issue-row[data-issue="issues/SPC-1"]');
+  await expect(created).toBeFocused();
+  await expect(created).toContainText('Plan: the "shell"');
+  const today = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
+  expect(await noteBody(page, "issues/SPC-1")).toBe(`---\ntitle: "Plan: the \\"shell\\""\nstatus: in-progress\npriority: high\nlabels: [Feature, UX]\nproject: Space\ncreated: ${today}\n---\n\nBuild it.\n`);
+  // The settings note now offers the new project and labels, and only those lines changed.
+  const settings = await noteBody(page, "issues/Issues");
+  expect(settings).toContain("prefix: SPC\nprojects: [Space]\nlabels: [Feature, UX]\n---\n\nSettings for Issues");
+  // IDs number on from the highest existing one.
+  await seed(page, "issues/SPC-7", issueFile("Seventh", "todo", "low", []));
+  await page.keyboard.press("Alt+n");
+  await expect(page.locator("#modal")).toContainText("This issue becomes SPC-8");
+  await page.getByLabel("Title", { exact: true }).fill("Eighth");
+  await page.getByRole("button", { name: "Create issue" }).click();
+  await expect(page.locator('.issue-row[data-issue="issues/SPC-8"]')).toBeVisible();
+  // Issue files stay out of the Notes list.
+  await page.keyboard.press("Alt+p");
+  await page.keyboard.press("1");
+  await expect(page.locator('#note-list [data-note="issues/SPC-1"]')).toHaveCount(0);
+});
+
+test("the Issues sidebar and filter bar narrow the list grouped by status", async ({ page }) => {
+  await seed(page, "issues/T-1", issueFile("Ship shell", "done", "high", ["Feature"]));
+  await seed(page, "issues/T-2", issueFile("List view", "in-progress", "urgent", ["Feature", "UX"]));
+  await seed(page, "issues/T-3", issueFile("Board", "todo", "medium", ["UX"], "Board work"));
+  await seed(page, "issues/T-4", issueFile("Canvas spike", "backlog", "none", []));
+  await seed(page, "issues/Issues", "---\nprefix: T\nprojects: [Space, Board work]\nlabels: [Feature, UX]\n---\n");
+  await openSeed(page, "Start.");
+  await openIssues(page);
+  const rows = page.locator(".issue-row");
+  // Done is hidden by default; groups follow status order.
+  await expect(rows).toHaveCount(3);
+  await expect(page.locator(".issue-group-name")).toHaveText(["In progress", "Todo", "Backlog"]);
+  await expect(page.locator("#issues-count")).toHaveText("3 issues");
+  await expect(page.locator('.issue-row[data-issue="issues/T-2"] [role="img"]').first()).toHaveAttribute("aria-label", "Priority: urgent");
+  const nav = (name) => page.locator(".issues-nav-row", { hasText: name });
+  await expect(nav("All issues")).toContainText("4");
+  await nav("Done").click();
+  await expect(rows).toHaveCount(1);
+  await expect(page.locator("#issues-chips")).toContainText("View: Done");
+  await page.getByRole("button", { name: "Remove filter: View: Done" }).click();
+  await expect(rows).toHaveCount(3);
+  await nav("Board work").click();
+  await expect(rows).toHaveCount(1);
+  await expect(page.locator("#issues-title")).toHaveText("Board work");
+  await page.getByRole("button", { name: "Remove filter: Project: Board work" }).click();
+  await nav("UX").click();
+  await expect(rows).toHaveCount(2);
+  await page.getByRole("button", { name: "Remove filter: Label: UX" }).click();
+  await page.getByRole("button", { name: "Remove filter: Status is not Done" }).click();
+  await expect(rows).toHaveCount(4);
+  await page.locator("#issues-search").fill("spike");
+  await expect(rows).toHaveCount(1);
+  await page.locator("#issues-search").fill("zzz");
+  await expect(page.locator("#issues-empty")).toContainText("No issues match");
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(rows).toHaveCount(3);
+  // The arrows move through the rows, and Enter opens the issue's file in Notes.
+  await rows.first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(rows.nth(1)).toBeFocused();
+  await expect(rows.nth(1)).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("End");
+  await expect(rows.last()).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
+  await expect(page.locator("#document-title")).toHaveText("T-4");
+  // Switching back keeps the Issues filters and the chosen row.
+  await openIssues(page);
+  await expect(page.locator('.issue-row[aria-selected="true"]')).toHaveAttribute("data-issue", "issues/T-4");
+});
+
+test("Issues reads at AA in Light and Dark", async ({ page }) => {
+  await seed(page, "issues/C-1", issueFile("Contrast", "in-progress", "urgent", ["Feature", "Bug"]));
+  await openSeed(page, "Start.");
+  const group = await openAppearance(page);
+  for (const name of ["Light", "Dark"]) {
+    await group.getByRole("radio", { name }).click();
+    await page.keyboard.press("Escape");
+    await openIssues(page);
+    await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)));
+    const failures = await page.evaluate(() => {
+      const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
+      const rgba = (color) => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data; return [r, g, b, a / 255]; };
+      const over = (top, base) => top.slice(0, 3).map((v, i) => v * top[3] + base[i] * (1 - top[3]));
+      const backdrop = (el) => { const layers = []; for (let n = el; n; n = n.parentElement) layers.push(rgba(getComputedStyle(n).backgroundColor)); return layers.reverse().reduce((base, layer) => over(layer, base), [255, 255, 255]); };
+      const lum = (c) => c.map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+      return [...document.querySelectorAll("#issues-app *")]
+        .filter((el) => el.checkVisibility() && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+        .map((el) => { const bg = backdrop(el); return [el.className + " " + el.textContent.trim().slice(0, 16), ratio(over(rgba(getComputedStyle(el).color), bg), bg)]; })
+        .filter(([, value]) => value < 4.5).map(([what, value]) => `${what} ${value.toFixed(2)}`);
+    });
+    expect(failures, name).toEqual([]);
+    await page.keyboard.press("Alt+p");
+    await page.keyboard.press("1");
+    await openAppearance(page);
+  }
+});
+
+test("turning Issues off removes it from the switcher and gives its files to Notes", async ({ page }) => {
+  await seed(page, "issues/T-1", issueFile("Kept", "todo", "none", []));
+  await openSeed(page, "Start.");
+  await page.locator("#settings-button").click();
+  await page.getByRole("switch", { name: /Issues/ }).uncheck();
+  await expect(page.getByRole("switch", { name: /Issues/ })).not.toBeChecked();
+  await page.keyboard.press("Escape");
+  await expect(page.locator('#note-list [data-note="issues/T-1"]')).toHaveCount(1);
+  await page.keyboard.press("Alt+p");
+  await expect(page.locator(".switcher-row")).toHaveCount(1);
+  await page.keyboard.press("2");
+  await expect(page.locator("#app")).toHaveAttribute("data-plugin", "notes");
 });
 
 test("the switcher fits a phone and reads at AA in Light and Dark", async ({ page }) => {
