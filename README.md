@@ -4,21 +4,27 @@
 
 # Labradorite
 
-A small, local-first Markdown notebook that runs in your browser. Your notes are
-plain `.md` files in a folder you choose, and one binary serves the app to your
-own computer only. No account or cloud service. Works offline; optional web
-embeds contact external services only after being enabled and loaded.
+A local workspace in your browser, with optional Notes and Issues plugins.
+Notes and issues stay plain Markdown in a folder you choose, served by one
+binary on your own computer. No account or cloud service. Works offline;
+web embeds contact external services only after being enabled and loaded.
+
+This checkout is developing **Labradorite Space 2026.1.0**. The published
+stable **v1.5.0** is the earlier notebook; the Space features below are in
+source and development builds. See the [roadmap](docs/ROADMAP.md).
 
 > AI-assisted software. Keep backups of the notes that matter.
 
 ## Features
 
-- Write visually or in Markdown, with preview and split view
-- `[[Wiki links]]`, tags, pins, search across notes, and find and replace in a note
-- For a computer used by one person: the app is closed to web pages, not to
-  other accounts on the same machine
-- Autosave that never overwrites outside changes, with draft recovery
-- Light, dark and system appearance, keyboard shortcuts and a phone-friendly layout
+- Optional Notes and Issues tools, a keyboard plugin switcher, and a Library of vault files
+- Visual Markdown editing, Preview/Split views, wiki links, tags, pins and search
+- Issues as project folders with their own ID prefixes, an overview, board and outline
+- Note, image, PDF, audio and video embeds in Write and Preview; opt-in web embeds
+- Autosave, revision conflict checks, recoverable browser drafts, history and trash
+- Light, Dark and System appearance; keyboard controls and phone workflows for Notes
+- For a computer used by one person: the app is closed to unrelated web pages,
+  but local accounts and programs can access its loopback API
 
 ## Install
 
@@ -51,13 +57,16 @@ Ctrl+C stops it. Chrome and Edge can install it as an app. The
 - Notes stay plain Markdown, never converted. Hidden folders such as `.git` are
   ignored, so other tools can share the folder.
 - Deleted notes go to `.trash/` in the vault until you empty it.
-- Every 1.x release reads and writes vaults exactly as 1.0 does.
+- Existing Markdown notes open without conversion. Issues adds plain files in
+  `issues/<Project>/`; disabling a plugin keeps its files.
 
 ## Development
 
 ```sh
 go vet ./... && go test -race ./...
-npm ci && npm run typecheck && npm run build && npm test     # Node 24+
+npm ci && npm run typecheck && npm run build                # Node 24+
+go build -o bin/labradorite ./cmd/labradorite
+npm test
 ```
 
 The stable v1.5.0 package supports Linux amd64. Four-target Actions packages

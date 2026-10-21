@@ -1,9 +1,15 @@
 # Labradorite guide
 
-A local-first writing space in your browser, powered by Go. Notes are plain
-Markdown files in a folder you choose. The app offers a WYSIWYG editor, Markdown
-source, rendered preview, split view, body search, focus mode, light/dark/system appearance and
-browser draft recovery.
+This guide describes **Labradorite Space 2026.1.0 development builds**. The
+published stable **v1.5.0** is the earlier notebook and does not include the
+Space plugin shell, Issues, Library or the later embed work. Development
+builds are stamped `2026.1.0+dev`; this guide does not announce a new release.
+
+Labradorite runs locally in your browser. Optional Notes and Issues plugins
+share a rail, settings, command palette and vault. Notes and issues are plain
+Markdown files in a folder you choose. Notes offers visual editing, Markdown
+source, Preview and Split, search, Light/Dark/System appearance and browser
+draft recovery.
 
 Labradorite is AI-assisted software. Keep important notes backed up and try it on
 a copy of your vault first.
@@ -42,7 +48,7 @@ Labradorite icon; it still needs `labradorite` running to work.
 
 ```sh
 ./bin/labradorite ~/Notes                  # open an existing Markdown vault
-./bin/labradorite -data-dir /tmp/test      # isolated notes AND theme settings
+./bin/labradorite -data-dir /tmp/test      # isolated notes AND app settings
 ./bin/labradorite -listen 127.0.0.1:4390   # choose another local port
 ./bin/labradorite -no-browser              # print the address without opening it
 ./bin/labradorite -version
@@ -64,18 +70,140 @@ one) to the new name, once. If coyotenote is still running on that folder, or
 the move fails, it keeps using the old folder and says so. Browser drafts kept
 under the old folder's path are refiled under the new one.
 
-With an explicit vault, theme preferences stay in that default data directory.
-`-data-dir` keeps both notes and settings in the given directory. Only one
-Labradorite process can open a vault at a time; a second one is refused.
+With an explicit vault, appearance and enabled-plugin choices stay in the default
+data directory. Web-embed permission belongs to the active vault. `-data-dir`
+changes the settings directory and, without a positional vault, the vault too.
+Only one Labradorite process can open a vault at a time; a second one is refused.
 
-## Writing
+## Labradorite Space
+
+### Switch tools and manage plugins
+
+The nine-dot button below the Labrador logo opens the plugin switcher. Press
+**Alt+P**, then a number shown beside a plugin, or use ↑/↓ and Enter. Escape
+closes it and returns focus to the button. The command palette also offers
+**Switch plugin…** and **Switch to Notes / Issues**. The active plugin supplies
+its own rail actions and commands; **F1** shows its shortcuts alongside the
+shared shortcuts.
+
+**Settings → Plugins** enables or disables Notes and Issues. Both are enabled
+when no saved choice exists. Disabling one keeps its files. With no plugin
+enabled, the empty workspace links to these settings; Settings, Commands and
+Library remain available. Plugins are built in; external plugin installation
+is not supported. The last active plugin is remembered in this browser per vault.
+
+Notes leaves files in enabled plugins' folders out of its list, tags, quick
+open and search. With Issues disabled, its Markdown files appear in Notes.
+A wiki link such as `[[issues/Trail/TL-1]]` opens the issue in Issues when it is
+enabled, or in Notes when Issues is disabled and Notes is enabled. Links into
+an enabled plugin folder show its picture in Write and Preview.
+
+### Library
+
+Open **Library** from the bottom rail, **Alt+L**, or the **Open the library**
+command. It lists files by kind: Notes, Issues, Attachments and Other files,
+with their folder, size and modified date. The filter matches names and folders.
+Hidden folders, symlinks and app settings are omitted.
+
+Selecting an issue opens Issues; a normal Markdown note opens Notes. If a
+file's plugin is disabled, Markdown opens in Notes when Notes is enabled.
+Files without an available opener download instead. Library also works with
+every plugin disabled. It does not move or delete files.
+
+### Issues
+
+Switch to **Issues**, then choose **New issue** or press **Alt+N**. Choose an
+existing project or **New project…**; a new project asks for a name and ID prefix.
+Each project owns a folder and prefix, such as `issues/Trail/` and `TL`.
+The prefix starts with a letter and contains up to ten letters/digits.
+New IDs count on from the highest existing number with that prefix. A project
+folder is created when a project is created, rather than when opening a vault.
+
+**All projects** opens an overview with Now issues and project summaries.
+Select a project to see its board by default; **Outline** switches to sections.
+**All projects → Board** is a separate remembered choice. **Find issues**
+searches titles and IDs; the sidebar groups issues by project, with Done folded
+initially. The board scrolls sideways when its columns do not fit.
+
+| Shown state | Stored `status` value | Where it appears |
+| --- | --- | --- |
+| Now | `in-progress` | Board and outline |
+| Next | `todo` | Board and outline; new-issue default |
+| Later | `backlog` | Board and outline |
+| Done | `done` | Board; folded section in outline |
+| Dropped | `cancelled` | Folded section in outline and the issue's state menu |
+
+Open a card or sidebar issue to read its full page. Click the title to rename
+it, or use the State, Priority, Labels and Project controls. Priorities are
+Urgent, High, Medium, Low and No priority; they are shown as words. Changing
+Project moves the file into that project's folder and keeps its ID. Links are
+updated by the same rename operation used for notes. The page shows its stored
+path, edit date, linked notes in both directions and Done-when progress.
+
+A heading exactly named **Done when** (for example `## Done when`) followed
+by ordinary task lines creates the page's checklist. Checking a step changes
+that marker in the Markdown file. Add or edit the description and task text
+using **Open in Notes**; the issue page renders the description. Changing a
+property preserves other fields and body text, and saves retain revision checks,
+history and conflict protection. Escape or **Close issue** returns to the project.
+
+Move a board card by dragging it to another column, using its **Move to…**
+button, or focusing the card and pressing **M**. Arrow keys move between cards;
+Enter opens one. In the project tree, arrows navigate and fold groups. These
+controls have keyboard alternatives to dragging. Issues is designed for desktop;
+Notes retains its phone drawer and editing workflows.
+
+#### Issue files
+
+```text
+issues/
+  Issues.md                 optional shared label suggestions/legacy settings
+  Trail/
+    Project.md              YAML prefix: TL
+    TL-1.md                 the issue and its description
+```
+
+For example, `issues/Trail/TL-1.md`:
+
+```markdown
+---
+title: Review the trail map
+status: todo
+priority: medium
+labels: [Planning]
+created: 2026-10-21
+---
+
+Compare the route with [[Reference/Trail map]].
+
+## Done when
+
+- [ ] Check distances
+- [ ] Record the chosen route
+```
+
+The filename holds the ID; the folder names the project. `Project.md` starts
+with YAML front matter:
+
+```yaml
+---
+prefix: TL
+---
+```
+
+Files saved directly as `issues/TL-1.md`
+from the earlier layout keep working. **Move into project folders** on All
+projects moves them by their existing `project:` field, keeping IDs and links;
+issues without a suitable project go into Inbox. This move is explicit.
+
+## Writing in Notes
 
 The Labrador logo and a permanent icon rail sit at the left. The logo returns
 to the start page; **Notes** shows or hides the adjacent notes panel. Search,
-recent notes, new notes, commands, trash and settings stay reachable when that
+recent notes, new notes, commands, trash, Library and settings stay reachable when that
 panel is closed. Desktop and phone remember their own open/closed preference.
 Drag rail icons to reorder them within the main shortcuts or bottom utility group;
-Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order.
+Alt+Shift+↑/↓ moves a focused icon too. This browser remembers the order. The logo and plugin switcher stay anchored.
 
 The header is one title row. At its left end, the **notes panel** button shows
 or hides the notes panel (its left pane is filled while the panel is open),
@@ -107,7 +235,8 @@ starting source is selected for you to replace), **Callout** (wraps the current
 paragraph; the arrow beside it picks one of 13 types, and the button remembers
 the last one), and **Find and replace** and **Note history**. With a diagram or
 formula selected, new content goes after it rather than replacing it. The
-tools are disabled while a recovered draft holds the note. It is available in
+tools are disabled while a recovered draft holds the note. Tab enters the panel
+at its last-used control; arrows, Home and End move between its tools. It is available in
 Write, and closes in source or preview modes.
 The Format button or Escape hides it; this browser remembers the choice separately
 for desktop and smaller screens. On smaller screens it opens over the content;
@@ -127,8 +256,10 @@ open or Ctrl/⌘ Shift T) holds the appearance and, under Writing, text sizes fr
 14–24 px, Narrow/Standard/Wide line widths for Write and Preview, and spellcheck
 in Write. Markdown text stays 2 px smaller than the chosen size. Every change
 applies at once and is kept; Done closes the window.
-Spelling uses the browser's own language and dictionary. These preferences do
-not change the Markdown files or follow the vault to another browser.
+Spelling uses the browser's language and dictionary. Writing preferences stay
+in this browser. Appearance and enabled plugins are saved with app settings;
+web-embed permission is saved in the active vault. These choices do not rewrite
+note contents. Settings also includes Plugins and Web embeds.
 
 - **Write** is a Tiptap WYSIWYG editor. Use the formatting panel or Markdown input rules for
   headings, bold, italic, strike, lists, tasks, quotes, inline/fenced code, links
@@ -144,8 +275,15 @@ not change the Markdown files or follow the vault to another browser.
   with ordinary Markdown, such as `![photo](attachments/photo.png)`. PNG, JPEG,
   GIF, WebP, AVIF and SVG images up to 20 MiB are accepted; a pasted screenshot is
   named after the moment it was pasted. Image paths are read relative to the note
-  first, then to the vault root, and embeds such as `![[photo.png]]` show in
-  Preview.
+  first, then to the vault root. Embeds such as `![[photo.png]]` show in both
+  Write and Preview.
+- **PDF, audio and video:** use **Insert → PDF, audio or video…**, the
+  **Attach a PDF, audio or video file** command, or paste/drop supported files.
+  PDFs and MP3, M4A, OGG/OGA, WAV, FLAC, MP4, WebM, MOV and OGV files are
+  accepted up to **100 MiB**, with a content check. They stay in `attachments/`.
+  `![[report.pdf]]`, `![[talk.mp3]]` and `![[clip.mp4]]` show the local viewer or
+  player in Write and Preview. Audio/video seeking uses range requests; actual
+  playback depends on the browser's supported codecs.
 - **Split** shows source and preview side by side. On narrow screens they stack
   vertically. Each pane scrolls independently.
 - **Find and replace** (Edit or Quick open command) searches the open
@@ -171,8 +309,9 @@ not change the Markdown files or follow the vault to another browser.
   to filter the note list, or choose All tags inside the list to reset it.
   In Preview, tags are buttons that apply the filter.
 - The icons above the notes list open **today's note**, toggle **tags**, and
-  **collapse or expand all folders and pins**. **Previous / Next note** follow
-  visited-note history. The small button at the far right closes the panel.
+  **collapse or expand all folders and pins**. The title row or rail Notes
+  button closes the panel. **Previous / Next note** in View, the command palette
+  or Alt+↑/↓ cycles visible sorted notes; Recently opened records visited notes.
 - **Pinned notes** sit below tags and above Notes. Use the pin button after the
   note title or the Pin/Unpin command; this section has compact title/date rows and
   remembers whether it is collapsed. **Recently opened** in the rail shows your
@@ -185,7 +324,7 @@ not change the Markdown files or follow the vault to another browser.
 - **Quick open** (Ctrl/⌘+K, or the footer hint) jumps to a note by a few letters of
   its path, such as `qp` for *Quarterly plan*; matched letters are highlighted.
   Start with `#` to jump to a heading of the open note, or `>` to run a command
-  such as a view change, rename or theme. Anything typed can also become a
+  such as a view change, rename or appearance setting. Anything typed can also become a
   content search or a new note.
 - **Today's note** (File menu, Quick open command, or Alt+J) opens
   `Journal/YYYY-MM-DD` using your computer's local date, creating an empty note
@@ -213,7 +352,7 @@ not change the Markdown files or follow the vault to another browser.
   choice is kept at once. Text colours that would fall below WCAG AA contrast
   are darkened or lightened just enough to pass.
 - **View → Focus mode** (Ctrl/⌘ Shift F) hides the sidebar. Small screens get a slide-out notes drawer,
-  a scrollable formatting toolbar, stacked split panes and compact status hints.
+  a Format drawer, stacked split panes and compact status hints.
 
 ### Extended syntax
 
@@ -289,9 +428,10 @@ Beyond GitHub Flavored Markdown, Preview understands:
   that would show itself again appears as a link instead.
 - **HTML:** formatting tags such as `<u>`, `<sub>`, `<sup>`, `<kbd>`, `<mark>`,
   `<abbr title="…">` and `<details><summary>…</summary>…</details>` show in
-  Preview. Scripts, styles, frames, forms, event handlers, `javascript:` links
-  and pictures from other computers are removed. As elsewhere, Markdown inside
-  an HTML block is shown as written, and Write shows such notes in Markdown.
+  Preview. Write also renders allowed inline tags and blocks as read-only
+  content, saving their HTML exactly when editing around them. Scripts, styles,
+  raw frames, forms, event handlers, `javascript:` links and remote pictures
+  are removed from Preview. Unsupported raw HTML keeps the Markdown fallback.
 
 #### Math and Mermaid
 Write inline formulas as `$x^2 + y^2 = z^2$`; the dollar signs must touch the
@@ -366,11 +506,12 @@ delimiter row keep their original spacing. Use Markdown for whitespace-sensitive
 edits or Markdown dialects beyond GFM.
 
 Write deliberately falls back to Markdown for unclosed front matter,
-reference-style link definitions, raw HTML, `![[…]]` embeds and named
-HTML entities such as `&copy;`. This keeps syntax that the rich editor cannot
-round-trip intact, including when a browser draft is restored; a short message says
-which syntax kept the note in Markdown. Some complex combinations of otherwise
-supported syntax also keep this fallback. Collaborative editing is not supported.
+reference-style link definitions, unsupported raw HTML and named HTML entities
+such as `&copy;`. These fallbacks preserve syntax the rich editor cannot round-trip,
+including when a browser draft is restored; a message explains the reason. Some
+complex combinations of otherwise supported syntax also keep this fallback.
+Note/file/web embeds and allowlisted HTML render in Write; embed targets and
+labels can be changed with Edit embed. Collaborative editing is not supported.
 
 ### Footnotes in Write
 
@@ -411,13 +552,16 @@ and all TOML front matter, keep the raw Properties editor.
 
 | Shortcut | Action |
 | --- | --- |
-| Alt+N or Ctrl/⌘+N | Create a note |
+| Alt+P, then 1–9 or arrows and Enter | Switch enabled plugin |
+| Alt+L | Open Library |
+| Alt+N or Ctrl/⌘+N | Create a note while Notes is active |
+| Alt+N | Create an issue while Issues is active |
 | Alt+J | Open or create today's journal note |
 | Alt+K or Ctrl/⌘+K | Quick open a note, heading or command |
 | Alt+S or Ctrl/⌘+Shift+E | Search note contents |
 | Ctrl/⌘+S | Save immediately |
 | Alt+M or Ctrl/⌘+Shift+M | Cycle Write → Markdown → Split → Preview |
-| Alt+T or Ctrl/⌘+Shift+T | Settings: appearance and writing |
+| Alt+T or Ctrl/⌘+Shift+T | Settings: appearance, writing, plugins and web embeds |
 | Ctrl/⌘+Shift+F | Toggle focus mode |
 | Alt+O | Show or hide the outline |
 | Ctrl/⌘+Shift+R | Rename or move |
@@ -426,8 +570,12 @@ and all TOML front matter, keep the raw Properties editor.
 | Ctrl/⌘+B / I | Bold / italic in Write |
 | Ctrl/⌘+Alt+0–6 | Normal text / heading level in Write |
 | Ctrl/⌘+Z / Shift+Z | Undo / redo edits |
-| F1 or the footer “Shortcuts” button | All shortcuts |
+| M on a focused Issues board card | Move the issue to another state |
+| F1 or the footer “Shortcuts” button | Shared and active-plugin shortcuts |
 | Escape | Close a dialog, drawer or narrow-screen outline |
+
+Notes-only shortcuts are active while Notes is selected. Issues adds its own
+card/tree navigation, Enter to open, and Escape to close the issue page.
 
 Browsers and operating systems reserve some combinations. Ctrl+T/P/R/W and the
 usual copy/cut/paste/undo behavior stay with the browser and editor. On macOS,
@@ -492,10 +640,10 @@ tab, search or open a note; a note with unsaved edits is never replaced.
 
 ## Your notes across versions
 
-From 1.0, every 1.x release keeps this format, so you can upgrade by replacing
-the binary, go back to an earlier 1.x, or open the same folder in other tools.
-A change that needed converting a vault would only come with a 2.0, with notes
-on how to move.
+Space keeps existing Markdown notes without conversion and adds plugin-owned
+folders. Issues files are ordinary Markdown too. Older notebook versions and
+other editors can read the files, but do not provide Space's plugin views. The
+next planned public release is 2026.1.0; 2.0.0 will not be released.
 
 What Labradorite stores in a vault:
 
@@ -506,14 +654,16 @@ What Labradorite stores in a vault:
   repeats). Nothing is emptied automatically.
 - **`.history/<note path>.md/`**: earlier versions of each note, one file per
   version.
-- **`attachments/`**: images added from the editor, linked from notes by path.
+- **`issues/<Project>/`**: a project's `Project.md` and Markdown issue files.
+- **`attachments/`**: uploaded images, PDFs, audio and video, linked by path.
 - **`.lock`**, and after an interrupted write `.pending-*` or `.recovery-*`
   files, which are kept for you to inspect.
 - **`web-embeds`**: opt-in web embed permission (`true` or `false`) in the
   active vault, including when appearance and plugin settings live elsewhere.
   Missing means off; another vault’s permission is not inherited.
-- **`theme`**: the chosen appearance (`light`, `dark` or `system`), in the
-  default data folder (or the `-data-dir` folder).
+- **`theme`** and **`plugins`**: appearance (`light`, `dark`, `system`) and
+  enabled-plugin choices in the default data folder or `-data-dir` folder;
+  these may live outside an explicitly chosen vault.
 
 Hidden folders are never read as notes, so `.git` or another app's settings
 folder can share the vault. In the browser, drafts, view, sort order and collapsed folders keep their
@@ -570,9 +720,9 @@ node --test scripts/release-policy.test.mjs # stable tags and publication guards
 npm run typecheck                   # strict checks for migrated TypeScript
 npm run build                       # refresh committed, embedded assets
 
-go vet ./...
-go test -race ./...
-go build -o bin/labradorite ./cmd/labradorite
+GOCACHE=/tmp/labradorite-go-cache go vet ./...
+GOCACHE=/tmp/labradorite-go-cache go test -race ./...
+GOCACHE=/tmp/labradorite-go-cache go build -o bin/labradorite ./cmd/labradorite
 python3 scripts/smoke_web.py        # Python 3, standard library only
 
 npx playwright install --with-deps chromium
@@ -586,6 +736,8 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm test
 ```
 
 Editing `web/src/` requires `npm run build` **then** rebuilding the Go binary.
+Stage generated changes with `git add -A web/assets` so replaced chunk names
+are removed as well as added. Go cache paths above are a convenient local example.
 Refresh the browser afterwards. All browser app sources under `web/src/` use
 strict TypeScript, including both editor adapters, API contracts, shared state,
 draft recovery and UI controls. `npm run typecheck` checks every app module in
@@ -689,6 +841,24 @@ uploading them. Publishing still requires explicit approval and a stable tag.
    then save; no draft should silently replace a newer disk revision.
 9. Narrow the browser: notes become a drawer and Split stacks vertically.
 10. Use the Trash button to restore an older deletion.
+11. Use Alt+P to switch between Notes and Issues; test F1 in each. Disable both
+    plugins in Settings, open Library with Alt+L, then enable the tools again.
+12. Create two Issues projects with different prefixes. Create issues, change a
+    property and a Done-when step, and inspect their Markdown files in Notes.
+13. Move an issue between board columns by drag and by M/Move to…. Toggle the
+    project outline and All projects overview, then move an issue to another
+    project and verify its ID and incoming links are preserved.
+14. Link an issue from a note; follow it in Write and Preview with Issues enabled,
+    then with Issues disabled. Filter Library by folder and open/download files.
+15. Attach an image, PDF and supported audio/video file in a temporary vault.
+    Check Write and Preview, seek the media, then edit an embed target/label.
+    Apply, Cancel, Escape and Undo must preserve the intended Markdown.
+16. Add a web URL and a YouTube URL embed. With permission off, verify no remote
+    frame loads. Enable permission: each must still wait for Load. Edit a loaded
+    URL; the old frame disappears and the new one waits. Turn permission off.
+17. Open another temporary vault with shared app settings; web embeds must start
+    off there. Check the first vault's permission is unaffected. Never use a real
+    vault to exercise deletion, conflict, migration or malformed-file tests.
 
 [MIT](../LICENSE). See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and the
 generated browser dependency license bundle for upstream attributions.
