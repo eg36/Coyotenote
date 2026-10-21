@@ -66,7 +66,6 @@ const paths: Record<string, string> = {
   hash: '<path d="M5 9h15M4 15h15M10 3 8 21m8-18-2 18"/>',
   command: '<path d="m4 17 6-5-6-5m8 12h8"/>',
   apps: '<g fill="currentColor" stroke="none"><circle cx="5" cy="5" r="1.8"/><circle cx="12" cy="5" r="1.8"/><circle cx="19" cy="5" r="1.8"/><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/><circle cx="5" cy="19" r="1.8"/><circle cx="12" cy="19" r="1.8"/><circle cx="19" cy="19" r="1.8"/></g>',
-  canvas: '<path d="M4 4h7v7H4zM17.5 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7ZM3 19c2.5-4 5-4 7-1.5s4.5 2.5 8-2.5"/>',
 };
 export function icon(name: string) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.note}</svg>`;

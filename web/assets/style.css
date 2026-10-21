@@ -2947,7 +2947,7 @@ dialog.danger #modal-submit {
 #format-panel .format-group { display: flex; flex: 0 0 100%; flex-wrap: wrap; align-items: center; gap: 4px; }
 
 /* Labradorite Space: the plugin switcher and the shell's empty state. */
-:root { --plugin-notes: var(--blue); --plugin-canvas: var(--cyan); }
+:root { --plugin-notes: var(--blue); }
 .rail-divider { flex: none; width: 22px; height: 1px; margin: 2px 0; background: var(--line); }
 .activity-rail .plugin-switcher { position: relative; }
 .activity-rail .plugin-switcher[aria-expanded="true"] { background: var(--selected); color: var(--accent-text); }
