@@ -20,6 +20,12 @@ import { openSwitcher } from "./switcher.js";
 // match: word starts and runs of consecutive letters count for more, and
 // shorter texts win ties. It returns null when a letter is missing.
 function fuzzyMatch(query: string, text: string): Match | null {
+  // Jumping to word starts reads best, but can strand later letters, as the
+  // "i" of "switch" jumping to "Issues" in "Switch to Issues"; then the
+  // letters are matched where they first occur.
+  return lettersIn(query, text, true) || lettersIn(query, text, false);
+}
+function lettersIn(query: string, text: string, preferStarts: boolean): Match | null {
   const q = query.toLowerCase().replace(/\s+/g, "");
   if (!q) return { score: 0, at: [] };
   const lower = text.toLowerCase();
@@ -29,11 +35,12 @@ function fuzzyMatch(query: string, text: string): Match | null {
   for (const letter of q) {
     let index = lower.indexOf(letter, from);
     // Prefer this letter at the start of a later word.
-    for (let next = index; next >= 0; next = lower.indexOf(letter, next + 1))
-      if (next === 0 || /[\s/_\-.]/.test(lower[next - 1])) {
-        if (next - index < 12) index = next;
-        break;
-      }
+    if (preferStarts)
+      for (let next = index; next >= 0; next = lower.indexOf(letter, next + 1))
+        if (next === 0 || /[\s/_\-.]/.test(lower[next - 1])) {
+          if (next - index < 12) index = next;
+          break;
+        }
     if (index < 0) return null;
     const start = index === 0 || /[\s/_\-.]/.test(lower[index - 1]);
     score += start ? 8 : 1;

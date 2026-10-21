@@ -3314,6 +3314,27 @@ test("Notes leaves enabled plugins' folders out of its list but still follows li
   await expect(row).toHaveCount(1);
 });
 
+test("the palette finds every command, note and heading by its full name", async ({ page }) => {
+  await seed(page, "Switch to the Island Notes", "x");
+  await openSeed(page, "# Change the appearance settings\n\nText.");
+  await page.keyboard.press("ControlOrMeta+k");
+  const input = page.getByRole("combobox", { name: "Search notes, headings and commands" });
+  await input.fill(">");
+  const labels = await page.locator(".palette-option .palette-label").allTextContents();
+  expect(labels).toContain("Change the appearance");
+  expect(labels).toContain("Switch to Issues");
+  for (const label of labels) {
+    await input.fill(">" + label);
+    await expect(page.locator(".palette-option .palette-label", { hasText: label }).first(), label).toBeVisible();
+  }
+  // A word-start jump that once stranded letters (#44).
+  await input.fill("Switch to the Island Notes");
+  await expect(page.locator(".palette-option").first()).toContainText("Switch to the Island Notes");
+  await input.fill("#Change the appearance settings");
+  await expect(page.locator(".palette-option").first()).toContainText("Change the appearance settings");
+  await page.keyboard.press("Escape");
+});
+
 async function noteBody(page, id) {
   return (await (await page.request.get("/api/note?id=" + encodeURIComponent(id))).json()).body;
 }
