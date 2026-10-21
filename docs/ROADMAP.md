@@ -24,10 +24,6 @@ third-party plugins are out of scope.
   ([#46](https://github.com/eg36/Labradorite/issues/46)), Notes with the open
   interface, accessibility and documentation work below, and a Library of
   vault files.
-- **2026.4.0**: an MCP server, so AI assistants that speak the Model Context
-  Protocol can work with a vault's notes locally, with the same
-  saves, revision checks and history as the app
-  ([#59](https://github.com/eg36/Labradorite/issues/59)).
 - **Later (target 2027.1)**: further plugins, such as calculation sheets.
 - Like before, intermediate milestones are internal and never tagged; versions
   keep the `vMAJOR.MINOR.PATCH` tag form, such as `v2026.1.0`.
