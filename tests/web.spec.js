@@ -3253,6 +3253,10 @@ test("turning Notes off leaves the shell's empty state, and turning it on return
   const empty = page.locator("#space-empty");
   await expect(empty).toBeVisible();
   await expect(empty).toContainText("No plugins are enabled");
+  // The logo keeps its place in the rail without the title row (#47).
+  const logo = await page.locator(".brand-mark").boundingBox(), switcher = await page.locator("#plugin-switcher").boundingBox();
+  expect(logo.y).toBeGreaterThanOrEqual(0);
+  expect(switcher.y).toBeGreaterThanOrEqual(logo.y + logo.height);
   for (const hidden of [".topbar", "#sidebar", ".workspace", "#new-note", "#trash-button"])
     await expect(page.locator(hidden)).toBeHidden();
   // Notes' shortcuts rest; the shell's still work.
@@ -3269,6 +3273,9 @@ test("turning Notes off leaves the shell's empty state, and turning it on return
   await page.keyboard.press("Escape");
   await expect(empty).toBeHidden();
   await expect(page.locator(".topbar")).toBeVisible();
+  // The logo area lines up with the title row again.
+  await expect.poll(async () => Math.round((await page.locator(".activity-rail .brand").boundingBox()).height))
+    .toBe(Math.round((await page.locator(".topbar").boundingBox()).height));
   await expect(page.locator("#new-note")).toBeVisible();
 });
 

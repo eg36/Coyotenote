@@ -83,9 +83,13 @@ function isSort(value: unknown): value is AppState["sort"] {
 async function initialize() {
   const topbar = document.querySelector(".topbar");
   if (!topbar) throw new Error("Missing app top bar");
-  const measureTopbar = () => $("app").style.setProperty(
-    "--topbar-height", `${topbar.getBoundingClientRect().height}px`,
-  );
+  // A hidden title row (another plugin is active) measures nothing, so the
+  // rail's logo area falls back to its usual height.
+  const measureTopbar = () => {
+    const height = topbar.getBoundingClientRect().height;
+    if (height) $("app").style.setProperty("--topbar-height", `${height}px`);
+    else $("app").style.removeProperty("--topbar-height");
+  };
   measureTopbar();
   new ResizeObserver(measureTopbar).observe(topbar);
   await claimTab();
