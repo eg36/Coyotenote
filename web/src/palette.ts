@@ -21,9 +21,8 @@ import { openLibrary } from "./library.js";
 // match: word starts and runs of consecutive letters count for more, and
 // shorter texts win ties. It returns null when a letter is missing.
 function fuzzyMatch(query: string, text: string): Match | null {
-  // Jumping to word starts reads best, but can strand later letters, as the
-  // "i" of "switch" jumping to "Issues" in "Switch to Issues"; then the
-  // letters are matched where they first occur.
+  // Jumping to word starts reads best, but can strand later letters. Fall
+  // back to matching letters where they first occur.
   return lettersIn(query, text, true) || lettersIn(query, text, false);
 }
 function lettersIn(query: string, text: string, preferStarts: boolean): Match | null {

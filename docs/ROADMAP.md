@@ -16,18 +16,18 @@ Labradorite becomes a shell that hosts plugins. The shell owns the rail, the
 plugin switcher, settings, themes and the command palette; each plugin brings
 its own interface. Every plugin is optional, Notes included, and stores its data
 as plain files in the vault, so a vault stays readable without the app. Vaults
-without plugin folders open as before. Plugins are built in; third-party plugins
-are out of scope.
+open as before, including Markdown files in former Issues folders. Notes is the
+current plugin; the Issues plugin has been removed. Plugins are built in;
+third-party plugins are out of scope.
 
 - **2026.1.0**: the plugin shell
   ([#46](https://github.com/eg36/Labradorite/issues/46)), Notes with the open
-  interface, accessibility and documentation work below, and Issues (one
-  Markdown file with front matter per issue, list and board views, an issue
-  panel).
-- **2026.2.0**: Canvas, a whiteboard whose shapes can link notes and issues. A
+  interface, accessibility and documentation work below, and a Library of
+  vault files.
+- **2026.2.0**: Canvas, a whiteboard whose shapes can link notes. A
   short engine spike comes first and its decision is recorded in an issue.
 - **2026.4.0**: an MCP server, so AI assistants that speak the Model Context
-  Protocol can work with a vault's notes and issues locally, with the same
+  Protocol can work with a vault's notes locally, with the same
   saves, revision checks and history as the app
   ([#59](https://github.com/eg36/Labradorite/issues/59)).
 - **Later (target 2027.1)**: further plugins, such as calculation sheets.

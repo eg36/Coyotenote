@@ -9,12 +9,11 @@ import (
 // builtinPlugins lists the plugins the shell can host, in switcher order.
 // Every plugin is optional; one the settings do not mention is enabled, so
 // vaults saved before a plugin existed open with it.
-var builtinPlugins = []string{"notes", "issues"}
+var builtinPlugins = []string{"notes"}
 
-// pluginFolders names the fixed vault folder each plugin keeps its files in.
-// Notes owns the rest of the vault. A folder appears when its first file is
-// saved, so vaults without it open as before.
-var pluginFolders = map[string]string{"issues": "issues"}
+// pluginFolders names reserved vault folders for installed plugins.
+// Notes currently owns the whole vault, including folders used by removed plugins.
+var pluginFolders = map[string]string{}
 
 // enabledFolders maps each enabled plugin to its folder, so Notes can leave
 // those files out of its list while their plugin shows them.

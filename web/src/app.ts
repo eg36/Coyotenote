@@ -61,7 +61,6 @@ import { setupOutline } from "./outline.js";
 import { setupMenus } from "./menus.js";
 import { setupRailOrder } from "./rail.js";
 import { activePlugin, isActive, openWith, ownerOf, startPlugins } from "./plugins.js";
-import { registerIssuesPlugin } from "./issues-plugin.js";
 import { setupSwitcher } from "./switcher.js";
 import { registerNotesPlugin } from "./notes-plugin.js";
 import { insertCallout, setupFormatting } from "./formatting.js";
@@ -129,7 +128,6 @@ async function initialize() {
   setupMenus();
   // Plugins add their rail buttons before the rail order is restored.
   registerNotesPlugin();
-  registerIssuesPlugin();
   setupRailOrder();
   setupFormatting();
   setupSwitcher();

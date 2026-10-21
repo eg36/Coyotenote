@@ -2947,7 +2947,7 @@ dialog.danger #modal-submit {
 #format-panel .format-group { display: flex; flex: 0 0 100%; flex-wrap: wrap; align-items: center; gap: 4px; }
 
 /* Labradorite Space: the plugin switcher and the shell's empty state. */
-:root { --plugin-notes: var(--blue); --plugin-issues: var(--warn); --plugin-canvas: var(--cyan); }
+:root { --plugin-notes: var(--blue); --plugin-canvas: var(--cyan); }
 .rail-divider { flex: none; width: 22px; height: 1px; margin: 2px 0; background: var(--line); }
 .activity-rail .plugin-switcher { position: relative; }
 .activity-rail .plugin-switcher[aria-expanded="true"] { background: var(--selected); color: var(--accent-text); }
@@ -2985,149 +2985,12 @@ dialog.danger #modal-submit {
 .space-empty h1 { margin: 0; font-size: 20px; font-weight: 600; }
 .space-empty p { margin: 0; max-width: 36ch; color: var(--muted); }
 
-/* Issues, an issue notebook: a tree of projects with the Notes panel's
-   metrics beside a page that reads like a note. */
-.issues-app { grid-column: 2 / -1; grid-row: 1 / -1; display: grid; grid-template-columns: var(--notes-width, 240px) minmax(0, 1fr); gap: var(--island-gap); min-height: 0; }
-.issues-app[hidden], .app:not([data-plugin="issues"]) > .issues-app { display: none; }
-.issues-app.issues-sidebar-hidden { grid-template-columns: minmax(0, 1fr); }
-.issues-app.issues-sidebar-hidden .issues-tree-panel { display: none; }
-.issues-tree-panel { display: flex; flex-direction: column; min-height: 0; padding: 14px 12px 0; background: var(--chrome); border-right: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-.issues-page { min-height: 0; overflow-y: auto; background: var(--surface); }
-@media (min-width: 800px) {
-  .issues-tree-panel { padding-top: 10px; }
-  .issues-tree-panel, .issues-page { border: 1px solid var(--line); border-radius: var(--island-radius); overflow: hidden; }
-  .issues-page { overflow-y: auto; }
-}
-.issues-search-field { margin: 0 0 10px; }
-.issues-search-field[hidden] { display: none; }
-#issues-search { width: 100%; box-sizing: border-box; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
-.issues-count { color: var(--muted); font-weight: 400; }
-.issues-tree .note-row-head { gap: 8px; }
-.issue-tree-row .note-title { flex: 1; }
-.issue-state { flex: none; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--muted); }
-.issue-tree-row .issue-state { width: 38px; }
-.issue-state.state-in-progress { color: var(--accent-text); }
-.issues-project-marker { flex: none; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); }
-.issue-done-mark { flex: none; display: inline-grid; place-items: center; width: 14px; color: var(--muted); }
-.issue-done-mark svg { width: 13px; height: 13px; }
-.issue-tag { color: var(--accent-text); }
-.issue-priority-word.priority-urgent, .issue-priority-word.priority-high { font-weight: 600; }
-.issue-priority-word.priority-urgent { color: var(--danger); }
-.issue-none { color: var(--muted); }
-
-/* The overview reads as a document: Now, Next and Later, with Done folded. */
-.issues-doc, .issue-page { max-width: 760px; margin: 0 auto; padding: 40px 48px 64px; box-sizing: border-box; }
-.issues-doc-section { margin-bottom: 28px; }
-.issues-doc-heading { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; font-size: 22px; font-weight: 600; cursor: default; }
-summary.issues-doc-heading { cursor: pointer; font-size: 17px; color: var(--muted); }
-.issues-doc-count { font-size: 13px; font-weight: 400; color: var(--muted); }
-.issues-doc-list { display: flex; flex-direction: column; }
-.issues-doc-empty { margin: 0; padding: 6px 0; color: var(--muted); font-size: 14px; }
-.issues-intro { max-width: 520px; margin: 0 auto; padding: 96px 32px; text-align: center; }
-.issues-intro h1 { margin: 0 0 12px; font-size: 26px; font-weight: 600; }
-.issues-intro p { margin: 0 0 20px; color: var(--muted); line-height: 1.6; }
-
-/* An open issue: path, title, property chips, then its text. */
-.issue-page { padding-top: 16px; }
-.issue-page-bar { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-bottom: 20px; }
-.issue-page-path { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.issue-page-sep { color: var(--muted); }
-.issue-key { font-size: 13px; color: var(--muted); }
-.issue-page-action { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--control-fill); color: var(--text); font-size: 13px; }
-.issue-page-action svg, .issue-link svg { width: 15px; height: 15px; }
-.issue-page-bar .icon-button { width: 32px; height: 32px; color: var(--muted); }
-.issues-spacer { flex: 1; }
-.issue-page-title { margin: 0 0 14px; font-size: 30px; font-weight: 700; line-height: 1.25; }
-.issue-title-button { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; overflow-wrap: anywhere; cursor: text; }
-.issue-title-input { width: 100%; padding: 0; border: 0; border-bottom: 1px solid var(--accent); background: none; color: var(--text); font: inherit; outline: none; }
-.issue-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 28px; }
-.issue-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--control-fill); color: var(--text); font-size: 13px; }
-.issue-chip:hover, .issue-chip[aria-expanded="true"] { border-color: var(--line-strong); }
-.issue-chip.issue-state { font-size: 13px; letter-spacing: 0; }
-.issue-chip.state-in-progress { background: var(--selected); border-color: transparent; color: var(--accent-text); }
-.issue-chip-caret { display: inline-grid; color: var(--muted); }
-.issue-chip-caret svg { width: 14px; height: 14px; }
-.issue-created { margin-left: 4px; font-size: 13px; color: var(--muted); }
-.issue-description { font-size: 16px; line-height: 1.7; overflow-wrap: anywhere; }
-.issue-description > :first-child { margin-top: 0; }
-.issue-section h2 { margin: 32px 0 10px; font-size: 18px; font-weight: 600; }
-.issue-tasks, .issue-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.issue-task { display: flex; align-items: flex-start; gap: 10px; font-size: 16px; line-height: 1.5; }
-.issue-task input { margin-top: 5px; accent-color: var(--accent); }
-.issue-link { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; margin: 0 -8px; border: 0; border-radius: 6px; background: none; color: var(--accent-text); font-size: 14px; text-align: left; }
-.issue-link:hover { background: var(--hover); }
-.issue-link-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.issue-link-relation { color: var(--muted); font-size: 12px; }
-.issue-page-footer { display: flex; justify-content: space-between; gap: 12px; max-width: 760px; margin: 0 auto; padding: 0 48px 24px; box-sizing: border-box; font-size: 12px; color: var(--muted); }
-.issue-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.issue-form .issue-field { margin-bottom: 12px; }
-.issue-form textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--chrome); color: var(--text); font: inherit; resize: vertical; }
-#menu-popup[data-open-menu^="issue-"] .menu-item { justify-content: flex-start; gap: 8px; min-height: 32px; }
-#menu-popup[data-open-menu^="issue-"] .menu-item svg { width: 16px; height: 16px; flex: none; }
-.menu-check-space { display: inline-block; width: 16px; flex: none; }
-@media (max-width: 799px) {
-  .issues-app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-  .issues-tree-panel { max-height: 36dvh; overflow-y: auto; }
-  .issues-doc, .issue-page, .issue-page-footer { padding-left: 20px; padding-right: 20px; }
-  .issue-page-title { font-size: 24px; }
-}
-/* In the tree, a project's marker sits where Notes shows its folder icon. */
-.folder-group :is(.issues-project-marker, .issue-done-mark) { flex: none; margin: 0 3px; }
-/* The board: the same issues as calm cards in state columns. */
-.issues-board { display: flex; gap: 16px; min-height: 100%; padding: 24px; box-sizing: border-box; overflow-x: auto; align-items: flex-start; }
-.issues-column { flex: 1 1 0; min-width: 240px; display: flex; flex-direction: column; gap: 10px; padding: 4px; border-radius: 12px; }
-.issues-column.drop-target { background: var(--selected); }
-.issues-column-heading { display: flex; align-items: baseline; gap: 8px; margin: 0 6px 2px; font-size: 18px; font-weight: 600; }
-.issues-column.state-done .issues-column-heading { color: var(--muted); }
-.issues-column-cards { display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
-.issue-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px #0001; }
-.issue-card.dragging { opacity: .5; }
-.issue-card-open { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 14px 8px; border: 0; border-radius: 10px 10px 0 0; background: none; color: var(--text); text-align: left; }
-.issue-card-title { font-size: 14px; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
-.issue-card-tags { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; }
-.issue-card-links { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
-.issue-card-links svg { width: 13px; height: 13px; }
-.issue-card-move { align-self: flex-end; margin: 0 8px 8px; padding: 2px 8px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 12px; }
-.issue-card-move:hover, .issue-card-move[aria-expanded="true"] { background: var(--hover); color: var(--text); }
-.issue-card:hover { border-color: var(--line-strong); }
-/* "Move to…" shows on the card in use; touch screens always show it. */
-@media (hover: hover) { .issue-card:not(:hover):not(:focus-within) .issue-card-move:not([aria-expanded="true"]) { opacity: 0; } }
 /* Plugins with a picture show it in the switcher and in Settings. */
 .switcher-tile.pictured { background: none; }
 .switcher-tile img { width: 36px; height: 36px; object-fit: contain; }
 .setting-plugin-image { flex: none; width: 32px; height: 32px; object-fit: contain; }
 
-/* A project's outline: its steps ring, then its issues with their facets. */
-.issues-doc { max-width: 920px; }
-.issues-doc-top { display: flex; align-items: center; gap: 24px; margin-bottom: 28px; }
-.issues-doc-titles { flex: 1; min-width: 0; }
-.issues-doc-titles h1 { margin: 0 0 4px; font-size: 32px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
-.issues-doc-facts { margin: 0; font-size: 14px; color: var(--muted); }
-.issues-page-actions { display: flex; align-items: center; gap: 8px; flex: none; }
-.issues-page-actions .primary-button { height: 32px; padding: 0 14px; }
-.issues-ring { position: relative; flex: none; width: 104px; height: 104px; }
-.issues-ring svg { width: 104px; height: 104px; }
-.issues-ring polygon { fill: none; stroke-width: 8; stroke-linejoin: round; }
-.issues-ring-base { stroke: var(--line); }
-.issues-ring-lit { stroke: url(#issues-ring-light); transition: stroke-dasharray .6s cubic-bezier(.16, 1, .3, 1); }
-.issues-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.issues-ring-label strong { font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.issues-ring-label small { margin-top: 2px; font-size: 11px; color: var(--muted); }
-.issue-facets { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--muted); }
-.issue-facets small { margin-left: 4px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.issue-facet { flex: none; width: 10px; height: 10px; margin: 0 1px; border: 1.5px solid var(--line-strong); border-radius: 2px; transform: rotate(45deg); }
-.issue-facet.done { border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--cyan)); }
-.issues-banner { display: flex; align-items: center; gap: 16px; margin: 0 0 24px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--chrome); font-size: 14px; }
-.issues-banner span { flex: 1; }
-.folder-group.current { background: var(--selected); color: var(--text); }
-.issues-board-page { display: flex; flex-direction: column; min-height: 100%; }
-.issues-board-top { display: flex; align-items: center; gap: 16px; padding: 24px 24px 0; }
-.issues-board-top h1 { flex: 1; margin: 0; font-size: 24px; font-weight: 700; }
-.issues-board { flex: 1; }
-.issue-card .issue-facets { margin-top: 2px; }
-@media (max-width: 799px) { .issues-doc-top { flex-wrap: wrap; } }
-/* The Done folder's check is a sign, not the fold chevron. */
-.folder-group .issue-done-mark svg { transform: none; }
+.menu-check-space { display: inline-block; width: 16px; flex: none; }
 /* The Library: every vault file, grouped by what opens it. */
 dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 .library input[type="search"] { width: 100%; box-sizing: border-box; margin-bottom: 12px; }
@@ -3149,78 +3012,9 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
   #format-panel .hl-swatch { width: 40px; height: 40px; }
   #format-panel #callout-type { width: 40px; height: 40px; }
 }
-/* Links into a plugin's folder carry the plugin's picture. */
-:is(#preview a[href^="/?note=issues%2F"], .wiki-link[data-wiki^="issues/"])::before {
-  content: ""; display: inline-block; width: 1.05em; height: 1.05em; margin-right: .25em; vertical-align: -.17em;
-  background: url("/assets/plugin-issues.png") center / contain no-repeat;
-}
 /* The rail scrolls only up and down; its open-panel bar may overhang. */
 .activity-rail { overflow-x: hidden; }
-.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-/* Issues with depth: cards and the issue hero carry a faint tint of their
-   project's colour and one lit facet laid over a square corner. */
-.issues-board-page { gap: 4px; }
-.issues-board-head { padding: 28px 28px 0; }
-.issues-board-head .issues-doc-top { margin-bottom: 8px; }
-.issues-board { gap: 18px; padding: 16px 28px 28px; }
-.issues-column { gap: 12px; padding: 6px; border-radius: 14px; }
-.issues-column-heading { align-items: center; gap: 10px; margin: 0 4px 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 15px; letter-spacing: .01em; }
-.issues-column.state-in-progress .issues-column-heading { border-bottom-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
-.issues-column.state-in-progress .issues-column-heading > span:first-child::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 2px; transform: rotate(45deg) translateY(-2px); background: var(--accent); }
-.issue-card {
-  --facet: 16px;
-  position: relative; border: 0; border-radius: 12px 0 12px 12px; isolation: isolate;
-  background: color-mix(in srgb, var(--project) 5%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 28%, var(--line)), 0 1px 2px rgb(0 0 0 / .18), 0 10px 24px -14px rgb(0 0 0 / .55);
-  transition: box-shadow .18s cubic-bezier(.16, 1, .3, 1);
-}
-.issue-card::before, .issue-hero::before { content: ""; position: absolute; top: 0; right: 0; z-index: 1; pointer-events: none; clip-path: polygon(0 0, 100% 0, 100% 100%);
-  background: linear-gradient(225deg, color-mix(in srgb, var(--project) 70%, white) 0%, color-mix(in srgb, var(--project) 80%, var(--cyan)) 45%, color-mix(in srgb, var(--project) 55%, transparent) 100%); }
-.issue-card::before { width: var(--facet); height: var(--facet); }
-/* A thin band of light along the top edge. */
-.issue-card::after { content: ""; position: absolute; top: 0; left: 14px; right: calc(var(--facet) + 6px); height: 2px; border-radius: 0 0 2px 2px; pointer-events: none;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--project) 80%, transparent), transparent); }
-.issue-card:hover, .issue-card:focus-within { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 55%, var(--line)), 0 2px 4px rgb(0 0 0 / .2), 0 16px 32px -14px rgb(0 0 0 / .6); }
-.issue-card.state-in-progress { background: color-mix(in srgb, var(--project) 7%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--line)), 0 1px 2px rgb(0 0 0 / .18), 0 10px 24px -14px rgb(0 0 0 / .55); }
-.issue-card.state-done { opacity: .72; }
-.issue-card.state-done .issue-card-title { color: var(--muted); }
-.issue-card-open { gap: 8px; padding: 14px 16px; border-radius: 12px 0 0 0; }
-.issue-card-top { display: flex; align-items: center; gap: 7px; width: 100%; font-size: 12px; color: var(--muted); }
-.issue-card-key { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.issue-badge { flex: none; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--text) 9%, transparent); color: var(--text); }
-.issue-badge.priority-urgent { background: color-mix(in srgb, var(--danger) 22%, transparent); }
-.issue-badge.priority-high { background: color-mix(in srgb, var(--warn) 22%, transparent); }
-.issue-card-title { font-size: 15px; font-weight: 600; line-height: 1.35; }
-.issue-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
-.issue-pill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px 0 7px; border-radius: 999px; font-size: 11px; color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
-.issue-pill-dot { width: 6px; height: 6px; border-radius: 1.5px; transform: rotate(45deg); }
-.issue-card-links { margin-left: auto; gap: 4px; }
-/* "Move to…" floats over the card's corner instead of taking a row. */
-.issue-card-move { position: absolute; right: 8px; bottom: 8px; margin: 0; background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
-
-/* The issue page: a tinted hero, then the text on a raised sheet. */
-.issue-hero { --project: var(--accent); position: relative; display: flex; align-items: center; gap: 28px; margin: 0 0 20px; padding: 26px 28px; border-radius: 16px 0 16px 16px; isolation: isolate; overflow: hidden;
-  background: color-mix(in srgb, var(--project) 9%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 35%, var(--line)), 0 18px 40px -26px rgb(0 0 0 / .7); }
-.issue-hero::before { width: 28px; height: 28px; }
-.issue-hero-text { flex: 1; min-width: 0; }
-.issue-hero .issue-page-title { margin-bottom: 16px; }
-.issue-hero .issue-chips { margin-bottom: 0; }
-.issue-hero .issue-chip { background: color-mix(in srgb, var(--surface) 70%, transparent); border-color: color-mix(in srgb, var(--project) 30%, var(--line)); }
-.issue-hero .issue-chip.state-in-progress { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--text); }
-.issue-hero-ring { width: 96px; height: 96px; }
-.issue-hero-ring svg { width: 96px; height: 96px; }
-.issue-sheet { padding: 24px 28px 28px; border-radius: 14px; background: color-mix(in srgb, var(--text) 3%, var(--surface)); box-shadow: inset 0 0 0 1px var(--line), 0 8px 24px -18px rgb(0 0 0 / .6); }
-.issue-sheet .issue-section h2 { margin-top: 28px; }
-.issue-tasks { gap: 8px; }
-.issue-task { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--text) 4%, transparent); }
-.issue-links { flex-direction: row; flex-wrap: wrap; gap: 8px; }
-.issue-links li { flex: 0 1 240px; }
-.issue-link { margin: 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--line); }
-.issue-link-relation { display: block; }
-@media (max-width: 799px) { .issue-hero { flex-direction: column; align-items: flex-start; padding: 20px; } }
-@media (prefers-reduced-motion: reduce) { .issue-card { transition: none; } }
 /* An embed in Write: what the preview shows, framed and read-only. */
 #rich-editor .note-embed { display: inline-block; width: 100%; box-sizing: border-box; margin: 4px 0; padding: 10px 14px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--text) 3%, var(--surface)); vertical-align: top; cursor: default; user-select: none; }
 #rich-editor .note-embed.ProseMirror-selectednode { border-color: var(--accent); }
@@ -3236,62 +3030,6 @@ dialog.library-dialog { width: min(760px, calc(100% - 32px)); }
 #rich-editor .write-html:hover, #rich-editor .write-html.ProseMirror-selectednode { box-shadow: 0 0 0 1px var(--line-strong); }
 #rich-editor .write-html-block { display: block; margin: 8px 0; padding: 2px 4px; }
 
-/* Outline rows are slim cards: the project's tint and facet, the title with
-   its ID, then priority, labels, steps and links along the right. */
-.issues-doc-section .issues-doc-heading { font-size: 15px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
-.issues-doc-list { gap: 8px; }
-.issue-line { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; width: 100%; padding: 12px 18px 12px 14px; border: 0; border-radius: 10px 0 10px 10px; text-align: left; color: var(--text);
-  background: color-mix(in srgb, var(--project) 5%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 26%, var(--line)), 0 1px 2px rgb(0 0 0 / .14);
-  transition: box-shadow .18s cubic-bezier(.16, 1, .3, 1); }
-.issue-line::before { content: ""; position: absolute; top: 0; right: 0; width: 12px; height: 12px; pointer-events: none; clip-path: polygon(0 0, 100% 0, 100% 100%);
-  background: linear-gradient(225deg, color-mix(in srgb, var(--project) 70%, white) 0%, color-mix(in srgb, var(--project) 80%, var(--cyan)) 45%, color-mix(in srgb, var(--project) 55%, transparent) 100%); }
-.issue-line:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 55%, var(--line)), 0 1px 2px rgb(0 0 0 / .14); }
-.issue-line.state-in-progress { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--line)), 0 1px 2px rgb(0 0 0 / .14); }
-.issue-line.state-done, .issue-line.state-cancelled { opacity: .72; }
-.issue-line-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.issue-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; line-height: 1.35; }
-.issue-line-meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.issue-line-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 280px; }
-.issue-line-end { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 120px; }
-@media (max-width: 900px) { .issue-line { grid-template-columns: auto minmax(0, 1fr) auto; } .issue-line-tags { display: none; } }
-
-/* The overview of all projects. */
-.issues-overview { max-width: 1120px; margin: 0 auto; padding: 32px 32px 48px; box-sizing: border-box; }
-.issues-overview .issues-doc-top { margin-bottom: 20px; }
-.issues-overview-section { margin-top: 28px; }
-.issues-overview-section > .issues-column-heading { margin: 0 0 14px; }
-.issues-now-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.issues-project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-.issue-project-card { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; border: 0; border-radius: 14px 0 14px 14px; text-align: left; color: var(--text);
-  background: color-mix(in srgb, var(--project) 6%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 30%, var(--line)), 0 1px 2px rgb(0 0 0 / .16), 0 12px 28px -18px rgb(0 0 0 / .6);
-  transition: box-shadow .18s cubic-bezier(.16, 1, .3, 1); }
-.issue-project-card::before { content: ""; position: absolute; top: 0; right: 0; width: 22px; height: 22px; pointer-events: none; clip-path: polygon(0 0, 100% 0, 100% 100%);
-  background: linear-gradient(225deg, color-mix(in srgb, var(--project) 70%, white) 0%, color-mix(in srgb, var(--project) 80%, var(--cyan)) 45%, color-mix(in srgb, var(--project) 55%, transparent) 100%); }
-.issue-project-card:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--project) 60%, var(--line)), 0 1px 2px rgb(0 0 0 / .16), 0 12px 28px -18px rgb(0 0 0 / .6); }
-.issue-project-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 12px; }
-.issue-project-name { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 18px; font-weight: 700; }
-.issue-project-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.issue-project-name .issues-project-marker { width: 10px; height: 10px; }
-.issue-project-prefix { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); background: color-mix(in srgb, var(--text) 7%, transparent); }
-.issue-project-middle { display: flex; align-items: center; gap: 16px; }
-.issue-project-middle .issues-ring { width: 72px; height: 72px; }
-.issue-project-middle .issues-ring svg { width: 72px; height: 72px; }
-.issue-project-middle .issues-ring-label strong { font-size: 16px; }
-.issue-project-middle .issues-ring-label small { font-size: 10px; }
-.issue-state-bar { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.issue-state-track { display: flex; gap: 3px; height: 8px; }
-.issue-state-part { min-width: 6px; border-radius: 3px; background: var(--line-strong); }
-.issue-state-part.state-in-progress { background: var(--accent); }
-.issue-state-part.state-todo { background: color-mix(in srgb, var(--accent) 45%, var(--line-strong)); }
-.issue-state-part.state-done { background: color-mix(in srgb, var(--good) 70%, var(--line)); }
-.issue-state-words { font-size: 12px; color: var(--muted); }
-.issue-project-next { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--project) 18%, var(--line)); }
-.issue-project-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 13px; }
-.issue-project-line .issue-state { width: 38px; flex: none; }
-.issue-project-line-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.issue-project-middle .issues-ring-label small { display: none; }
 /* PDFs, audio and video embedded in a note. */
 .media-embed { margin: 16px 0; }
 .media-embed figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); }

@@ -4,8 +4,8 @@
 
 # Labradorite
 
-A local workspace in your browser, with optional Notes and Issues plugins.
-Notes and issues stay plain Markdown in a folder you choose, served by one
+A local workspace in your browser, with an optional Notes plugin.
+Notes stay plain Markdown in a folder you choose, served by one
 binary on your own computer. No account or cloud service. Works offline;
 web embeds contact external services only after being enabled and loaded.
 
@@ -17,9 +17,8 @@ source and development builds. See the [roadmap](docs/ROADMAP.md).
 
 ## Features
 
-- Optional Notes and Issues tools, a keyboard plugin switcher, and a Library of vault files
+- Optional Notes, a keyboard plugin switcher, and a Library of vault files
 - Visual Markdown editing, Preview/Split views, wiki links, tags, pins and search
-- Issues as project folders with their own ID prefixes, an overview, board and outline
 - Note, image, PDF, audio and video embeds in Write and Preview; opt-in web embeds
 - Autosave, revision conflict checks, recoverable browser drafts, history and trash
 - Light, Dark and System appearance; keyboard controls and phone workflows for Notes
@@ -57,8 +56,8 @@ Ctrl+C stops it. Chrome and Edge can install it as an app. The
 - Notes stay plain Markdown, never converted. Hidden folders such as `.git` are
   ignored, so other tools can share the folder.
 - Deleted notes go to `.trash/` in the vault until you empty it.
-- Existing Markdown notes open without conversion. Issues adds plain files in
-  `issues/<Project>/`; disabling a plugin keeps its files.
+- Existing Markdown notes open without conversion, including files in an
+  `issues/` folder from earlier development builds. Disabling Notes keeps its files.
 
 ## Development
 

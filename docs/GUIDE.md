@@ -2,11 +2,11 @@
 
 This guide describes **Labradorite Space 2026.1.0 development builds**. The
 published stable **v1.5.0** is the earlier notebook and does not include the
-Space plugin shell, Issues, Library or the later embed work. Development
+Space plugin shell, Library or the later embed work. Development
 builds are stamped `2026.1.0+dev`; this guide does not announce a new release.
 
-Labradorite runs locally in your browser. Optional Notes and Issues plugins
-share a rail, settings, command palette and vault. Notes and issues are plain
+Labradorite runs locally in your browser. The optional Notes plugin
+uses a shared rail, settings, command palette and vault. Notes are plain
 Markdown files in a folder you choose. Notes offers visual editing, Markdown
 source, Preview and Split, search, Light/Dark/System appearance and browser
 draft recovery.
@@ -82,119 +82,30 @@ Only one Labradorite process can open a vault at a time; a second one is refused
 The nine-dot button below the Labrador logo opens the plugin switcher. Press
 **Alt+P**, then a number shown beside a plugin, or use ↑/↓ and Enter. Escape
 closes it and returns focus to the button. The command palette also offers
-**Switch plugin…** and **Switch to Notes / Issues**. The active plugin supplies
+**Switch plugin…** and **Switch to Notes**. The active plugin supplies
 its own rail actions and commands; **F1** shows its shortcuts alongside the
 shared shortcuts.
 
-**Settings → Plugins** enables or disables Notes and Issues. Both are enabled
-when no saved choice exists. Disabling one keeps its files. With no plugin
+**Settings → Plugins** enables or disables Notes, which is enabled
+when no saved choice exists. Disabling it keeps its files. With no plugin
 enabled, the empty workspace links to these settings; Settings, Commands and
 Library remain available. Plugins are built in; external plugin installation
 is not supported. The last active plugin is remembered in this browser per vault.
 
-Notes leaves files in enabled plugins' folders out of its list, tags, quick
-open and search. With Issues disabled, its Markdown files appear in Notes.
-A wiki link such as `[[issues/Trail/TL-1]]` opens the issue in Issues when it is
-enabled, or in Notes when Issues is disabled and Notes is enabled. Links into
-an enabled plugin folder show its picture in Write and Preview.
+All ordinary Markdown files appear in Notes, including files in an existing
+`issues/` folder. The former Issues plugin is no longer included; its files
+remain editable as notes, and wiki links to them open in Notes.
 
 ### Library
 
 Open **Library** from the bottom rail, **Alt+L**, or the **Open the library**
-command. It lists files by kind: Notes, Issues, Attachments and Other files,
+command. It lists files by kind: Notes, Attachments and Other files,
 with their folder, size and modified date. The filter matches names and folders.
 Hidden folders, symlinks and app settings are omitted.
 
-Selecting an issue opens Issues; a normal Markdown note opens Notes. If a
-file's plugin is disabled, Markdown opens in Notes when Notes is enabled.
+Selecting a Markdown file opens Notes when Notes is enabled.
 Files without an available opener download instead. Library also works with
 every plugin disabled. It does not move or delete files.
-
-### Issues
-
-Switch to **Issues**, then choose **New issue** or press **Alt+N**. Choose an
-existing project or **New project…**; a new project asks for a name and ID prefix.
-Each project owns a folder and prefix, such as `issues/Trail/` and `TL`.
-The prefix starts with a letter and contains up to ten letters/digits.
-New IDs count on from the highest existing number with that prefix. A project
-folder is created when a project is created, rather than when opening a vault.
-
-**All projects** opens an overview with Now issues and project summaries.
-Select a project to see its board by default; **Outline** switches to sections.
-**All projects → Board** is a separate remembered choice. **Find issues**
-searches titles and IDs; the sidebar groups issues by project, with Done folded
-initially. The board scrolls sideways when its columns do not fit.
-
-| Shown state | Stored `status` value | Where it appears |
-| --- | --- | --- |
-| Now | `in-progress` | Board and outline |
-| Next | `todo` | Board and outline; new-issue default |
-| Later | `backlog` | Board and outline |
-| Done | `done` | Board; folded section in outline |
-| Dropped | `cancelled` | Folded section in outline and the issue's state menu |
-
-Open a card or sidebar issue to read its full page. Click the title to rename
-it, or use the State, Priority, Labels and Project controls. Priorities are
-Urgent, High, Medium, Low and No priority; they are shown as words. Changing
-Project moves the file into that project's folder and keeps its ID. Links are
-updated by the same rename operation used for notes. The page shows its stored
-path, edit date, linked notes in both directions and Done-when progress.
-
-A heading exactly named **Done when** (for example `## Done when`) followed
-by ordinary task lines creates the page's checklist. Checking a step changes
-that marker in the Markdown file. Add or edit the description and task text
-using **Open in Notes**; the issue page renders the description. Changing a
-property preserves other fields and body text, and saves retain revision checks,
-history and conflict protection. Escape or **Close issue** returns to the project.
-
-Move a board card by dragging it to another column, using its **Move to…**
-button, or focusing the card and pressing **M**. Arrow keys move between cards;
-Enter opens one. In the project tree, arrows navigate and fold groups. These
-controls have keyboard alternatives to dragging. Issues is designed for desktop;
-Notes retains its phone drawer and editing workflows.
-
-#### Issue files
-
-```text
-issues/
-  Issues.md                 optional shared label suggestions/legacy settings
-  Trail/
-    Project.md              YAML prefix: TL
-    TL-1.md                 the issue and its description
-```
-
-For example, `issues/Trail/TL-1.md`:
-
-```markdown
----
-title: Review the trail map
-status: todo
-priority: medium
-labels: [Planning]
-created: 2026-10-21
----
-
-Compare the route with [[Reference/Trail map]].
-
-## Done when
-
-- [ ] Check distances
-- [ ] Record the chosen route
-```
-
-The filename holds the ID; the folder names the project. `Project.md` starts
-with YAML front matter:
-
-```yaml
----
-prefix: TL
----
-```
-
-Files saved directly as `issues/TL-1.md`
-from the earlier layout keep working. **Move into project folders** on All
-projects moves them by their existing `project:` field, keeping IDs and links;
-issues without a suitable project go into Inbox. This move is explicit.
 
 ## Writing in Notes
 
@@ -555,7 +466,6 @@ and all TOML front matter, keep the raw Properties editor.
 | Alt+P, then 1–9 or arrows and Enter | Switch enabled plugin |
 | Alt+L | Open Library |
 | Alt+N or Ctrl/⌘+N | Create a note while Notes is active |
-| Alt+N | Create an issue while Issues is active |
 | Alt+J | Open or create today's journal note |
 | Alt+K or Ctrl/⌘+K | Quick open a note, heading or command |
 | Alt+S or Ctrl/⌘+Shift+E | Search note contents |
@@ -570,12 +480,10 @@ and all TOML front matter, keep the raw Properties editor.
 | Ctrl/⌘+B / I | Bold / italic in Write |
 | Ctrl/⌘+Alt+0–6 | Normal text / heading level in Write |
 | Ctrl/⌘+Z / Shift+Z | Undo / redo edits |
-| M on a focused Issues board card | Move the issue to another state |
 | F1 or the footer “Shortcuts” button | Shared and active-plugin shortcuts |
 | Escape | Close a dialog, drawer or narrow-screen outline |
 
-Notes-only shortcuts are active while Notes is selected. Issues adds its own
-card/tree navigation, Enter to open, and Escape to close the issue page.
+Notes-only shortcuts are active while Notes is selected.
 
 Browsers and operating systems reserve some combinations. Ctrl+T/P/R/W and the
 usual copy/cut/paste/undo behavior stay with the browser and editor. On macOS,
@@ -640,10 +548,10 @@ tab, search or open a note; a note with unsaved edits is never replaced.
 
 ## Your notes across versions
 
-Space keeps existing Markdown notes without conversion and adds plugin-owned
-folders. Issues files are ordinary Markdown too. Older notebook versions and
-other editors can read the files, but do not provide Space's plugin views. The
-next planned public release is 2026.1.0; 2.0.0 will not be released.
+Space keeps existing Markdown notes without conversion. Files previously
+created by the Issues plugin remain ordinary Markdown in their existing folders
+and open in Notes. No files are moved or deleted when upgrading. The next
+planned public release is 2026.1.0; 2.0.0 will not be released.
 
 What Labradorite stores in a vault:
 
@@ -654,7 +562,6 @@ What Labradorite stores in a vault:
   repeats). Nothing is emptied automatically.
 - **`.history/<note path>.md/`**: earlier versions of each note, one file per
   version.
-- **`issues/<Project>/`**: a project's `Project.md` and Markdown issue files.
 - **`attachments/`**: uploaded images, PDFs, audio and video, linked by path.
 - **`.lock`**, and after an interrupted write `.pending-*` or `.recovery-*`
   files, which are kept for you to inspect.
@@ -841,22 +748,18 @@ uploading them. Publishing still requires explicit approval and a stable tag.
    then save; no draft should silently replace a newer disk revision.
 9. Narrow the browser: notes become a drawer and Split stacks vertically.
 10. Use the Trash button to restore an older deletion.
-11. Use Alt+P to switch between Notes and Issues; test F1 in each. Disable both
-    plugins in Settings, open Library with Alt+L, then enable the tools again.
-12. Create two Issues projects with different prefixes. Create issues, change a
-    property and a Done-when step, and inspect their Markdown files in Notes.
-13. Move an issue between board columns by drag and by M/Move to…. Toggle the
-    project outline and All projects overview, then move an issue to another
-    project and verify its ID and incoming links are preserved.
-14. Link an issue from a note; follow it in Write and Preview with Issues enabled,
-    then with Issues disabled. Filter Library by folder and open/download files.
-15. Attach an image, PDF and supported audio/video file in a temporary vault.
+11. Use Alt+P to select Notes and test F1. Disable Notes in Settings, open
+    Library with Alt+L, then enable Notes again.
+12. Open existing Markdown under an `issues/` folder in Notes. Follow links
+    to those files in Write and Preview; confirm their paths and contents stay intact.
+13. Filter Library by folder and open/download files.
+14. Attach an image, PDF and supported audio/video file in a temporary vault.
     Check Write and Preview, seek the media, then edit an embed target/label.
     Apply, Cancel, Escape and Undo must preserve the intended Markdown.
-16. Add a web URL and a YouTube URL embed. With permission off, verify no remote
+15. Add a web URL and a YouTube URL embed. With permission off, verify no remote
     frame loads. Enable permission: each must still wait for Load. Edit a loaded
     URL; the old frame disappears and the new one waits. Turn permission off.
-17. Open another temporary vault with shared app settings; web embeds must start
+16. Open another temporary vault with shared app settings; web embeds must start
     off there. Check the first vault's permission is unaffected. Never use a real
     vault to exercise deletion, conflict, migration or malformed-file tests.
 

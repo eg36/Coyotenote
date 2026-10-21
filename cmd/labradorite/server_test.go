@@ -268,15 +268,10 @@ func TestPluginsDefaultOnAndPersist(t *testing.T) {
 		t.Fatalf("settings mixed up: %v %v", state["theme"], state["plugins"])
 	}
 	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"chess": true}}, 422)
-	// Enabled plugins report their folders; a disabled one gives its folder back to Notes.
-	if got := request(t, a, "GET", "/api/state", nil, 200)["pluginFolders"].(map[string]any); got["issues"] != "issues" || got["notes"] != nil {
-		t.Fatalf("plugin folders: %v", got)
-	}
-	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"issues": false}}, 200)
+	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"issues": true}}, 422)
 	if got := request(t, a, "GET", "/api/state", nil, 200)["pluginFolders"].(map[string]any); len(got) != 0 {
-		t.Fatalf("disabled plugin folder: %v", got)
+		t.Fatalf("unexpected reserved plugin folders: %v", got)
 	}
-	request(t, a, "POST", "/api/settings", mutation{Plugins: map[string]bool{"issues": true}}, 200)
 	request(t, a, "POST", "/api/settings", mutation{}, 422)
 	// A damaged or unknown saved choice falls back to the defaults.
 	if err := os.WriteFile(filepath.Join(a.store.Config, "plugins"), []byte(`{"notes":false,"chess":true`), 0o600); err != nil {
@@ -287,25 +282,57 @@ func TestPluginsDefaultOnAndPersist(t *testing.T) {
 	}
 }
 
-func TestPluginFilesListTheirFolderWithText(t *testing.T) {
-	a := testApp(t)
-	empty := request(t, a, "GET", "/api/plugin-files?plugin=issues", nil, 200)
-	if files := empty["files"].([]any); len(files) != 0 || empty["folder"] != "issues" {
-		t.Fatalf("empty folder: %v", empty)
+func TestRemovedPluginPreferencesKeepTheirMarkdownAsOrdinaryNotes(t *testing.T) {
+	for _, oldEnabled := range []bool{false, true} {
+		t.Run(fmt.Sprint(oldEnabled), func(t *testing.T) {
+			a := testApp(t)
+			body := "---\ntitle: One\nstatus: open\n---\nOriginal project text."
+			request(t, a, "POST", "/api/note", mutation{ID: "issues/Space/A-1", Body: body}, 201)
+			request(t, a, "POST", "/api/note", mutation{ID: "Plan", Body: "See [[issues/Space/A-1]]."}, 201)
+			saved := fmt.Sprintf(`{"notes":true,"issues":%t}`, oldEnabled)
+			if err := os.WriteFile(filepath.Join(a.store.Config, "plugins"), []byte(saved), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			state := request(t, a, "GET", "/api/state", nil, 200)
+			if plugins := state["plugins"].(map[string]any); len(plugins) != 1 || plugins["notes"] != true {
+				t.Fatalf("stale plugin preference exposed: %v", plugins)
+			}
+			if folders := state["pluginFolders"].(map[string]any); len(folders) != 0 {
+				t.Fatalf("removed plugin still reserves a folder: %v", folders)
+			}
+			found := false
+			for _, entry := range state["notes"].([]any) {
+				if entry.(map[string]any)["id"] == "issues/Space/A-1" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatal("old plugin Markdown missing from Notes")
+			}
+			note := request(t, a, "GET", "/api/note?id=issues%2FSpace%2FA-1", nil, 200)
+			if note["body"] != body || fmt.Sprint(note["backlinks"]) != "[Plan]" {
+				t.Fatalf("old plugin note changed: %v", note)
+			}
+			library := request(t, a, "GET", "/api/library", nil, 200)
+			if len(library["folders"].(map[string]any)) != 0 {
+				t.Fatal("Library still reserves the removed plugin folder")
+			}
+			found = false
+			for _, entry := range library["files"].([]any) {
+				if entry.(map[string]any)["path"] == "issues/Space/A-1.md" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatal("old plugin Markdown missing from Library")
+			}
+			request(t, a, "POST", "/api/settings", mutation{Theme: "light"}, 200)
+			if got := request(t, a, "GET", "/api/note?id=issues%2FSpace%2FA-1", nil, 200)["body"]; got != body {
+				t.Fatalf("settings update changed old plugin Markdown: %v", got)
+			}
+			request(t, a, "GET", "/api/plugin-files?plugin=issues", mutation{}, 404)
+		})
 	}
-	request(t, a, "POST", "/api/note", mutation{ID: "issues/A-1", Body: "---\ntitle: One\n---\nText"}, 201)
-	request(t, a, "POST", "/api/note", mutation{ID: "Plan", Body: "See [[issues/A-1]]."}, 201)
-	request(t, a, "POST", "/api/note", mutation{ID: "issuesish/Other", Body: "x"}, 201)
-	got := request(t, a, "GET", "/api/plugin-files?plugin=issues", nil, 200)["files"].([]any)
-	if len(got) != 1 {
-		t.Fatalf("files: %v", got)
-	}
-	file := got[0].(map[string]any)
-	if file["id"] != "issues/A-1" || !strings.Contains(file["body"].(string), "title: One") || len(file["backlinks"].([]any)) != 1 {
-		t.Fatalf("file: %v", file)
-	}
-	request(t, a, "GET", "/api/plugin-files?plugin=notes", nil, 404)
-	request(t, a, "GET", "/api/plugin-files?plugin=../x", nil, 404)
 }
 
 func TestLibraryListsEveryVaultFileAndDownloadsThem(t *testing.T) {
